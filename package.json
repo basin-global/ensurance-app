@@ -1,5 +1,5 @@
 {
-  "name": "ensurance-app",
+  "name": "ensurance",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,14 +9,19 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@shadcn/ui": "^0.0.4",
     "next": "latest",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.16",
     "typescript": "latest"
   }
-} 
+}
