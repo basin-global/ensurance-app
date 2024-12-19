@@ -18,7 +18,7 @@ export default function Home() {
     },
     {
       role: "assistant",
-      content: "A redwood forest in California - those are incredibly valuable ecosystems! They store massive amounts of carbon, support biodiversity, and provide essential watershed services. I'd love to help ensure its protection, but I'm still learning. Ensurance agents coming soon!"
+      content: "A redwood forest in California - those are incredibly valuable ecosystems! They store massive amounts of carbon, support biodiversity, and provide essential watershed services. I'd love to help ensure its protection. Ensurance agents coming soon!"
     }
   ];
 

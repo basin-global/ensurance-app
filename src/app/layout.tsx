@@ -1,9 +1,12 @@
 import { spaceGrotesk, spaceMono } from './fonts'
 import './globals.css'
+import { PrivyProviderWrapper } from '@/providers/privy-provider'
+import Header from '@/components/layout/header'
+import Footer from '@/components/layout/footer'
 
 export const metadata = {
-  title: 'Ensurance',
-  description: 'Web3 Insurance Platform',
+  title: 'onchain agents',
+  description: 'onchain ai agents for everyone',
 }
 
 export const viewport = {
@@ -21,7 +24,13 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${spaceGrotesk.variable} ${spaceMono.variable}`}>
       <body className="antialiased min-h-screen flex flex-col font-grotesk">
-        {children}
+        <PrivyProviderWrapper>
+          <Header />
+          <main className="flex-1">
+            {children}
+          </main>
+          <Footer />
+        </PrivyProviderWrapper>
       </body>
     </html>
   )
