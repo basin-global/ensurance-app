@@ -3,6 +3,8 @@ import './globals.css'
 import { PrivyProviderWrapper } from '@/providers/privy-provider'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
+import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer } from 'react-toastify'
 
 export const metadata = {
   title: 'onchain agents',
@@ -26,6 +28,7 @@ export default function RootLayout({
       <body className="antialiased min-h-screen flex flex-col font-grotesk">
         <PrivyProviderWrapper>
           <Header />
+          <ToastContainer />
           <main className="flex-1">
             {children}
           </main>
