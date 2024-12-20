@@ -1,43 +1,18 @@
-import React, { useState, lazy, Suspense, useEffect, useCallback, useRef } from 'react'
+import React, { useState, lazy, Suspense, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation';
 import { getActiveChains, chainOrder } from '@/config/chains'
 import * as Tooltip from '@radix-ui/react-tooltip'
-import { ChainDropdown } from './ChainDropdown';
+import ChainDropdown from '@/modules/shared/ChainDropdown';
+import { TabData, BaseTabData, BaseModuleProps } from '@/types';
+import ReputationModule from '@/modules/reputation';
 
 const AssetsModule = lazy(() => import('@/modules/assets'))
 const CurrencyModule = lazy(() => import('@/modules/currency'))
 
-interface TabData {
-  value: string;
-  label: string;
-  component: React.LazyExoticComponent<any>;
-  showChainDropdown: boolean;
-}
-
 interface TabGroup {
   label: string;
-  tabs: TabData[];
+  tabs: BaseTabData[];
 }
-
-const tabGroups: TabGroup[] = [
-  {
-    label: 'PORTFOLIO',
-    tabs: [
-      { value: 'assets', label: 'assets', component: AssetsModule, showChainDropdown: true },
-      { value: 'currency', label: 'currency', component: CurrencyModule, showChainDropdown: true },
-    ]
-  }
-];
-
-const standardTabs: TabData[] = [
-  { value: 'reputation', label: 'reputation', component: ReputationModule, showChainDropdown: false },
-]
-
-// Combine all tabs for lookup purposes
-const tabData: TabData[] = [
-  ...tabGroups[0].tabs,  // Portfolio tabs
-  ...standardTabs        // Standard tabs
-];
 
 interface TabbedModulesProps {
   address: string;
@@ -47,6 +22,35 @@ interface TabbedModulesProps {
   initialChain?: string | null;
 }
 
+// Keep the base tab configurations outside the component
+const baseTabGroups: TabGroup[] = [
+  {
+    label: 'PORTFOLIO',
+    tabs: [
+      { 
+        value: 'assets', 
+        label: 'assets', 
+        showChainDropdown: true 
+      },
+      { 
+        value: 'currency', 
+        label: 'currency', 
+        component: CurrencyModule, 
+        showChainDropdown: true 
+      },
+    ]
+  }
+];
+
+const standardTabs: TabData[] = [
+  { 
+    value: 'reputation', 
+    label: 'reputation', 
+    component: ReputationModule, 
+    showChainDropdown: false 
+  },
+];
+
 export function TabbedModules({ 
   address, 
   isTokenbound = true, 
@@ -54,52 +58,36 @@ export function TabbedModules({
   initialModule,
   initialChain 
 }: TabbedModulesProps) {
-  console.log('TabbedModules props:', {
-    address,
-    isTokenbound,
-    isOwner
-  });
-
   const router = useRouter();
-
   const [activeTab, setActiveTab] = useState(initialModule || 'assets');
-
   const [selectedChain, setSelectedChain] = useState(initialChain || 'base');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [shouldLoadAssets, setShouldLoadAssets] = useState(false);
+  const assetsRef = useRef<HTMLDivElement>(null);
 
-  const activeChains = getActiveChains();
+  // Create the dynamic tab data inside the component
+  const tabGroups = baseTabGroups.map(group => ({
+    ...group,
+    tabs: group.tabs.map(tab => ({
+      ...tab,
+      component: tab.value === 'assets' 
+        ? (props: BaseModuleProps) => (
+            <AssetsModule 
+              {...props} 
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              currentGroup={undefined}
+            />
+          )
+        : tab.component!
+    })) as TabData[]
+  }));
 
-  useEffect(() => {
-    localStorage.setItem('activeTab', activeTab);
-  }, [activeTab]);
-
-  const updateUrl = (tab: string, chain: string) => {
-    const url = new URL(window.location.href);
-    url.searchParams.set('module', tab);
-    
-    // Only include chain parameter if it's not 'all' and the tab has chain dropdown
-    const activeTab = tabData.find(t => t.value === tab);
-    if (activeTab?.showChainDropdown && chain !== 'all') {
-      url.searchParams.set('chain', chain);
-    } else {
-      url.searchParams.delete('chain');
-    }
-
-    router.push(url.toString());
-  };
-
-  const handleChainChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const newChain = event.target.value;
-    setSelectedChain(newChain);
-    updateUrl(activeTab, newChain);
-  };
-
-  const setActiveTabAndUpdateUrl = (tab: string) => {
-    setActiveTab(tab);
-    updateUrl(tab, selectedChain);
-  };
-
-  const orderedChains = chainOrder.filter(chain => activeChains.some(ac => ac.simplehashName === chain));
-  orderedChains.unshift('all');
+  // Combine all tabs for lookup purposes
+  const tabData: TabData[] = [
+    ...tabGroups[0].tabs,
+    ...standardTabs
+  ];
 
   const activeTabData = tabData.find(tab => tab.value === activeTab);
 
@@ -118,8 +106,27 @@ export function TabbedModules({
       : 'text-gray-500 dark:text-gray-300 hover:bg-muted dark:hover:bg-muted-dark'
   }
 
-  const [shouldLoadAssets, setShouldLoadAssets] = useState(false);
-  const assetsRef = useRef<HTMLDivElement>(null);
+  const updateUrl = (tab: string, chain: string) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('module', tab);
+    
+    if (activeTabData?.showChainDropdown && chain !== 'all') {
+      url.searchParams.set('chain', chain);
+    } else {
+      url.searchParams.delete('chain');
+    }
+
+    router.push(url.toString());
+  };
+
+  const setActiveTabAndUpdateUrl = (tab: string) => {
+    setActiveTab(tab);
+    updateUrl(tab, selectedChain);
+  };
+
+  useEffect(() => {
+    localStorage.setItem('activeTab', activeTab);
+  }, [activeTab]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -129,9 +136,7 @@ export function TabbedModules({
           observer.disconnect();
         }
       },
-      {
-        rootMargin: '100px', // Start loading a bit before the element comes into view
-      }
+      { rootMargin: '100px' }
     );
 
     if (assetsRef.current) {
@@ -139,9 +144,8 @@ export function TabbedModules({
     }
 
     return () => observer.disconnect();
-  }, [activeTab]); // Reset and reobserve when tab changes
+  }, [activeTab]);
 
-  // Set initial values from URL on mount
   useEffect(() => {
     if (initialModule && tabData.some(tab => tab.value === initialModule)) {
       setActiveTab(initialModule);
@@ -203,7 +207,7 @@ export function TabbedModules({
             ))}
           </div>
 
-          {/* Chain Dropdown - moved outside tabs container */}
+          {/* Chain Dropdown */}
           {activeTabData?.showChainDropdown && (
             <div className="flex-shrink-0">
               <ChainDropdown
@@ -236,5 +240,5 @@ export function TabbedModules({
         </Suspense>
       </div>
     </div>
-  )
+  );
 }
