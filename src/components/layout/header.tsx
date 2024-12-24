@@ -6,10 +6,6 @@ import { usePathname } from 'next/navigation'
 export default function Header() {
   const pathname = usePathname()
   
-  const logoPath = pathname?.startsWith('/onchain-agents') 
-    ? '/groups/orbs/ai-orb.png'
-    : '/groups/orbs/ensurance-orb.png'
-
   const headerText = pathname?.startsWith('/onchain-agents')
     ? 'onchain agents'
     : 'ensurance agents'
@@ -21,7 +17,7 @@ export default function Header() {
           <div className="flex items-center gap-2 font-mono font-bold">
             {!pathname?.startsWith('/onchain-agents') && (
               <Image 
-                src={logoPath}
+                src="/groups/orbs/ensurance-orb.png"
                 alt="Logo"
                 width={24}
                 height={24}
