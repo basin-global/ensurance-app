@@ -24,11 +24,6 @@ export default function Home() {
 
   return (
     <main className="p-4 max-w-2xl mx-auto">
-      <h1 className="text-3xl mb-8">
-        <span className="font-grotesk">ensurance</span>
-        <span className="font-mono">.app</span>
-      </h1>
-      
       <div className="space-y-4">
         {sampleConversation.map((message, index) => (
           <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>

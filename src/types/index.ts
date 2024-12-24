@@ -213,16 +213,10 @@ export interface AssetsModuleProps extends BaseModuleProps {
   currentGroup?: string;
 }
 
-// Add a new interface for the base configuration
-export interface BaseTabData {
+export interface TabData {
   value: string;
   label: string;
+  component: React.ComponentType<BaseModuleProps>;
   showChainDropdown?: boolean;
   isEnsuranceTab?: boolean;
-  component?: React.ComponentType<BaseModuleProps>;
-}
-
-// Keep the original TabData interface for the fully configured tabs
-export interface TabData extends BaseTabData {
-  component: React.ComponentType<BaseModuleProps>;
 }
