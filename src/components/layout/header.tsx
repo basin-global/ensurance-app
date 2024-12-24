@@ -5,7 +5,11 @@ import { usePathname } from 'next/navigation'
 
 export default function Header() {
   const pathname = usePathname()
-  const isOnchainAgentsRoute = pathname?.startsWith('/onchain-agents') || pathname?.startsWith('/site-onchain-agents')
+  const hostname = typeof window !== 'undefined' ? window.location.hostname : ''
+  
+  const isOnchainAgentsRoute = hostname.includes('onchain-agents.ai') || 
+    pathname?.startsWith('/onchain-agents') || 
+    pathname?.startsWith('/site-onchain-agents')
   
   const headerText = isOnchainAgentsRoute
     ? 'onchain agents'
