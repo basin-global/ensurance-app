@@ -15,7 +15,7 @@ export default function Header() {
       <div className="container mx-auto px-4 py-4">
         <nav className="flex items-center justify-between">
           <div className="flex items-center gap-2 font-mono font-bold">
-            {!pathname?.startsWith('/onchain-agents') && (
+            {pathname?.startsWith('/') && !pathname?.startsWith('/onchain-agents') && (
               <Image 
                 src="/groups/orbs/ensurance-orb.png"
                 alt="Logo"
