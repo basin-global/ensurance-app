@@ -5,8 +5,9 @@ import { usePathname } from 'next/navigation'
 
 export default function Header() {
   const pathname = usePathname()
+  const isOnchainAgentsRoute = pathname?.startsWith('/onchain-agents') || pathname?.startsWith('/site-onchain-agents')
   
-  const headerText = pathname?.startsWith('/onchain-agents')
+  const headerText = isOnchainAgentsRoute
     ? 'onchain agents'
     : 'ensurance agents'
 
@@ -15,7 +16,7 @@ export default function Header() {
       <div className="container mx-auto px-4 py-4">
         <nav className="flex items-center justify-between">
           <div className="flex items-center gap-2 font-mono font-bold">
-            {pathname?.startsWith('/') && !pathname?.startsWith('/onchain-agents') && (
+            {!isOnchainAgentsRoute && (
               <Image 
                 src="/groups/orbs/ensurance-orb.png"
                 alt="Logo"
