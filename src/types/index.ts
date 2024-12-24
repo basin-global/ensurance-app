@@ -213,9 +213,15 @@ export interface AssetsModuleProps extends BaseModuleProps {
   currentGroup?: string;
 }
 
-export interface TabData {
+export interface BaseTabData {
   value: string;
   label: string;
+  component?: React.ComponentType<BaseModuleProps>;
+  showChainDropdown?: boolean;
+  isEnsuranceTab?: boolean;
+}
+
+export interface TabData extends BaseTabData {
   component: React.ComponentType<BaseModuleProps>;
   showChainDropdown?: boolean;
   isEnsuranceTab?: boolean;
