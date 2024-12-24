@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation';
 import { getActiveChains, chainOrder } from '@/config/chains'
 import * as Tooltip from '@radix-ui/react-tooltip'
 import ChainDropdown from '@/modules/shared/ChainDropdown';
-import { TabData, BaseTabData, BaseModuleProps } from '@/types';
+import { TabData, BaseModuleProps } from '@/types';
 import ReputationModule from '@/modules/reputation';
 
 const AssetsModule = lazy(() => import('@/modules/assets'))
@@ -11,7 +11,7 @@ const CurrencyModule = lazy(() => import('@/modules/currency'))
 
 interface TabGroup {
   label: string;
-  tabs: BaseTabData[];
+  tabs: TabData[];
 }
 
 interface TabbedModulesProps {
@@ -30,6 +30,7 @@ const baseTabGroups: TabGroup[] = [
       { 
         value: 'assets', 
         label: 'assets', 
+        component: AssetsModule,
         showChainDropdown: true 
       },
       { 
