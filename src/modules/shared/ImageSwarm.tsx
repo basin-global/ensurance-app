@@ -29,13 +29,15 @@ const ImageSwarm: React.FC<ImageSwarmProps> = ({ images }) => {
   const [selectedItem, setSelectedItem] = useState<SwarmItem | null>(null)
 
   useEffect(() => {
+    const headerHeight = 60
+    
     const items = images.map((img, index) => ({
       id: index,
       src: img.src,
       title: img.title,
       description: img.description,
       x: Math.random() * window.innerWidth,
-      y: Math.random() * window.innerHeight,
+      y: headerHeight + Math.random() * (window.innerHeight - headerHeight),
       vx: (Math.random() - 0.5) * 1.5,
       vy: (Math.random() - 0.5) * 1.5,
     }))
@@ -58,17 +60,44 @@ const ImageSwarm: React.FC<ImageSwarmProps> = ({ images }) => {
           let newX = item.x + newVx
           let newY = item.y + newVy
 
+          // Check collisions with other agents
+          prevItems.forEach(other => {
+            if (other.id !== item.id) {
+              const dx = newX - other.x
+              const dy = newY - other.y
+              const distance = Math.sqrt(dx * dx + dy * dy)
+              const minDistance = 100 // Size of agents plus some buffer
+
+              if (distance < minDistance) {
+                // Collision detected! Calculate bounce response
+                const angle = Math.atan2(dy, dx)
+                const targetX = other.x + Math.cos(angle) * minDistance
+                const targetY = other.y + Math.sin(angle) * minDistance
+                
+                // Move away from collision
+                newX = targetX
+                newY = targetY
+                
+                // Bounce velocities
+                const bounceForce = 0.8
+                newVx = Math.cos(angle) * speed * bounceForce
+                newVy = Math.sin(angle) * speed * bounceForce
+              }
+            }
+          })
+
+          // Wall bouncing
           if (newX < 0 || newX > window.innerWidth) {
             newVx *= -1 * (0.8 + Math.random() * 0.4)
           }
-          if (newY < 0 || newY > window.innerHeight) {
+          if (newY < headerHeight || newY > window.innerHeight) {
             newVy *= -1 * (0.8 + Math.random() * 0.4)
           }
 
           return {
             ...item,
             x: newX,
-            y: newY,
+            y: Math.max(headerHeight, Math.min(window.innerHeight, newY)),
             vx: newVx,
             vy: newVy,
           }

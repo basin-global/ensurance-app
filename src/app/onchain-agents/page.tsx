@@ -22,6 +22,11 @@ const agentImages = [
     title: 'otto.boulder',
     description: 'always doing both',
   },
+  {
+    src: 'https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com/tokyo/generated/6.png',
+    title: '悠真.tokyo',
+    description: '自然の安らぎと安全を東京につなぐためにAIを活用するユージェン',
+  },
   // Add more agents as needed
 ]
 
