@@ -5,6 +5,20 @@
 :root {
   --foreground-rgb: 255, 255, 255;
   --background-rgb: 0, 0, 0;
+  /* Dark theme tabs */
+  --tab-active: rgb(var(--foreground-rgb));
+  --tab-text: rgb(var(--background-rgb));
+  --tab-bg: rgba(var(--foreground-rgb), 0.1);
+  --tab-panel-bg: rgba(var(--foreground-rgb), 0.05);
+}
+
+/* Onchain agents theme */
+.onchain-agents {
+  /* Blue theme tabs */
+  --tab-active: rgb(59, 130, 246); /* blue-500 */
+  --tab-text: rgb(255, 255, 255); /* white */
+  --tab-bg: rgba(0, 0, 0, 0.2); /* darker background */
+  --tab-panel-bg: rgba(0, 0, 0, 0.1); /* darker panels */
 }
 
 html {

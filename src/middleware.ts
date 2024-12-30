@@ -3,25 +3,24 @@ import type { NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
   const hostname = request.headers.get('host')
+  const pathname = request.nextUrl.pathname
   const isDev = process.env.NODE_ENV === 'development'
 
   // Skip for static files and API routes
-  if (request.nextUrl.pathname.startsWith('/_next') || 
-      request.nextUrl.pathname.startsWith('/api')) {
+  if (pathname.startsWith('/_next') || 
+      pathname.startsWith('/api')) {
     return NextResponse.next()
   }
 
   // For development testing
-  if (isDev && request.nextUrl.pathname.startsWith('/site-onchain-agents')) {
-    const newPath = request.nextUrl.pathname.replace('/site-onchain-agents', '')
-    const newUrl = new URL(`/onchain-agents${newPath}`, request.url)
-    return NextResponse.rewrite(newUrl)
+  if (isDev && pathname.startsWith('/site-onchain-agents')) {
+    const newPath = pathname.replace('/site-onchain-agents', '')
+    return NextResponse.rewrite(new URL(newPath, request.url))
   }
 
-  // Production domain mapping
+  // Production domain mapping for onchain-agents.ai
   if (hostname?.includes('onchain-agents.ai')) {
-    const newUrl = new URL(`/onchain-agents${request.nextUrl.pathname}`, request.url)
-    return NextResponse.rewrite(newUrl)
+    return NextResponse.rewrite(new URL(pathname, request.url))
   }
 
   // All other requests go to main app

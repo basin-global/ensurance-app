@@ -4,28 +4,23 @@
 import Image from 'next/image';
 import { useState } from 'react';
 
-type ImageVariant = 'circle' | 'square';
-type ImageType = 'orbs' | 'banners';
-type ImageExtension = 'png' | 'jpg';
-
 interface AccountImageProps {
   tokenId: string | number;
-  variant?: ImageVariant;
+  groupName: string;
+  variant?: 'circle' | 'square';
   className?: string;
-  imageType?: ImageType;
 }
 
 export default function AccountImage({ 
   tokenId, 
+  groupName,
   variant = 'circle',
-  className = '',
-  imageType = 'orbs'
+  className = ''
 }: AccountImageProps) {
   const [imageExists, setImageExists] = useState(true);
 
-  // Determine file extension based on imageType
-  const extension: ImageExtension = imageType === 'banners' ? 'jpg' : 'png';
-  const imageUrl = `/groups/${imageType}/${tokenId}.${extension}`;
+  // Use the groupName to construct the URL
+  const imageUrl = `https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com/${groupName}/generated/${tokenId}.png`;
   
   if (!imageExists) return null;
 
@@ -37,7 +32,7 @@ export default function AccountImage({
     <div className={containerClasses}>
       <Image
         src={imageUrl}
-        alt={`Token ${tokenId} image`}
+        alt={`Account ${tokenId} image`}
         fill
         className="object-cover"
         onError={() => setImageExists(false)}
