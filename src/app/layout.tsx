@@ -55,7 +55,7 @@ export default function RootLayout({
                 theme="dark"
                 position="top-right"
                 toastClassName={`!bg-gray-900 !text-gray-100 ${spaceMono.variable}`}
-                bodyClassName={`${spaceMono.variable} !font-mono`}
+                className={`${spaceMono.variable} !font-mono`}
                 progressClassName="!bg-blue-500"
                 closeButton={false}
               />
