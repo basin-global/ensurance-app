@@ -170,7 +170,7 @@ export default function CurrencyModule({ address, selectedChain, isTokenbound = 
                 {chain === 'polygon' ? (
                   <div>
                     {filteredBalances[chain].some(token => !token.fungible_id) && (
-                      <table className="w-full bg-white dark:bg-gray-800 rounded-lg overflow-hidden mb-4 [&_td]:border [&_th]:border">
+                      <table className="w-full bg-primary-dark border-gray-800 rounded-lg overflow-hidden mb-4 [&_td]:border [&_th]:border">
                         <colgroup>
                           <col className="w-[35%]" />
                           <col className="w-[25%]" />
@@ -230,19 +230,12 @@ export default function CurrencyModule({ address, selectedChain, isTokenbound = 
                     </a>
                   </div>
                 ) : filteredBalances[chain].length > 0 ? (
-                  <table className="w-full bg-white dark:bg-gray-800 rounded-lg overflow-hidden [&_td]:border [&_th]:border">
-                    <colgroup>
-                      <col className="w-[35%]" />
-                      <col className="w-[25%]" />
-                      <col className="w-[25%]" />
-                      <col className="w-[7.5%]" />
-                      <col className="w-[7.5%]" />
-                    </colgroup>
-                    <thead className="bg-gray-100 dark:bg-gray-700">
+                  <table className="w-full bg-primary-dark border-gray-800 rounded-lg overflow-hidden [&_td]:border-gray-800 [&_th]:border-gray-800">
+                    <thead className="bg-gray-900">
                       <tr>
-                        <th className="px-4 py-2 text-left">Token</th>
-                        <th className="px-4 py-2 text-left">Balance</th>
-                        <th className="px-4 py-2 text-left">USD Value</th>
+                        <th className="px-4 py-2 text-left text-gray-300">Token</th>
+                        <th className="px-4 py-2 text-left text-gray-300">Balance</th>
+                        <th className="px-4 py-2 text-left text-gray-300">USD Value</th>
                         <th className="px-4 py-2 text-left text-gray-500">Price</th>
                         <th className="px-4 py-2 text-left text-gray-500">Source</th>
                       </tr>
@@ -255,7 +248,7 @@ export default function CurrencyModule({ address, selectedChain, isTokenbound = 
                         const priceDecimals = getAppropriateDecimals(price);
 
                         return (
-                          <tr key={token.fungible_id || token.symbol} className="group relative border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                          <tr key={token.fungible_id || token.symbol} className="group relative border-b border-gray-800 hover:bg-gray-900/50">
                             <td className="px-4 py-2 text-left">
                               <div className="flex items-center gap-3">
                                 <div className="opacity-0 group-hover:opacity-100 transition-opacity">
@@ -324,7 +317,7 @@ export default function CurrencyModule({ address, selectedChain, isTokenbound = 
                   <div className="mt-6 flex gap-4 justify-center">
                     <button 
                       onClick={() => handleOperation('send', firstToken)}
-                      className="px-6 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg flex items-center gap-2 transition-colors cursor-pointer"
+                      className="px-6 py-2 bg-primary hover:bg-primary/80 text-primary-foreground rounded-lg flex items-center gap-2 transition-colors cursor-pointer"
                     >
                       <Send className="h-4 w-4" />
                       SEND

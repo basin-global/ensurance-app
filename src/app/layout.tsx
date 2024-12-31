@@ -6,7 +6,7 @@ import Footer from '@/components/layout/footer'
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify'
 import { SiteProvider } from '@/contexts/site-context'
-import { SiteWrapper } from '@/components/SiteWrapper'
+import { SiteWrapper } from '@/components/layout/SiteWrapper'
 
 export const metadata = {
   title: 'onchain agents',

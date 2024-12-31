@@ -273,11 +273,11 @@ export default function AssetsModule({
         loader={
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mt-6">
             {[...Array(4)].map((_, index) => (
-              <Card key={`skeleton-${index}`}>
+              <Card key={`skeleton-${index}`} className="bg-primary-dark border-gray-800">
                 <CardContent className="p-4">
-                  <Skeleton className="h-48 w-full mb-4" />
-                  <Skeleton className="h-4 w-3/4 mb-2" />
-                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton className="h-48 w-full mb-4 bg-gray-800" />
+                  <Skeleton className="h-4 w-3/4 mb-2 bg-gray-800" />
+                  <Skeleton className="h-4 w-1/2 bg-gray-800" />
                 </CardContent>
               </Card>
             ))}

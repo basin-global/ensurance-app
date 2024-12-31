@@ -68,7 +68,7 @@ export default function AssetCard({
   return (
     <div className="relative">
       <Link href={`/assets/${asset.chain}/${asset.contract_address}/${asset.token_id}`}>
-        <Card className="overflow-hidden bg-white dark:bg-gray-800 transition-all duration-300 cursor-pointer h-full rounded-xl hover:shadow-lg">
+        <Card className="overflow-hidden bg-primary-dark border-gray-800 transition-all duration-300 cursor-pointer h-full rounded-xl hover:shadow-lg">
           <CardContent className="p-0 h-full flex flex-col">
             <div className="aspect-square relative bg-black rounded-xl">
               {hasBalance && quantity >= 1 && (
@@ -101,7 +101,7 @@ export default function AssetCard({
               )}
             </div>
 
-            <div className="px-4 py-2 flex justify-between items-center border-b border-gray-100 dark:border-gray-700">
+            <div className="px-4 py-2 flex justify-between items-center border-b border-gray-800">
               {isEnsurable ? (
                 <Button
                   className="hover:bg-transparent p-0 bg-transparent text-sm"
@@ -112,7 +112,7 @@ export default function AssetCard({
                     setIsEnsureModalOpen(true);
                   }}
                 >
-                  <PlusCircle className="h-6 w-6 text-white hover:text-gray-300" />
+                  <PlusCircle className="h-6 w-6 text-gray-300 hover:text-white" />
                 </Button>
               ) : (
                 <div className="w-6" />
@@ -121,7 +121,7 @@ export default function AssetCard({
               {showEnsureMenu && (
                 <DropdownMenu>
                   <DropdownMenuTrigger 
-                    className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-800"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -147,9 +147,9 @@ export default function AssetCard({
             </div>
 
             <div className="p-4 flex-1">
-              <h3 className="font-bold text-lg line-clamp-1">{asset.name || 'Untitled'}</h3>
-              <p className="text-sm text-gray-500 line-clamp-1">{asset.collection?.name}</p>
-              <p className="text-xs text-gray-400">{formatChainName(asset.chain)}</p>
+              <h3 className="font-bold text-lg line-clamp-1 text-gray-100">{asset.name || 'Untitled'}</h3>
+              <p className="text-sm text-gray-400 line-clamp-1">{asset.collection?.name}</p>
+              <p className="text-xs text-gray-500">{formatChainName(asset.chain)}</p>
               <div className="flex flex-col gap-2 mt-2">
                 {isEnsured && (
                   <span className="text-sm tracking-wider font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-yellow-500 to-amber-600">

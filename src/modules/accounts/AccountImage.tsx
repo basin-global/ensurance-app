@@ -2,7 +2,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface AccountImageProps {
   tokenId: string | number;
@@ -17,25 +17,33 @@ export default function AccountImage({
   variant = 'circle',
   className = ''
 }: AccountImageProps) {
-  const [imageExists, setImageExists] = useState(true);
+  const [imageExists, setImageExists] = useState(false);
+  const primaryImageUrl = `https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com/${groupName}/${tokenId}.png`;
 
-  // Use the groupName to construct the URL
-  const imageUrl = `https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com/${groupName}/generated/${tokenId}.png`;
-  
-  if (!imageExists) return null;
+  useEffect(() => {
+    // Check if image exists
+    fetch(primaryImageUrl, { method: 'HEAD' })
+      .then(res => {
+        setImageExists(res.ok);
+      })
+      .catch(() => {
+        setImageExists(false);
+      });
+  }, [primaryImageUrl]);
 
-  const containerClasses = `relative h-full aspect-square overflow-hidden ${
-    variant === 'circle' ? 'rounded-full' : 'rounded-lg'
-  } ${className}`;
+  if (!imageExists) {
+    return null;
+  }
 
   return (
-    <div className={containerClasses}>
+    <div className={`relative h-full aspect-square overflow-hidden ${
+      variant === 'circle' ? 'rounded-full' : 'rounded-lg'
+    } ${className}`}>
       <Image
-        src={imageUrl}
-        alt={`Account ${tokenId} image`}
+        src={primaryImageUrl}
+        alt={`Account ${tokenId}`}
         fill
         className="object-cover"
-        onError={() => setImageExists(false)}
         priority
       />
     </div>

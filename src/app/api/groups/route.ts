@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { groups } from '@/lib/database/queries/groups';
 
+// Cache successful responses for 1 hour
+export const revalidate = 3600;
+
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
@@ -8,11 +11,19 @@ export async function GET(request: NextRequest) {
 
         if (ogName) {
             const group = await groups.getByName(ogName);
-            return NextResponse.json(group);
+            return NextResponse.json(group, {
+                headers: {
+                    'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+                },
+            });
         }
 
         const allGroups = await groups.getAll();
-        return NextResponse.json(allGroups);
+        return NextResponse.json(allGroups, {
+            headers: {
+                'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+            },
+        });
     } catch (error) {
         console.error('Error fetching groups:', error);
         return NextResponse.json(
@@ -22,6 +33,7 @@ export async function GET(request: NextRequest) {
     }
 }
 
+// POST method doesn't need caching since it's modifying data
 export async function POST(request: NextRequest) {
     try {
         const data = await request.json();

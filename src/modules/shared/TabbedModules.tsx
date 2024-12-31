@@ -51,6 +51,8 @@ export function TabbedModules({
   initialModule,
   initialChain 
 }: TabbedModulesProps) {
+  console.log('TabbedModules initializing with address:', address)
+  console.log('Initial chain:', initialChain)
   const router = useRouter()
   const [activeTab, setActiveTab] = useState(initialModule || 'assets')
   const [selectedChain, setSelectedChain] = useState(initialChain || 'base')

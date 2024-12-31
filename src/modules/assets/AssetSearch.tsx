@@ -1,4 +1,5 @@
 import React from 'react'
+import { cn } from '@/lib/utils'
 
 interface AssetSearchProps {
   searchQuery: string;
@@ -12,13 +13,21 @@ export function AssetSearch({
   placeholder = "Search assets..."
 }: AssetSearchProps) {
   return (
-    <div>
+    <div className="w-full max-w-md">
       <input
         type="text"
         placeholder={placeholder}
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        className="font-mono"
+        className={cn(
+          "w-full px-4 py-2 rounded-lg",
+          "bg-[rgb(var(--background-rgb))]",
+          "border border-[rgba(var(--foreground-rgb),0.1)]",
+          "text-[rgb(var(--foreground-rgb))]",
+          "placeholder:text-[rgba(var(--foreground-rgb),0.5)]",
+          "focus:outline-none focus:ring-2 focus:ring-[rgba(var(--foreground-rgb),0.2)]",
+          "transition-colors duration-200"
+        )}
       />
     </div>
   )

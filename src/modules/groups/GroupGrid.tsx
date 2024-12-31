@@ -52,16 +52,18 @@ export default function GroupGrid() {
                     href={getGroupUrl(group.og_name)}
                     className="bg-primary dark:bg-primary-dark hover:bg-primary-dark dark:hover:bg-primary text-primary-foreground dark:text-primary-dark-foreground font-bold py-4 px-6 rounded-lg transition duration-300 ease-in-out transform hover:-translate-y-1 hover:scale-105 flex items-center"
                 >
-                    <div className="w-10 h-10 rounded-full overflow-hidden mr-4 flex-shrink-0">
+                    <div className="w-16 h-16 flex-shrink-0 mr-4">
                         <Image
                             src={`/groups/orbs/${group.og_name.replace(/^\./, '')}-orb.png`}
                             alt={`${group.og_name} orb`}
-                            width={40}
-                            height={40}
-                            className="object-cover"
+                            width={64}
+                            height={64}
+                            className="object-cover rounded-full"
                         />
                     </div>
-                    <span className="text-lg">{group.og_name}</span>
+                    <span className="text-lg font-mono truncate">
+                        {group.og_name}
+                    </span>
                 </Link>
             ))}
         </div>

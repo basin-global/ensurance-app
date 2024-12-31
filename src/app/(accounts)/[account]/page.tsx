@@ -1,5 +1,9 @@
 import { TabbedModules } from '@/modules/shared/TabbedModules'
-import AccountImage from '@/modules/accounts/AccountImage'
+import { notFound } from 'next/navigation'
+import { headers } from 'next/headers'
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
+import AccountHeader from '@/modules/accounts/AccountHeader'
 
 export default async function AccountPage({
   params,
@@ -9,37 +13,44 @@ export default async function AccountPage({
   searchParams: { module?: string; chain?: string };
 }) {
   const accountName = params.account
-  const [name, group] = accountName.split('.')
+  const headersList = headers()
+  const host = headersList.get('host') || ''
   
-  // Fetch account data from API
-  const response = await fetch(`/api/groups/${group}/accounts/${name}`)
+  const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
+  const baseUrl = `${protocol}://${host}`
+  
+  const response = await fetch(`${baseUrl}/api/accounts/${accountName}`, {
+    next: { revalidate: 3600 }
+  })
+  
+  if (!response.ok) {
+    notFound()
+  }
+
   const accountData = await response.json()
+  const [name, group] = accountName.split('.')
 
   return (
-    <div className="container mx-auto px-4">
-      <div className="flex items-center gap-4 mb-6">
-        <div className="w-16 h-16 bg-gray-800 rounded-full">
-          <AccountImage 
-            tokenId={accountData.token_id}
-            groupName={group}
-            variant="circle"
-            className="bg-gray-800"
-          />
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold text-white">
-            {accountName}
-          </h2>
-        </div>
+    <div className="flex flex-col min-h-screen">
+      <div className="container mx-auto px-4">
+        <AccountHeader 
+          accountName={accountName}
+          tokenId={accountData.token_id}
+          tbaAddress={accountData.tba_address}
+          groupName={group}
+        />
       </div>
 
-      <TabbedModules
-        address={accountName}
-        isTokenbound={true}
-        isOwner={false}
-        initialModule={searchParams.module}
-        initialChain={searchParams.chain}
-      />
+      <div className="flex-1 container mx-auto px-4">
+        <TabbedModules
+          address={accountData.tba_address}
+          isOwner={false}
+          initialModule={searchParams.module}
+          initialChain={searchParams.chain}
+        />
+      </div>
+      
+      <ToastContainer theme="dark" />
     </div>
   )
 } 
