@@ -1,36 +1,44 @@
 import ImageSwarm from '@/modules/shared/ImageSwarm'
 import Link from 'next/link'
+import { headers } from 'next/headers'
 
-const agentImages = [
-  {
-    src: 'https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com/higher/generated/13.png',
-    title: 'rise.higher',
-    description: 'a higher network participant',
-  },
-  {
-    src: 'https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com/basin/generated/109.png',
-    title: 'beaver.basin',
-    description: 'techo-naturalist ecosystem engineer',
-  },
-  {
-    src: 'https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com/ai/generated/4.png',
-    title: 'thomas.ai',
-    description: 'always doing both',
-  },
-  {
-    src: 'https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com/boulder/generated/29.png',
-    title: 'otto.boulder',
-    description: 'always doing both',
-  },
-  {
-    src: 'https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com/tokyo/generated/6.png',
-    title: '悠真.tokyo',
-    description: '自然の安らぎと安全を東京につなぐためにAIを活用するユージェン',
-  },
-  // Add more agents as needed
-]
+// Helper function to determine article
+function getArticle(word: string) {
+  // Get the first letter after the dot
+  const firstLetter = word.substring(1).charAt(0).toLowerCase()
+  // Check if it starts with a vowel sound
+  return 'aeiou'.includes(firstLetter) ? 'an' : 'a'
+}
 
-export default function OnchainAgents() {
+async function getAgents() {
+  const headersList = headers()
+  const host = headersList.get('host') || ''
+  const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
+  const baseUrl = `${protocol}://${host}`
+  
+  const res = await fetch(`${baseUrl}/api/accounts`, {
+    next: { revalidate: 3600 } // Cache for 1 hour
+  })
+  
+  if (!res.ok) {
+    throw new Error('Failed to fetch agents')
+  }
+
+  const accounts = await res.json()
+  
+  return accounts
+    .filter((account: any) => account.is_agent)
+    .map((account: any) => ({
+      tokenId: account.token_id,
+      groupName: account.og_name.substring(1),
+      title: account.full_account_name,
+      description: `${getArticle(account.og_name)} ${account.og_name} agent`,
+    }))
+}
+
+export default async function OnchainAgents() {
+  const agentImages = await getAgents()
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
       <div className="z-10 relative text-center">

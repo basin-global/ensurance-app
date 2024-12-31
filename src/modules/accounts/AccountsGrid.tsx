@@ -18,9 +18,14 @@ interface Account {
 interface AccountsGridProps {
     groupName?: string;
     searchQuery?: string;
+    agentsOnly?: boolean;
 }
 
-export default function AccountsGrid({ groupName, searchQuery = '' }: AccountsGridProps) {
+export default function AccountsGrid({ 
+    groupName, 
+    searchQuery = '', 
+    agentsOnly = false
+}: AccountsGridProps) {
     const site = useSite()
     const [allAccounts, setAllAccounts] = useState<Account[]>([])
     const [displayedAccounts, setDisplayedAccounts] = useState<Account[]>([])
@@ -28,6 +33,9 @@ export default function AccountsGrid({ groupName, searchQuery = '' }: AccountsGr
     const [error, setError] = useState<string | null>(null)
     const [page, setPage] = useState(1)
     const ITEMS_PER_PAGE = 20
+
+    // Determine if we should show only agents based on both site and prop
+    const showOnlyAgents = site === 'onchain-agents' || agentsOnly
 
     // Fetch all accounts once
     useEffect(() => {
@@ -41,6 +49,11 @@ export default function AccountsGrid({ groupName, searchQuery = '' }: AccountsGr
                 let filtered = groupName 
                     ? data.filter(account => account.og_name === `.${groupName}`)
                     : data;
+
+                // Filter for agents only if on onchain-agents site or if agentsOnly prop is true
+                if (showOnlyAgents) {
+                    filtered = filtered.filter(account => account.is_agent);
+                }
 
                 // Sort agent accounts first, then alphabetically
                 filtered.sort((a, b) => {
@@ -56,7 +69,7 @@ export default function AccountsGrid({ groupName, searchQuery = '' }: AccountsGr
             }
         }
         fetchAccounts()
-    }, [groupName])
+    }, [groupName, showOnlyAgents])
 
     // Handle search and pagination
     useEffect(() => {
@@ -100,20 +113,23 @@ export default function AccountsGrid({ groupName, searchQuery = '' }: AccountsGr
                 </div>
             }
         >
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {displayedAccounts.map((account) => (
                     <Link
-                        key={account.token_id}
+                        key={account.full_account_name}
                         href={getAccountUrl(account.full_account_name)}
-                        className="bg-primary dark:bg-primary-dark hover:bg-primary-dark dark:hover:bg-primary text-primary-foreground dark:text-primary-dark-foreground font-bold py-4 px-6 rounded-lg transition duration-300 ease-in-out transform hover:-translate-y-1 hover:scale-105 flex items-center"
+                        className="bg-primary dark:bg-primary-dark hover:bg-primary-dark dark:hover:bg-primary 
+                                 text-primary-foreground dark:text-primary-dark-foreground font-bold py-4 px-6 
+                                 rounded-lg transition duration-300 ease-in-out transform 
+                                 hover:-translate-y-1 hover:scale-105 flex items-center"
                     >
-                        <div className="w-16 h-16 flex-shrink-0 mr-4">
+                        <div className="w-20 h-20 flex-shrink-0 mr-6">
                             <AccountImage
                                 tokenId={account.token_id}
                                 groupName={account.og_name.replace('.', '')}
                             />
                         </div>
-                        <span className="text-lg font-mono truncate">
+                        <span className="text-xl font-mono break-all">
                             {account.full_account_name}
                         </span>
                     </Link>

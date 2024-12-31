@@ -1,22 +1,23 @@
-// components/AccountImage.tsx
 'use client';
 
 import Image from 'next/image';
 import { useState } from 'react';
 
-interface AccountImageProps {
+interface SwarmAccountImageProps {
   tokenId: string | number;
   groupName: string;
-  variant?: 'circle' | 'square';
   className?: string;
+  size?: 'small' | 'large';
+  unoptimized?: boolean;
 }
 
-export default function AccountImage({ 
+export default function SwarmAccountImage({ 
   tokenId, 
   groupName,
-  variant = 'circle',
-  className = ''
-}: AccountImageProps) {
+  className = '',
+  size = 'small',
+  unoptimized = false
+}: SwarmAccountImageProps) {
   const [imageSrc, setImageSrc] = useState(
     `https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com/${groupName}/${tokenId}.png`
   );
@@ -31,19 +32,20 @@ export default function AccountImage({
     }
   };
 
+  const dimensions = size === 'large' ? 200 : 100;
+
   return (
-    <div className={`relative h-full aspect-square overflow-hidden ${
-      variant === 'circle' ? 'rounded-full' : 'rounded-lg'
-    } ${className}`}>
+    <div className={`relative aspect-square overflow-hidden ${className}`}>
       <Image
         src={imageSrc}
         alt={`Account ${tokenId}`}
-        fill
-        className="object-cover"
+        width={dimensions}
+        height={dimensions}
+        className="object-cover w-full h-full hover:scale-110 transition-transform duration-300 cursor-pointer"
         onError={handleImageError}
         priority
-        unoptimized
+        unoptimized={unoptimized}
       />
     </div>
   );
-}
+} 

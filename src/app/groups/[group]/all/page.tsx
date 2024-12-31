@@ -20,7 +20,11 @@ export default function GroupAllPage({ params }: { params: { group: string } }) 
               placeholder="Search accounts..." 
             />
           </div>
-          <AccountsGrid groupName={params.group} searchQuery={searchQuery} />
+          <AccountsGrid 
+            groupName={params.group} 
+            searchQuery={searchQuery}
+            agentsOnly={false}
+          />
         </div>
       </div>
     </div>
