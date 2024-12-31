@@ -59,7 +59,9 @@ export default function AssetCard({
   );
 
   const handleOperationSelect = () => {
-    toast.info('Feature coming soon!');
+    toast.info('Feature coming soon!', {
+      closeButton: false
+    });
     setIsEnsureModalOpen(false);
   };
 

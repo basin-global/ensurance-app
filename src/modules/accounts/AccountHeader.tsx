@@ -31,7 +31,6 @@ export default function AccountHeader({ accountName, tokenId, tbaAddress, groupN
             onClick={() => {
               navigator.clipboard.writeText(tbaAddress)
                 .then(() => toast.success('Account address copied to clipboard!', {
-                  position: "top-right",
                   autoClose: 2000,
                   hideProgressBar: false,
                   closeOnClick: true,

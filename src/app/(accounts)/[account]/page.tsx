@@ -1,8 +1,6 @@
 import { TabbedModules } from '@/modules/shared/TabbedModules'
 import { notFound } from 'next/navigation'
 import { headers } from 'next/headers'
-import { ToastContainer } from 'react-toastify'
-import 'react-toastify/dist/ReactToastify.css'
 import AccountHeader from '@/modules/accounts/AccountHeader'
 
 export default async function AccountPage({
@@ -49,8 +47,6 @@ export default async function AccountPage({
           initialChain={searchParams.chain}
         />
       </div>
-      
-      <ToastContainer theme="dark" />
     </div>
   )
 } 

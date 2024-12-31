@@ -36,7 +36,9 @@ const ImageSwarm: React.FC<ImageSwarmProps> = ({ images }) => {
 
   // Helper function to get the correct URL
   const getAccountUrl = (accountName: string) => {
-    const basePath = site === 'onchain-agents' ? '/site-onchain-agents' : ''
+    // Only add the prefix in development environment
+    const isDev = process.env.NODE_ENV === 'development'
+    const basePath = (isDev && site === 'onchain-agents') ? '/site-onchain-agents' : ''
     return `${basePath}/${accountName}`
   }
 
