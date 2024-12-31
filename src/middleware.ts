@@ -29,7 +29,9 @@ export function middleware(request: NextRequest) {
 
   // Production domain mapping for onchain-agents.ai
   if (hostname?.includes('onchain-agents.ai')) {
-    return NextResponse.rewrite(new URL(pathname, request.url), {
+    // Handle root path specifically
+    const newPathname = pathname === '/' ? '/onchain-agents' : pathname
+    return NextResponse.rewrite(new URL(newPathname, request.url), {
       request: { headers: requestHeaders }
     })
   }
