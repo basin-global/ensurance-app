@@ -5,12 +5,19 @@ import EnsurancePoolGrid from '@/modules/ensurance/components/EnsurancePoolGrid'
 import { AssetSearch } from '@/modules/assets/AssetSearch'
 import { cn } from '@/lib/utils'
 
-type Category = 'all' | 'ecosystems' | 'core benefits'
+// Define the category type with the actual values we want to use for filtering
+type Category = 'all' | 'Ecosystems' | 'Core Benefits'
 
 export default function PoolsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState<Category>('all')
-  const categories: Category[] = ['all', 'ecosystems', 'core benefits']
+  
+  // Define categories with their display names
+  const categoryConfig: { value: Category; display: string }[] = [
+    { value: 'all', display: 'all' },
+    { value: 'Ecosystems', display: 'ecosystems' },
+    { value: 'Core Benefits', display: 'core benefits' }
+  ]
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -20,18 +27,18 @@ export default function PoolsPage() {
         <nav>
           <div className="container mx-auto px-4 flex justify-center">
             <ul className="flex space-x-8">
-              {categories.map((category) => (
-                <li key={category}>
+              {categoryConfig.map(({ value, display }) => (
+                <li key={value}>
                   <button
-                    onClick={() => setActiveCategory(category)}
+                    onClick={() => setActiveCategory(value)}
                     className={cn(
                       "inline-block py-4 font-medium transition-colors",
-                      activeCategory === category
+                      activeCategory === value
                         ? "text-primary"
                         : "text-muted-foreground hover:text-primary"
                     )}
                   >
-                    {category}
+                    {display}
                   </button>
                 </li>
               ))}

@@ -31,62 +31,63 @@ export default function AccountsGrid({
     const [displayedAccounts, setDisplayedAccounts] = useState<Account[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [page, setPage] = useState(1)
+    const [displayLimit, setDisplayLimit] = useState(20)
     const ITEMS_PER_PAGE = 20
 
-    // Determine if we should show only agents based on both site and prop
     const showOnlyAgents = site === 'onchain-agents' || agentsOnly
 
     // Fetch all accounts once
-    useEffect(() => {
-        async function fetchAccounts() {
-            try {
-                const response = await fetch('/api/accounts')
-                if (!response.ok) throw new Error('Failed to fetch accounts')
-                const data = await response.json()
-                
-                // Filter by group if specified
-                let filtered = groupName 
-                    ? data.filter(account => account.og_name === `.${groupName}`)
-                    : data;
-
-                // Filter for agents only if on onchain-agents site or if agentsOnly prop is true
-                if (showOnlyAgents) {
-                    filtered = filtered.filter(account => account.is_agent);
-                }
-
-                // Sort agent accounts first, then alphabetically
-                filtered.sort((a, b) => {
-                    if (a.is_agent !== b.is_agent) return a.is_agent ? -1 : 1;
-                    return a.full_account_name.localeCompare(b.full_account_name);
-                });
-
-                setAllAccounts(filtered)
-            } catch (err) {
-                setError('Failed to load accounts')
-            } finally {
-                setLoading(false)
-            }
+    const fetchAccounts = async () => {
+        try {
+            const response = await fetch('/api/accounts')
+            if (!response.ok) throw new Error('Failed to fetch accounts')
+            const data = await response.json()
+            setAllAccounts(data)
+        } catch (err) {
+            setError('Failed to load accounts')
+        } finally {
+            setLoading(false)
         }
-        fetchAccounts()
-    }, [groupName, showOnlyAgents])
-
-    // Handle search and pagination
-    useEffect(() => {
-        const filtered = allAccounts.filter(account => 
-            account.full_account_name.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-        setDisplayedAccounts(filtered.slice(0, page * ITEMS_PER_PAGE))
-    }, [allAccounts, searchQuery, page])
-
-    const loadMore = () => {
-        setPage(prev => prev + 1)
     }
 
-    const hasMore = displayedAccounts.length < 
-        allAccounts.filter(account => 
-            account.full_account_name.toLowerCase().includes(searchQuery.toLowerCase())
-        ).length
+    // Initial fetch
+    useEffect(() => {
+        fetchAccounts()
+    }, [])
+
+    // Handle filtering and display
+    useEffect(() => {
+        let filtered = allAccounts
+
+        // Filter by group if specified
+        if (groupName) {
+            filtered = filtered.filter(account => account.og_name === `.${groupName}`)
+        }
+
+        // Filter for agents
+        if (showOnlyAgents) {
+            filtered = filtered.filter(account => account.is_agent)
+        }
+
+        // Filter by search
+        if (searchQuery) {
+            filtered = filtered.filter(account => 
+                account.full_account_name.toLowerCase().includes(searchQuery.toLowerCase())
+            )
+        }
+
+        // Sort
+        filtered.sort((a, b) => {
+            if (a.is_agent !== b.is_agent) return a.is_agent ? -1 : 1
+            return a.full_account_name.localeCompare(b.full_account_name)
+        })
+
+        setDisplayedAccounts(filtered)
+    }, [allAccounts, groupName, showOnlyAgents, searchQuery])
+
+    const loadMore = () => {
+        setDisplayLimit(prev => prev + ITEMS_PER_PAGE)
+    }
 
     const getAccountUrl = (accountName: string) => {
         const basePath = site === 'onchain-agents' ? '/site-onchain-agents' : ''
@@ -97,9 +98,9 @@ export default function AccountsGrid({
 
     return (
         <InfiniteScroll
-            dataLength={displayedAccounts.length}
+            dataLength={Math.min(displayLimit, displayedAccounts.length)}
             next={loadMore}
-            hasMore={hasMore}
+            hasMore={displayLimit < displayedAccounts.length}
             loader={
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-6">
                     {[...Array(4)].map((_, index) => (
@@ -114,7 +115,7 @@ export default function AccountsGrid({
             }
         >
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                {displayedAccounts.map((account) => (
+                {displayedAccounts.slice(0, displayLimit).map((account) => (
                     <Link
                         key={account.full_account_name}
                         href={getAccountUrl(account.full_account_name)}

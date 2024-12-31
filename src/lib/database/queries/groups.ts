@@ -1,16 +1,16 @@
-import { db } from '../';
+import { sql } from '@vercel/postgres';
 
 // All group operations in one place
 export const groups = {
     // Get all groups
     getAll: async () => {
-        const result = await db`SELECT * FROM situs_ogs ORDER BY og_name`;
+        const result = await sql`SELECT * FROM situs_ogs ORDER BY og_name`;
         return result.rows;
     },
     
     // Get single group
     getByName: async (ogName: string) => {
-        const result = await db`
+        const result = await sql`
             SELECT * FROM situs_ogs 
             WHERE og_name = ${ogName} 
             LIMIT 1`;
@@ -27,7 +27,7 @@ export const groups = {
         website?: string,
         chat?: string
     }) => {
-        const result = await db`
+        const result = await sql`
             INSERT INTO situs_ogs (
                 og_name, 
                 name_front, 
