@@ -54,8 +54,7 @@ export default function RootLayout({
               <ToastContainer 
                 theme="dark"
                 position="top-right"
-                toastClassName={`!bg-gray-900 !text-gray-100 ${spaceMono.variable}`}
-                className={`${spaceMono.variable} !font-mono`}
+                toastClassName="!bg-gray-900 !text-gray-100"
                 progressClassName="!bg-blue-500"
                 closeButton={false}
               />

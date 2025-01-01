@@ -10,13 +10,14 @@ export default function Header() {
   const site = useSite()
   
   const isOnchainAgentsRoute = site === 'onchain-agents'
+  const isDev = process.env.NODE_ENV === 'development'
   
   const headerText = isOnchainAgentsRoute
     ? 'onchain agents'
     : 'ensurance agents'
 
   const homeUrl = isOnchainAgentsRoute
-    ? '/site-onchain-agents'
+    ? (isDev ? '/site-onchain-agents' : '/')
     : '/'
 
   return (
