@@ -104,22 +104,7 @@ export default function AssetCard({
             </div>
 
             <div className="px-4 py-2 flex justify-between items-center border-b border-gray-800">
-              {isEnsurable ? (
-                <Button
-                  className="hover:bg-transparent p-0 bg-transparent text-sm"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setSelectedOperation('ensure');
-                    setIsEnsureModalOpen(true);
-                  }}
-                >
-                  <PlusCircle className="h-6 w-6 text-gray-300 hover:text-white" />
-                </Button>
-              ) : (
-                <div className="w-6" />
-              )}
-
+              <div className="w-6" />
               {showEnsureMenu && (
                 <DropdownMenu>
                   <DropdownMenuTrigger 

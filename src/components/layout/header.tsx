@@ -4,6 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSite } from '@/contexts/site-context'
+import { HeaderSearch } from './HeaderSearch'
 
 export default function Header() {
   const pathname = usePathname()
@@ -21,7 +22,7 @@ export default function Header() {
     : '/'
 
   return (
-    <header className="w-full border-b border-gray-800">
+    <header className="w-full border-b border-gray-800 relative z-10">
       <div className="container mx-auto px-4 py-4">
         <nav className="flex items-center justify-between">
           <Link 
@@ -39,7 +40,7 @@ export default function Header() {
             {headerText}
           </Link>
           <div className="flex items-center gap-4">
-            {/* Add navigation items or buttons here later */}
+            <HeaderSearch />
           </div>
         </nav>
       </div>

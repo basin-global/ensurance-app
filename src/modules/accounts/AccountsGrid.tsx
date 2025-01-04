@@ -7,6 +7,7 @@ import AccountImage from './AccountImage'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import Image from 'next/image'
 
 interface Account {
     full_account_name: string;
@@ -114,28 +115,72 @@ export default function AccountsGrid({
                 </div>
             }
         >
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                {displayedAccounts.slice(0, displayLimit).map((account) => (
-                    <Link
-                        key={account.full_account_name}
-                        href={getAccountUrl(account.full_account_name)}
-                        className="bg-primary dark:bg-primary-dark hover:bg-primary-dark dark:hover:bg-primary 
-                                 text-primary-foreground dark:text-primary-dark-foreground font-bold py-4 px-6 
-                                 rounded-lg transition duration-300 ease-in-out transform 
-                                 hover:-translate-y-1 hover:scale-105 flex items-center"
-                    >
+            {loading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                    {[...Array(4)].map((_, index) => (
+                        <Card key={`skeleton-${index}`} className="bg-primary-dark border-gray-800">
+                            <CardContent className="p-4 flex items-center">
+                                <Skeleton className="w-16 h-16 mr-4 bg-gray-800" />
+                                <Skeleton className="h-4 w-3/4 bg-gray-800" />
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            ) : displayedAccounts.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                    {displayedAccounts.slice(0, displayLimit).map((account) => (
+                        <Link
+                            key={account.full_account_name}
+                            href={getAccountUrl(account.full_account_name)}
+                            className="bg-primary dark:bg-primary-dark hover:bg-primary-dark dark:hover:bg-primary 
+                                     text-primary-foreground dark:text-primary-dark-foreground font-bold py-4 px-6 
+                                     rounded-lg transition duration-300 ease-in-out transform 
+                                     hover:-translate-y-1 hover:scale-105 flex items-center"
+                        >
+                            <div className="w-20 h-20 flex-shrink-0 mr-6">
+                                <AccountImage
+                                    tokenId={account.token_id}
+                                    groupName={account.og_name.replace('.', '')}
+                                />
+                            </div>
+                            <span className="text-xl font-mono break-all">
+                                {account.full_account_name}
+                            </span>
+                        </Link>
+                    ))}
+                </div>
+            ) : (
+                <div className="flex items-center justify-center py-12">
+                    {groupName && (
                         <div className="w-20 h-20 flex-shrink-0 mr-6">
-                            <AccountImage
-                                tokenId={account.token_id}
-                                groupName={account.og_name.replace('.', '')}
+                            <Image
+                                src={`/groups/orbs/${groupName}-orb.png`}
+                                alt={`${groupName} orb`}
+                                width={80}
+                                height={80}
+                                className="rounded-full"
                             />
                         </div>
-                        <span className="text-xl font-mono break-all">
-                            {account.full_account_name}
-                        </span>
-                    </Link>
-                ))}
-            </div>
+                    )}
+                    <div>
+                        <p className="text-xl font-mono text-gray-400 mb-4">
+                            No {groupName ? `.${groupName}` : ''} accounts have been agentified yet...
+                        </p>
+                        <p className="text-gray-500 font-mono">
+                            Any account can become an agent with a few clicks.{' '}
+                            <a 
+                                href="https://x.com/onchain_agents" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-blue-400 hover:text-blue-300 transition-colors"
+                            >
+                                Contact us
+                            </a>
+                            {' '}to make it happen.
+                        </p>
+                    </div>
+                </div>
+            )}
         </InfiniteScroll>
     )
 } 

@@ -124,10 +124,12 @@ const ImageSwarm: React.FC<ImageSwarmProps> = ({ images }) => {
   }, [images])
 
   return (
-    <div className="fixed inset-0 overflow-hidden">
-      {swarmItems.map((item) => (
-        <SwarmImage key={item.id} item={item} onClick={() => setSelectedItem(item)} />
-      ))}
+    <>
+      <div className="w-full h-full">
+        {swarmItems.map((item) => (
+          <SwarmImage key={item.id} item={item} onClick={() => setSelectedItem(item)} />
+        ))}
+      </div>
       <Dialog open={!!selectedItem} onOpenChange={() => setSelectedItem(null)}>
         <DialogContent className="bg-black/90">
           <div className="flex flex-col items-center gap-6">
@@ -154,7 +156,7 @@ const ImageSwarm: React.FC<ImageSwarmProps> = ({ images }) => {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   )
 }
 

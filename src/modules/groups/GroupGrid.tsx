@@ -13,7 +13,11 @@ interface Group {
     contract_address: string;
 }
 
-export default function GroupGrid() {
+interface GroupGridProps {
+    searchQuery: string;
+}
+
+export default function GroupGrid({ searchQuery }: GroupGridProps) {
     const site = useSite()
     const [groups, setGroups] = useState<Group[]>([])
     const [loading, setLoading] = useState(true)
@@ -38,15 +42,21 @@ export default function GroupGrid() {
 
     const getGroupUrl = (groupName: string) => {
         const basePath = site === 'onchain-agents' ? '/site-onchain-agents' : ''
-        return `${basePath}/groups/${groupName.replace(/^\./, '')}`
+        return `${basePath}/groups/${groupName.replace(/^\./, '')}/all`
     }
+
+    const filteredGroups = groups.filter(group => 
+        group.og_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (group.name_front?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (group.tagline?.toLowerCase().includes(searchQuery.toLowerCase()))
+    )
 
     if (loading) return <div>Loading...</div>
     if (error) return <div className="text-red-500">{error}</div>
 
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-            {groups.map((group) => (
+            {filteredGroups.map((group) => (
                 <Link
                     key={group.contract_address}
                     href={getGroupUrl(group.og_name)}

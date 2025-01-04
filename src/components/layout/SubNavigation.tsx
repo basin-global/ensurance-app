@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { useSite } from '@/contexts/site-context'
 
 interface SubNavigationProps {
   type: 'accounts' | 'og' | 'assets' | 'ensurance';
@@ -11,21 +12,23 @@ interface SubNavigationProps {
 
 export function SubNavigation({ type, groupName }: SubNavigationProps) {
   const pathname = usePathname()
-   
+  const site = useSite()
+  const basePath = site === 'onchain-agents' ? '/site-onchain-agents' : ''
+  
   const links = groupName 
     ? [
-        { href: `/groups/${groupName}/all`, label: 'all' },
-        { href: `/groups/${groupName}/create`, label: 'create' },
-        { href: `/groups/${groupName}/mine`, label: 'mine' }
+        { href: `${basePath}/groups/${groupName}/all`, label: 'all' },
+        { href: `${basePath}/groups/${groupName}/create`, label: 'create' },
+        { href: `${basePath}/groups/${groupName}/mine`, label: 'mine' }
       ]
     : [
-        { href: '/all', label: 'all' },
-        { href: '/create', label: 'create' },
-        { href: '/mine', label: 'mine' }
+        { href: `${basePath}/all`, label: 'all' },
+        { href: `${basePath}/create`, label: 'create' },
+        { href: `${basePath}/mine`, label: 'mine' }
     ]
 
   return (
-    <nav className="mb-8">
+    <nav className="mb-4">
       <div className="container mx-auto px-4 flex justify-center">
         <ul className="flex space-x-8">
           {links.map(({ href, label }) => {

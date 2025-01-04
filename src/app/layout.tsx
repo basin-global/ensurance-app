@@ -3,6 +3,8 @@ import './globals.css'
 import { PrivyProviderWrapper } from '@/providers/privy-provider'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
+import { DeclarativeSection } from '@/components/layout/DeclarativeSection'
+import { DeclarativeHero } from '@/components/layout/DeclarativeHero'
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify'
 import { SiteProvider } from '@/contexts/site-context'
@@ -65,6 +67,7 @@ export default function RootLayout({
             </PrivyProviderWrapper>
           </SiteWrapper>
         </SiteProvider>
+        <div id="modal-root" />
       </body>
     </html>
   )

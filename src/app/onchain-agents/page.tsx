@@ -40,7 +40,7 @@ export default async function OnchainAgents() {
   const agentImages = await getAgents()
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
+    <main className="flex min-h-screen flex-col items-center justify-between p-24 relative">
       <div className="z-10 relative text-center">
         <h1 className="text-4xl font-bold mb-4">onchain .ai agents</h1>
         <Link 
@@ -51,7 +51,11 @@ export default async function OnchainAgents() {
           get early access
         </Link>
       </div>
-      <ImageSwarm images={agentImages} />
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute inset-0 pointer-events-auto">
+          <ImageSwarm images={agentImages} />
+        </div>
+      </div>
     </main>
   )
 }
