@@ -22,13 +22,13 @@ export async function generateMetadata(): Promise<Metadata> {
   if (isOnchainAgents) {
     return {
       title: 'onchain .ai agents',
-      description: 'Onchain Agents for Everyone',
+      description: 'Onchain Agents for Everyone'
     }
   }
 
   return {
     title: 'ensurance agents',
-    description: 'Ensuring Nature & the Benefits It Provides',
+    description: 'Ensuring Nature & the Benefits It Provides'
   }
 }
 
