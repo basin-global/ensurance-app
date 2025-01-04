@@ -19,9 +19,14 @@ export function middleware(request: NextRequest) {
   }
 
   // For development testing
-  if (isDev && pathname.startsWith('/site-onchain-agents')) {
+  if (isDev && (pathname.startsWith('/site-onchain-agents') || 
+      (pathname === '/favicon.ico' && request.headers.get('referer')?.includes('/site-onchain-agents')))) {
     // Handle root path for onchain-agents site
-    const newPath = pathname === '/site-onchain-agents' ? '/onchain-agents' : pathname.replace('/site-onchain-agents', '')
+    const newPath = pathname === '/site-onchain-agents' 
+      ? '/onchain-agents' 
+      : pathname === '/favicon.ico'
+        ? '/onchain-agents/favicon.ico'
+        : pathname.replace('/site-onchain-agents', '')
     return NextResponse.rewrite(new URL(newPath, request.url), {
       request: { headers: requestHeaders }
     })
@@ -30,7 +35,11 @@ export function middleware(request: NextRequest) {
   // Production domain mapping for onchain-agents.ai
   if (hostname?.includes('onchain-agents.ai')) {
     // Handle root path specifically
-    const newPathname = pathname === '/' ? '/onchain-agents' : pathname
+    const newPathname = pathname === '/' 
+      ? '/onchain-agents' 
+      : pathname === '/favicon.ico'
+        ? '/onchain-agents/favicon.ico'
+        : pathname
     return NextResponse.rewrite(new URL(newPathname, request.url), {
       request: { headers: requestHeaders }
     })
@@ -46,6 +55,6 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image).*)',
   ],
 } 
