@@ -18,6 +18,7 @@ interface EnsurancePoolGridProps {
     groupName?: string;
     searchQuery?: string;
     activeCategory: 'all' | 'Ecosystems' | 'Core Benefits';
+    urlPrefix?: string;
 }
 
 type Category = 'all' | 'Ecosystems' | 'Core Benefits'
@@ -30,9 +31,17 @@ interface PoolMapping {
 export default function EnsurancePoolGrid({ 
   groupName, 
   searchQuery = '', 
-  activeCategory 
+  activeCategory,
+  urlPrefix = ''
 }: EnsurancePoolGridProps) {
     const site = useSite()
+    const isDev = process.env.NODE_ENV === 'development'
+    
+    const getPathPrefix = () => {
+        if (site !== 'onchain-agents') return '';
+        return isDev ? '/site-onchain-agents' : '';
+    };
+
     const [accounts, setAccounts] = useState<Account[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -95,7 +104,7 @@ export default function EnsurancePoolGrid({
                 .map((account) => (
                     <Link
                         key={account.token_id}
-                        href={`/${account.full_account_name}`}
+                        href={`${urlPrefix}/${account.full_account_name}`}
                         className="bg-background-light dark:bg-background-dark rounded-lg overflow-hidden hover:shadow-lg transition-all duration-300"
                     >
                         <div className="aspect-video relative">
@@ -106,9 +115,12 @@ export default function EnsurancePoolGrid({
                             />
                         </div>
                         <div className="p-4">
-                            <h3 className="text-lg font-semibold mb-2">
+                            <h3 className="text-lg font-semibold mb-1">
                                 {getDisplayName(account.full_account_name)}
                             </h3>
+                            <p className="text-sm font-mono text-gray-500">
+                                {account.full_account_name}
+                            </p>
                         </div>
                     </Link>
                 ))}

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import EnsurancePoolGrid from '@/modules/ensurance/components/EnsurancePoolGrid'
 import { AssetSearch } from '@/modules/assets/AssetSearch'
 import { cn } from '@/lib/utils'
+import { useSite } from '@/contexts/site-context'
 
 // Define the category type with the actual values we want to use for filtering
 type Category = 'all' | 'Ecosystems' | 'Core Benefits'
@@ -11,6 +12,10 @@ type Category = 'all' | 'Ecosystems' | 'Core Benefits'
 export default function PoolsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState<Category>('all')
+  const site = useSite()
+  const isDev = process.env.NODE_ENV === 'development'
+  
+  const urlPrefix = site === 'onchain-agents' ? (isDev ? '/site-onchain-agents' : '') : ''
   
   // Define categories with their display names
   const categoryConfig: { value: Category; display: string }[] = [
@@ -60,6 +65,7 @@ export default function PoolsPage() {
           groupName="ensurance" 
           searchQuery={searchQuery}
           activeCategory={activeCategory}
+          urlPrefix={urlPrefix}
         />
       </div>
     </div>

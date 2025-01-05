@@ -2,6 +2,23 @@ import { sql } from '@vercel/postgres';
 
 // All group operations in one place
 export const groups = {
+    // Get minimal data for search results
+    getSearchResults: async () => {
+        try {
+            const result = await sql`
+                SELECT 
+                    og_name,
+                    name_front
+                FROM situs_ogs 
+                ORDER BY og_name
+            `;
+            return result.rows;
+        } catch (error) {
+            console.error('Database query error:', error);
+            throw error;
+        }
+    },
+    
     // Get all groups
     getAll: async () => {
         const result = await sql`SELECT * FROM situs_ogs ORDER BY og_name`;

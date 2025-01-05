@@ -11,7 +11,7 @@ export function DeclarativeSection() {
                 currency $ENSURE drives investment into the $1T biodiversity gap. 
               </p>
               <p className="text-2xl font-bold mt-14 tracking-wide">
-                the result: reduced risk, increased resilience, & greater wellbeing.
+                ⚡ reduced risk · increased resilience · greater wellbeing ⚡
               </p>
             </div>
           </div>

@@ -1,23 +1,31 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Search } from 'lucide-react'
 import { AssetSearch } from '@/modules/assets/AssetSearch'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { useDebounce } from '@/hooks/useDebounce'
 import { createPortal } from 'react-dom'
+import { poolNameMappings } from '@/modules/ensurance/poolMappings'
+import { useSite } from '@/contexts/site-context'
 
 interface SearchResult {
   name: string
   path: string
+  type: string
+  chain?: string
+  is_agent?: boolean
+  is_pool?: boolean
 }
 
 export function HeaderSearch() {
+  const site = useSite()
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const debouncedSearch = useDebounce(searchQuery, 300)
+  const debouncedSearch = useDebounce(searchQuery, 200)
   const [selectedIndex, setSelectedIndex] = useState(-1)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -73,21 +81,57 @@ export function HeaderSearch() {
         return
       }
 
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+
+      abortControllerRef.current = new AbortController()
+
       setIsLoading(true)
       try {
-        const response = await fetch(`/api/search?q=${encodeURIComponent(debouncedSearch)}`)
+        const response = await fetch(
+          `/api/search?q=${encodeURIComponent(debouncedSearch)}`,
+          { signal: abortControllerRef.current.signal }
+        )
         const data = await response.json()
-        setResults(data.results || [])
+        
+        if (abortControllerRef.current) {
+          setResults(data.results || [])
+        }
       } catch (error) {
-        console.error('Search failed:', error)
-        setResults([])
+        if (error.name !== 'AbortError') {
+          console.error('Search failed:', error)
+          setResults([])
+        }
       } finally {
         setIsLoading(false)
       }
     }
 
     performSearch()
+
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+        abortControllerRef.current = null
+      }
+    }
   }, [debouncedSearch])
+
+  const sortedResults = React.useMemo(() => {
+    return results.sort((a, b) => {
+      const typeOrder = {
+        group: 1,
+        account: a.is_pool ? 2 : (a.is_agent ? 3 : 4),
+        certificate: 5
+      }
+      return (typeOrder[a.type] || 99) - (typeOrder[b.type] || 99)
+    })
+  }, [results])
+
+  const searchPlaceholder = site === 'onchain-agents' 
+    ? "Search agents or groups..." 
+    : "Search accounts, groups, or certificates..."
 
   const modalContent = isOpen && (
     <>
@@ -105,7 +149,7 @@ export function HeaderSearch() {
             <AssetSearch
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
-              placeholder="Search accounts or groups..."
+              placeholder={searchPlaceholder}
               autoFocus={isOpen}
             />
           </div>
@@ -115,8 +159,8 @@ export function HeaderSearch() {
               <div className="text-center py-4 text-[rgba(var(--foreground-rgb),0.5)] text-lg">
                 Searching...
               </div>
-            ) : results.length > 0 ? (
-              results.map((result, i) => (
+            ) : sortedResults.length > 0 ? (
+              sortedResults.map((result, i) => (
                 <Link
                   key={i}
                   href={result.path}
@@ -131,11 +175,35 @@ export function HeaderSearch() {
                   )}
                 >
                   <span>{result.name}</span>
-                  {result.path.startsWith('/groups/') && (
-                    <span className="text-xs px-2 py-1 rounded bg-[rgba(var(--foreground-rgb),0.1)] text-[rgba(var(--foreground-rgb),0.7)]">
-                      GROUP
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {result.type === 'group' && (
+                      <span className="text-xs px-2 py-1 rounded bg-[rgba(var(--foreground-rgb),0.1)] text-[rgba(var(--foreground-rgb),0.7)]">
+                        GROUP
+                      </span>
+                    )}
+                    {result.type === 'account' && (
+                      <>
+                        {result.is_pool ? (
+                          <span className="text-xs px-2 py-1 rounded bg-emerald-500/20 text-emerald-400">
+                            POOL
+                          </span>
+                        ) : result.is_agent ? (
+                          <span className="text-xs px-2 py-1 rounded bg-purple-500/20 text-purple-400">
+                            AGENT
+                          </span>
+                        ) : (
+                          <span className="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-400">
+                            ACCOUNT
+                          </span>
+                        )}
+                      </>
+                    )}
+                    {result.type === 'certificate' && (
+                      <span className="text-xs px-2 py-1 rounded bg-gradient-to-r from-amber-300/20 to-amber-600/20 text-amber-500">
+                        CERTIFICATE
+                      </span>
+                    )}
+                  </div>
                 </Link>
               ))
             ) : debouncedSearch && (
