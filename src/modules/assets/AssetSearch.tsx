@@ -5,12 +5,14 @@ interface AssetSearchProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   placeholder?: string;
+  autoFocus?: boolean;
 }
 
 export function AssetSearch({ 
   searchQuery, 
   setSearchQuery, 
-  placeholder = "Search assets..."
+  placeholder = "Search assets...",
+  autoFocus
 }: AssetSearchProps) {
   return (
     <div className="w-full max-w-md">
@@ -19,6 +21,7 @@ export function AssetSearch({
         placeholder={placeholder}
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
+        autoFocus={autoFocus}
         className={cn(
           "w-full px-4 py-2 rounded-lg",
           "bg-[rgb(var(--background-rgb))]",

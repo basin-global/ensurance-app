@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Search } from 'lucide-react'
 import { AssetSearch } from '@/modules/assets/AssetSearch'
 import { cn } from '@/lib/utils'
@@ -17,6 +17,54 @@ export function HeaderSearch() {
   const [results, setResults] = useState<SearchResult[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const debouncedSearch = useDebounce(searchQuery, 300)
+  const [selectedIndex, setSelectedIndex] = useState(-1)
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+        event.preventDefault()
+        setIsOpen(true)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (!isOpen) return
+
+      switch (event.key) {
+        case 'ArrowDown':
+          event.preventDefault()
+          setSelectedIndex(prev => 
+            prev < results.length - 1 ? prev + 1 : prev
+          )
+          break
+        case 'ArrowUp':
+          event.preventDefault()
+          setSelectedIndex(prev => 
+            prev > 0 ? prev - 1 : prev
+          )
+          break
+        case 'Enter':
+          event.preventDefault()
+          if (selectedIndex >= 0 && results[selectedIndex]) {
+            window.location.href = results[selectedIndex].path
+            setIsOpen(false)
+          }
+          break
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, results, selectedIndex])
+
+  useEffect(() => {
+    setSelectedIndex(-1)
+  }, [searchQuery])
 
   React.useEffect(() => {
     async function performSearch() {
@@ -58,6 +106,7 @@ export function HeaderSearch() {
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
               placeholder="Search accounts or groups..."
+              autoFocus={isOpen}
             />
           </div>
           
@@ -77,7 +126,8 @@ export function HeaderSearch() {
                     "text-[rgb(var(--foreground-rgb))] rounded-lg",
                     "transition-colors duration-200",
                     "flex items-center justify-between",
-                    "text-lg font-grotesk"
+                    "text-lg font-grotesk",
+                    i === selectedIndex && "bg-[rgba(var(--foreground-rgb),0.1)]"
                   )}
                 >
                   <span>{result.name}</span>
