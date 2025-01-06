@@ -8,6 +8,19 @@ const ACTIVE_CHAINS = getActiveChains().map(chain => chain.simplehashName).join(
 console.log('Active chains:', ACTIVE_CHAINS);
 console.log('SimpleHash library loaded');
 
+// Helper function to get the correct API path prefix
+function getApiPathPrefix() {
+  if (typeof window === 'undefined') return '/api'; // Server-side
+  
+  // Client-side
+  const isDev = process.env.NODE_ENV === 'development';
+  const hostname = window.location.hostname;
+  const isOnchainAgents = hostname.includes('onchain-agents.ai') || 
+    (isDev && window.location.pathname.startsWith('/site-onchain-agents'));
+  
+  return isOnchainAgents && isDev ? '/site-onchain-agents/api' : '/api';
+}
+
 export const simpleHashApi = axios.create({
   baseURL: 'https://api.simplehash.com/api/v0',
   headers: {
@@ -191,8 +204,9 @@ export async function fetchAllBalances(address: string) {
 
 export async function fetchNFTsByContract(chain: string, contractAddress: string) {
   try {
+    const apiPrefix = getApiPathPrefix();
     // Use our API route instead of direct SimpleHash call
-    const response = await fetch(`/api/simplehash/nft?chain=${chain}&contractAddress=${contractAddress}`);
+    const response = await fetch(`${apiPrefix}/simplehash/nft?chain=${chain}&contractAddress=${contractAddress}`);
     
     if (!response.ok) {
       throw new Error('Failed to fetch NFTs from API');
@@ -230,24 +244,13 @@ export async function fetchNFTsByContract(chain: string, contractAddress: string
 export async function fetchENSName(address: string): Promise<string | null> {
   console.log('fetchENSName function called');
   try {
-    console.log('Making SimpleHash API call for address:', address);
-    const response = await simpleHashApi.get(`/ens/reverse_lookup?wallet_addresses=${address}`);
-    console.log('SimpleHash API response:', response.data);
-    
-    // The response format is an array with { address, ens } objects
-    if (Array.isArray(response.data) && response.data.length > 0) {
-      const ensName = response.data[0].ens;
-      console.log('fetchENSName - Found ENS name:', ensName);
-      return ensName || null;
-    }
-    
-    console.log('fetchENSName - No ENS name found in response');
-    return null;
+    const apiPrefix = getApiPathPrefix();
+    const response = await fetch(`${apiPrefix}/simplehash/ens?address=${address}`);
+    if (!response.ok) throw new Error('Failed to fetch ENS name');
+    const data = await response.json();
+    return data.name || null;
   } catch (error) {
     console.error('fetchENSName - Error:', error);
-    if (axios.isAxiosError(error)) {
-      console.error('fetchENSName - Response:', error.response?.data);
-    }
     return null;
   }
 }
@@ -255,13 +258,11 @@ export async function fetchENSName(address: string): Promise<string | null> {
 export async function fetchNFTAssets(nftIds: string) {
   try {
     console.log('Fetching NFT assets for IDs:', nftIds);
-    const response = await simpleHashApi.get('/nfts/assets', {
-      params: {
-        nft_ids: nftIds
-      }
-    });
-    console.log('SimpleHash NFT Assets Raw Response:', JSON.stringify(response.data, null, 2));
-    return response.data;
+    const apiPrefix = getApiPathPrefix();
+    const response = await fetch(`${apiPrefix}/simplehash/nft/assets?nft_ids=${nftIds}`);
+    if (!response.ok) throw new Error('Failed to fetch NFT assets');
+    const data = await response.json();
+    return data;
   } catch (error) {
     console.error('Error fetching NFT assets:', error);
     throw error;
@@ -269,24 +270,16 @@ export async function fetchNFTAssets(nftIds: string) {
 }
 
 export async function fetchENSAddress(ensName: string): Promise<string | null> {
-  const apiKey = process.env.SIMPLEHASH_API_KEY
-  if (!apiKey) throw new Error('SIMPLEHASH_API_KEY is not set')
-
-  const response = await fetch(
-    `https://api.simplehash.com/api/v0/ens/lookup?ens_names=${ensName}`,
-    {
-      headers: {
-        'X-API-KEY': apiKey,
-      },
-    }
-  )
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ENS address: ${response.statusText}`)
+  try {
+    const apiPrefix = getApiPathPrefix();
+    const response = await fetch(`${apiPrefix}/simplehash/ens?name=${ensName}`);
+    if (!response.ok) throw new Error('Failed to fetch ENS address');
+    const data = await response.json();
+    return data.address || null;
+  } catch (error) {
+    console.error('Error fetching ENS address:', error);
+    return null;
   }
-
-  const data = await response.json()
-  return data.ens_domains?.[0]?.owner_address || null
 }
 
 // Add this new version that uses our API routes

@@ -1,8 +1,14 @@
 import { simpleHashApi } from '@/lib/simplehash';
 import { NextResponse } from 'next/server';
 import { isSpamContract } from '@/config/spamContracts';
+import { headers } from 'next/headers';
+import { getSiteContext } from '@/lib/config/routes';
 
 export async function GET(request: Request) {
+  const headersList = headers();
+  const host = headersList.get('host') || '';
+  const siteContext = getSiteContext(host, '');
+  
   const { searchParams } = new URL(request.url);
   const address = searchParams.get('address');
   const chain = searchParams.get('chain');
@@ -11,6 +17,7 @@ export async function GET(request: Request) {
   const fetchAll = searchParams.get('fetchAll') === 'true';
 
   console.log('NFT route params:', {
+    siteContext,
     address,
     chain,
     contractAddress,

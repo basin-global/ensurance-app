@@ -13,7 +13,11 @@ interface SubNavigationProps {
 export function SubNavigation({ type, groupName }: SubNavigationProps) {
   const pathname = usePathname()
   const site = useSite()
-  const basePath = site === 'onchain-agents' ? '/site-onchain-agents' : ''
+  const isDev = process.env.NODE_ENV === 'development'
+  
+  // In development, we need the /site-onchain-agents prefix
+  // In production, onchain-agents.ai serves directly from root
+  const basePath = site === 'onchain-agents' && isDev ? '/site-onchain-agents' : ''
   
   const links = groupName 
     ? [

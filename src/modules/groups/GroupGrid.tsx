@@ -19,6 +19,7 @@ interface GroupGridProps {
 
 export default function GroupGrid({ searchQuery }: GroupGridProps) {
     const site = useSite()
+    const isDev = process.env.NODE_ENV === 'development'
     const [groups, setGroups] = useState<Group[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -41,7 +42,7 @@ export default function GroupGrid({ searchQuery }: GroupGridProps) {
     }, [])
 
     const getGroupUrl = (groupName: string) => {
-        const basePath = site === 'onchain-agents' ? '/site-onchain-agents' : ''
+        const basePath = site === 'onchain-agents' && isDev ? '/site-onchain-agents' : ''
         return `${basePath}/groups/${groupName.replace(/^\./, '')}/all`
     }
 
