@@ -134,7 +134,8 @@ export default function AssetDetailPage({ params }: { params: { chain: string; c
 
       if (isEnsurance) {
         try {
-          const response = await fetch(`${apiPrefix}/ensurance?chain=${params.chain}&tokenId=${params.tokenId}`);
+          // For certificates, always use /api since it's our database
+          const response = await fetch(`/api/ensurance?chain=${params.chain}&tokenId=${params.tokenId}`);
           if (response.ok) {
             const data = await response.json();
             console.log('Ensurance data:', data);
@@ -147,7 +148,7 @@ export default function AssetDetailPage({ params }: { params: { chain: string; c
     };
 
     fetchEnsuranceData();
-  }, [isEnsurance, params.chain, params.tokenId, apiPrefix]);
+  }, [isEnsurance, params.chain, params.tokenId]);
 
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
