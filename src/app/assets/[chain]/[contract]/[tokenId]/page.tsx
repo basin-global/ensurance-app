@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { isEnsuranceToken } from '@/modules/ensurance/config'
 import { Asset, EnsureOperation } from '@/types';
 import { SplitsBar } from '@/modules/splits/components/SplitsBar';
+import { useSite } from '@/contexts/site-context';
 
 // Add type for ensurance data
 type EnsuranceData = {
@@ -36,6 +37,10 @@ const DESCRIPTION_CHAR_LIMIT = 300;
 
 export default function AssetDetailPage({ params }: { params: { chain: string; contract: string; tokenId: string } }) {
   const router = useRouter();
+  const site = useSite();
+  const isDev = process.env.NODE_ENV === 'development';
+  const apiPrefix = site === 'onchain-agents' && isDev ? '/site-onchain-agents/api' : '/api';
+  
   const [assetDetails, setAssetDetails] = useState<Asset | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,62 +62,30 @@ export default function AssetDetailPage({ params }: { params: { chain: string; c
     return user.wallet.address.toLowerCase() === assetDetails.owners[0].owner_address.toLowerCase();
   }, [user?.wallet?.address, assetDetails?.owners]);
 
-  const fetchAssetDetails = useMemo(() => async () => {
+  const fetchAssetDetails = useCallback(async () => {
     setLoading(true);
     try {
-      // If we're on the certificates route, use our DB
-      if (window.location.pathname.includes('/certificates/')) {
-        console.log('Fetching ensurance data for:', { chain: params.chain, tokenId: params.tokenId });
-        const response = await fetch(`/api/ensurance?chain=${params.chain}&tokenId=${params.tokenId}`);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        console.log('Ensurance details from DB:', data);
-        if (!data) {
-          throw new Error('No data returned from API');
-        }
-        setAssetDetails({
-          ...data,
-          contract_address: params.contract,
-          token_id: params.tokenId,
-          chain: params.chain,
-          image_url: data.image_url || `https://ipfs.io/ipfs/${data.image_ipfs}`,
-          video_url: data.video_url,
-          audio_url: data.audio_url,
-          name: data.name || `Certificate #${params.tokenId}`,
-          description: data.description || '',
-          owners: [{ owner_address: data.creator_reward_recipient, quantity: '1' }]
-        });
-        setEnsuranceData(data);
-      } else {
-        // For non-ensurance assets, use SimpleHash
-        const response = await fetch(`/api/simplehash/nft?chain=${params.chain}&contractAddress=${params.contract}&tokenId=${params.tokenId}`);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        console.log('Asset details from SimpleHash:', data);
-        setAssetDetails(data);
-      }
-    } catch (error) {
-      console.error('Error fetching asset details:', error);
+      const response = await fetch(`${apiPrefix}/simplehash/nft?chain=${params.chain}&contractAddress=${params.contract}&tokenId=${params.tokenId}`);
+      if (!response.ok) throw new Error('Failed to fetch asset details');
+      const data = await response.json();
+      setAssetDetails(data);
+    } catch (err) {
+      console.error('Error fetching asset:', err);
       setError('Failed to fetch asset details. Please try again later.');
     } finally {
       setLoading(false);
     }
-  }, [params.chain, params.contract, params.tokenId]);
-
-  // Call fetchAssetDetails immediately if we're on the certificates page
-  useEffect(() => {
-    if (window.location.pathname.includes('/certificates/')) {
-      fetchAssetDetails();
-    }
-  }, [fetchAssetDetails]);
+  }, [params.chain, params.contract, params.tokenId, apiPrefix]);
 
   useEffect(() => {
     const checkForRedirect = async () => {
       if (hasRedirected) return;
+      
+      // Skip redirect if we're already on the certificates page
+      if (window.location.pathname.includes('/certificates/')) {
+        fetchAssetDetails();
+        return;
+      }
       
       // First check if this is an ensurance token
       if (isEnsuranceToken(params.chain, params.contract)) {
@@ -124,7 +97,7 @@ export default function AssetDetailPage({ params }: { params: { chain: string; c
       
       // Then check for account redirect
       try {
-        const response = await fetch(`/api/getAccountByToken?contract=${params.contract}&tokenId=${params.tokenId}`);
+        const response = await fetch(`${apiPrefix}/getAccountByToken?contract=${params.contract}&tokenId=${params.tokenId}`);
         
         if (!response.ok) throw new Error('Failed to fetch account');
         const data = await response.json();
@@ -145,7 +118,7 @@ export default function AssetDetailPage({ params }: { params: { chain: string; c
     };
 
     checkForRedirect();
-  }, [params.chain, params.contract, params.tokenId, router, hasRedirected, fetchAssetDetails]);
+  }, [params.chain, params.contract, params.tokenId, router, hasRedirected, fetchAssetDetails, apiPrefix]);
 
   useEffect(() => {
     if (user?.wallet?.address) {
@@ -161,7 +134,7 @@ export default function AssetDetailPage({ params }: { params: { chain: string; c
 
       if (isEnsurance) {
         try {
-          const response = await fetch(`/api/ensurance?chain=${params.chain}&tokenId=${params.tokenId}`);
+          const response = await fetch(`${apiPrefix}/ensurance?chain=${params.chain}&tokenId=${params.tokenId}`);
           if (response.ok) {
             const data = await response.json();
             console.log('Ensurance data:', data);
@@ -174,7 +147,7 @@ export default function AssetDetailPage({ params }: { params: { chain: string; c
     };
 
     fetchEnsuranceData();
-  }, [isEnsurance, params.chain, params.tokenId]);
+  }, [isEnsurance, params.chain, params.tokenId, apiPrefix]);
 
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
