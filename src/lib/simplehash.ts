@@ -1,6 +1,8 @@
 import axios from 'axios';
 import { getActiveChains } from '@/config/chains';
 import { isSpamContract } from '@/config/spamContracts';
+import { getApiPrefix } from '@/lib/config/routes';
+import { useSite } from '@/contexts/site-context';
 
 const SIMPLEHASH_API_KEY = process.env.SIMPLEHASH_API_KEY;
 const ACTIVE_CHAINS = getActiveChains().map(chain => chain.simplehashName).join(',');
@@ -16,8 +18,10 @@ function getApiPathPrefix() {
   const isDev = process.env.NODE_ENV === 'development';
   const hostname = window.location.hostname;
   const isOnchainAgents = hostname.includes('onchain-agents.ai') || 
-    (isDev && window.location.pathname.startsWith('/site-onchain-agents'));
+    (isDev && window.location.pathname.split('/')[1] === 'site-onchain-agents');
   
+  // In production, API calls don't need the /onchain-agents prefix
+  // Only need the prefix in development for onchain-agents
   return isOnchainAgents && isDev ? '/site-onchain-agents/api' : '/api';
 }
 

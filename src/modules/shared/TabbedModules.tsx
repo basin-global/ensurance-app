@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import * as Tooltip from '@radix-ui/react-tooltip'
 import ChainDropdown from './ChainDropdown'
+import { useSite } from '@/contexts/site-context'
 
 // Import modules
 import AssetsModule from '@/modules/assets'

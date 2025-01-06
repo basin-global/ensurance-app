@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useSite } from '@/contexts/site-context'
+import { getBasePath } from '@/lib/config/routes'
 
 interface GroupData {
     og_name: string;
@@ -18,6 +20,8 @@ export function GroupInfo({ groupName }: { groupName: string }) {
     const [groupData, setGroupData] = useState<GroupData | null>(null)
     const [error, setError] = useState<string | null>(null)
     const cleanGroupName = groupName.startsWith('.') ? groupName.slice(1) : groupName
+    const site = useSite()
+    const basePath = getBasePath(site)
 
     useEffect(() => {
         async function fetchGroupData() {
@@ -68,7 +72,7 @@ export function GroupInfo({ groupName }: { groupName: string }) {
     if (!groupData) return null
 
     return (
-        <Link href={`/groups/${cleanGroupName}`} className="block border border-gray-800 rounded-xl overflow-hidden hover:border-gray-700 transition-colors w-3/4 mx-auto mb-16">
+        <Link href={`${basePath}/groups/${cleanGroupName}`} className="block border border-gray-800 rounded-xl overflow-hidden hover:border-gray-700 transition-colors w-3/4 mx-auto mb-16">
             <div className="relative h-24">
                 <Image
                     src={`/groups/banners/${cleanGroupName}-banner.jpg`}

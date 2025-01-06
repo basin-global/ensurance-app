@@ -17,12 +17,21 @@ export const siteConfig = {
 export function getSiteContext(hostname: string, pathname: string): SiteContext {
     const isDev = process.env.NODE_ENV === 'development'
     if (isDev) {
-        return pathname.startsWith('/site-onchain-agents') ? 'onchain-agents' : 'ensurance'
+        // In dev, only check the initial part of the path, ignoring API calls
+        const basePath = pathname.split('/')[1] // Get first path segment
+        return basePath === 'site-onchain-agents' ? 'onchain-agents' : 'ensurance'
     }
     return hostname.includes('onchain-agents.ai') ? 'onchain-agents' : 'ensurance'
 }
 
-// Simple helper to get the URL prefix
+// Get the API prefix for requests
+export function getApiPrefix(site: SiteContext): string {
+    const isDev = process.env.NODE_ENV === 'development'
+    // In production, API calls don't need the prefix
+    return site === 'onchain-agents' && isDev ? '/site-onchain-agents/api' : '/api'
+}
+
+// Simple helper to get the URL prefix for client routes
 export function getBasePath(site: SiteContext): string {
     const isDev = process.env.NODE_ENV === 'development'
     if (site === 'onchain-agents') {
