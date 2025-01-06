@@ -10,8 +10,7 @@ This is a Next.js app that serves two domains with shared code:
 
 ```
 /src
-  /app                     # Main application directory (shared + ensurance.app)
-    /(ensurance)          # Ensurance-specific routes
+  /app                     # Main application directory (ensurance.app primarily uses this but onchain-agents.ai can use all files in /app)
     /onchain-agents       # Onchain Agents specific files
    
   /lib
@@ -20,7 +19,7 @@ This is a Next.js app that serves two domains with shared code:
 ```
 
 3. **URL Management**
-   - Always use URL helpers
+   -  use URL helpers as needed ie getBasePath
    - Never hardcode paths
    - Let routing utilities handle prefixes
 

@@ -17,6 +17,7 @@ import { isEnsuranceToken } from '@/modules/ensurance/config'
 import { Asset, EnsureOperation } from '@/types';
 import { SplitsBar } from '@/modules/splits/components/SplitsBar';
 import { useSite } from '@/contexts/site-context';
+import { getBasePath } from '@/lib/config/routes';
 
 // Add type for ensurance data
 type EnsuranceData = {
@@ -41,6 +42,12 @@ export default function AssetDetailPage({ params }: { params: { chain: string; c
   const isDev = process.env.NODE_ENV === 'development';
   const apiPrefix = site === 'onchain-agents' && isDev ? '/site-onchain-agents/api' : '/api';
   
+  // Add site-aware path helper
+  const getRoutePath = (path: string) => {
+    const basePath = getBasePath(site);
+    return `${basePath}${path}`;
+  };
+
   const [assetDetails, setAssetDetails] = useState<Asset | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,33 +72,55 @@ export default function AssetDetailPage({ params }: { params: { chain: string; c
   const fetchAssetDetails = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${apiPrefix}/simplehash/nft?chain=${params.chain}&contractAddress=${params.contract}&tokenId=${params.tokenId}`);
-      if (!response.ok) throw new Error('Failed to fetch asset details');
-      const data = await response.json();
-      setAssetDetails(data);
+      if (isEnsurance) {
+        // For Ensurance tokens, fetch from our database
+        const response = await fetch(`/api/ensurance?chain=${params.chain}&tokenId=${params.tokenId}`);
+        if (!response.ok) throw new Error('Failed to fetch certificate details');
+        const data = await response.json();
+        
+        // Transform Ensurance data to match Asset type structure
+        const transformedData = {
+          ...data,
+          chain: params.chain,
+          contract_address: params.contract,
+          token_id: params.tokenId,
+          nft_id: `${params.chain}-${params.tokenId}`,
+          collection: { name: 'Ensurance' }
+        };
+        
+        setAssetDetails(transformedData);
+        setEnsuranceData(data);  // Keep the original data for Ensurance-specific features
+      } else {
+        // For non-Ensurance tokens, use SimpleHash
+        const response = await fetch(`${apiPrefix}/simplehash/nft?chain=${params.chain}&contractAddress=${params.contract}&tokenId=${params.tokenId}`);
+        if (!response.ok) throw new Error('Failed to fetch asset details');
+        const data = await response.json();
+        setAssetDetails(data);
+      }
     } catch (err) {
       console.error('Error fetching asset:', err);
       setError('Failed to fetch asset details. Please try again later.');
     } finally {
       setLoading(false);
     }
-  }, [params.chain, params.contract, params.tokenId, apiPrefix]);
+  }, [params.chain, params.contract, params.tokenId, apiPrefix, isEnsurance]);
 
   useEffect(() => {
     const checkForRedirect = async () => {
       if (hasRedirected) return;
       
       // Skip redirect if we're already on the certificates page
-      if (window.location.pathname.includes('/certificates/')) {
+      if (window.location.pathname.includes(getRoutePath('/certificates/'))) {
         fetchAssetDetails();
         return;
       }
       
       // First check if this is an ensurance token
       if (isEnsuranceToken(params.chain, params.contract)) {
-        console.log('Asset: Redirecting to certificates path:', `/certificates/${params.chain}/${params.tokenId}`);
+        const certificatePath = getRoutePath(`/certificates/${params.chain}/${params.tokenId}`);
+        console.log('Asset: Redirecting to certificates path:', certificatePath);
         setHasRedirected(true);
-        router.replace(`/certificates/${params.chain}/${params.tokenId}`);
+        router.replace(certificatePath);
         return;
       }
       
@@ -103,7 +132,7 @@ export default function AssetDetailPage({ params }: { params: { chain: string; c
         const data = await response.json();
         
         if (data?.full_account_name) {
-          const redirectPath = `/${data.full_account_name}`;
+          const redirectPath = getRoutePath(`/${data.full_account_name}`);
           console.log('Asset: Redirecting to account:', redirectPath);
           setHasRedirected(true);
           router.replace(redirectPath);
@@ -118,37 +147,13 @@ export default function AssetDetailPage({ params }: { params: { chain: string; c
     };
 
     checkForRedirect();
-  }, [params.chain, params.contract, params.tokenId, router, hasRedirected, fetchAssetDetails, apiPrefix]);
+  }, [params.chain, params.contract, params.tokenId, router, hasRedirected, fetchAssetDetails, apiPrefix, site]);
 
   useEffect(() => {
     if (user?.wallet?.address) {
       setAddress(user.wallet.address);
     }
   }, [user?.wallet?.address]);
-
-  useEffect(() => {
-    const fetchEnsuranceData = async () => {
-      if (isEnsurance && !window.location.pathname.includes('/certificates/')) {
-        return; // Don't fetch if we haven't redirected yet
-      }
-
-      if (isEnsurance) {
-        try {
-          // For certificates, always use /api since it's our database
-          const response = await fetch(`/api/ensurance?chain=${params.chain}&tokenId=${params.tokenId}`);
-          if (response.ok) {
-            const data = await response.json();
-            console.log('Ensurance data:', data);
-            setEnsuranceData(data);
-          }
-        } catch (error) {
-          console.error('Error fetching ensurance data:', error);
-        }
-      }
-    };
-
-    fetchEnsuranceData();
-  }, [isEnsurance, params.chain, params.tokenId]);
 
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
@@ -361,7 +366,7 @@ export default function AssetDetailPage({ params }: { params: { chain: string; c
 
                     {ensuranceData?.creator_reward_recipient_split && (
                       <a 
-                        href={`/flow/${params.chain}/${ensuranceData.creator_reward_recipient}`}
+                        href={getRoutePath(`/flow/${params.chain}/${ensuranceData.creator_reward_recipient}`)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="w-full p-4 bg-background dark:bg-background-dark rounded-xl hover:bg-gray-900 transition-colors duration-200"
