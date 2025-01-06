@@ -8,7 +8,7 @@ export function DeclarativeHero() {
               ensurance
             </h1>
             <p className="text-2xl font-grotesk">
-              ensuring natural assets & the critical benefits they provide
+              ensuring the stocks & flows of natural capital
             </p>
           </div>
         </div>

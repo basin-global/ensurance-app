@@ -80,13 +80,32 @@ export const accounts = {
                 tba_address,
                 token_id,
                 is_agent,
+                description,
                 '${groupName}' as og_name
             FROM "${tableName}"
             WHERE full_account_name = $1
             LIMIT 1
         `;
         
+        // Add more detailed debug logging
+        console.log('Running query:', query);
+        console.log('For account:', fullAccountName);
         const result = await sql.query(query, [fullAccountName]);
-        return result.rows[0];
+        console.log('Raw Database Result:', result.rows[0]);
+        console.log('Description from DB:', result.rows[0]?.description);
+        const row = result.rows[0];
+        
+        // Log the final return object
+        const returnObj = {
+            full_account_name: row.full_account_name,
+            tba_address: row.tba_address,
+            token_id: row.token_id,
+            is_agent: row.is_agent,
+            description: row.description,
+            og_name: groupName
+        };
+        console.log('Returning object:', returnObj);
+        
+        return returnObj;
     }
 }; 

@@ -38,6 +38,7 @@ export default function EnsurancePoolGrid({
     const isDev = process.env.NODE_ENV === 'development'
     
     const getPathPrefix = () => {
+        if (urlPrefix) return urlPrefix;
         if (site !== 'onchain-agents') return '';
         return isDev ? '/site-onchain-agents' : '';
     };
@@ -104,7 +105,7 @@ export default function EnsurancePoolGrid({
                 .map((account) => (
                     <Link
                         key={account.token_id}
-                        href={`${urlPrefix}/${account.full_account_name}`}
+                        href={`${getPathPrefix()}/${account.full_account_name}`}
                         className="bg-background-light dark:bg-background-dark rounded-lg overflow-hidden hover:shadow-lg transition-all duration-300"
                     >
                         <div className="aspect-video relative">

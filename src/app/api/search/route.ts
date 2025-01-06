@@ -28,17 +28,26 @@ export async function GET(request: NextRequest) {
         
         // Determine if we're in onchain-agents context from the host
         const host = request.headers.get('host') || '';
-        const referer = request.headers.get('referer') || '';
         const isDev = process.env.NODE_ENV === 'development';
         
-        const isOnchainAgents = host.includes('onchain-agents') || 
-            (isDev && referer.includes('site-onchain-agents'));
+        // In production, onchain-agents.ai serves from /onchain-agents
+        // In development, we use /site-onchain-agents
+        const isOnchainAgents = host.includes('onchain-agents.ai') || 
+            (isDev && request.nextUrl.pathname.startsWith('/site-onchain-agents'));
+
+        // Get the base path based on the context
+        const getBasePath = () => {
+            if (!isOnchainAgents) return '';
+            if (isDev) return '/site-onchain-agents';
+            return '/onchain-agents';
+        };
 
         if (!query) {
             return NextResponse.json({ results: [] });
         }
 
         const searchLower = query.toLowerCase();
+        const basePath = getBasePath();
 
         // Fetch all data in parallel
         const [groupsData, accountsData, certificatesData] = await Promise.all([
@@ -58,12 +67,6 @@ export async function GET(request: NextRequest) {
             cache.certificates = { data: certificatesData, timestamp: Date.now() };
         }
 
-        // Helper function to get the correct path prefix for development
-        const getPathPrefix = () => {
-            if (!isOnchainAgents) return '';
-            return isDev ? '/site-onchain-agents' : '';
-        };
-
         // Process results in parallel
         const [matchingGroups, matchingAccounts, matchingCertificates] = await Promise.all([
             groupsData
@@ -73,7 +76,7 @@ export async function GET(request: NextRequest) {
                 )
                 .map(group => ({
                     name: group.name_front || group.og_name,
-                    path: `${getPathPrefix()}/groups/${group.og_name.replace(/^\./, '')}/all`,
+                    path: `${basePath}/groups/${group.og_name.replace(/^\./, '')}/all`,
                     type: 'group'
                 })),
             accountsData
@@ -82,7 +85,7 @@ export async function GET(request: NextRequest) {
                 )
                 .map(account => ({
                     name: account.full_account_name,
-                    path: `${getPathPrefix()}/${account.full_account_name}`,
+                    path: `${basePath}/${account.full_account_name}`,
                     type: 'account',
                     is_agent: account.is_agent,
                     is_pool: account.full_account_name in poolNameMappings
@@ -94,7 +97,7 @@ export async function GET(request: NextRequest) {
                 )
                 .map(cert => ({
                     name: cert.name || `Certificate #${cert.token_id}`,
-                    path: `${getPathPrefix()}/certificates/${cert.chain}/${cert.token_id}`,
+                    path: `${basePath}/certificates/${cert.chain}/${cert.token_id}`,
                     type: 'certificate'
                 }))
         ]);

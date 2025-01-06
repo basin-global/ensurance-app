@@ -8,9 +8,20 @@ interface AccountHeaderProps {
   tokenId: number
   tbaAddress: string
   groupName: string
+  description?: string
+  isAgent?: boolean
 }
 
-export default function AccountHeader({ accountName, tokenId, tbaAddress, groupName }: AccountHeaderProps) {
+export default function AccountHeader({ 
+  accountName, 
+  tokenId, 
+  tbaAddress, 
+  groupName,
+  description,
+  isAgent 
+}: AccountHeaderProps) {
+  console.log('Description prop:', description)
+
   return (
     <div className="relative group/main py-8">
       <div className="flex items-center gap-6">
@@ -23,9 +34,21 @@ export default function AccountHeader({ accountName, tokenId, tbaAddress, groupN
           />
         </div>
         <div className="flex flex-col gap-1">
-          <h2 className="text-3xl font-bold text-white">
-            {accountName}
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-3xl font-bold text-white">
+              {accountName}
+            </h2>
+            {isAgent && (
+              <span className="text-xs px-1.5 py-0.5 rounded bg-gray-800/80 text-purple-300/50 font-mono ml-2 translate-y-[2px]">
+                AGENT
+              </span>
+            )}
+          </div>
+          {description && (
+            <p className="text-gray-400 text-sm max-w-2xl">
+              {description}
+            </p>
+          )}
           <div 
             className="cursor-pointer text-sm font-mono text-gray-500 opacity-0 group-hover/main:opacity-70 transition-opacity duration-300 delay-300 hover:text-gray-300"
             onClick={() => {

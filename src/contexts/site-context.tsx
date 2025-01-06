@@ -1,24 +1,22 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
+import { SiteContext as SiteContextType, getSiteContext } from '@/lib/config/routes'
 
-type SiteType = 'ensurance' | 'onchain-agents'
-
-const SiteContext = createContext<SiteType>('ensurance')
+const SiteContext = createContext<SiteContextType>('ensurance')
 
 export function useSite() {
   return useContext(SiteContext)
 }
 
 export function SiteProvider({ children }: { children: React.ReactNode }) {
-  const [site, setSite] = useState<SiteType>('ensurance')
+  const [site, setSite] = useState<SiteContextType>('ensurance')
 
   useEffect(() => {
-    const isOnchainAgents = 
-      window.location.hostname === 'onchain-agents.ai' || 
-      window.location.pathname.startsWith('/site-onchain-agents')
-    
-    setSite(isOnchainAgents ? 'onchain-agents' : 'ensurance')
+    // Use the same logic as our routing config
+    const hostname = window.location.hostname
+    const pathname = window.location.pathname
+    setSite(getSiteContext(hostname, pathname))
   }, [])
 
   return (

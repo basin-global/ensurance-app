@@ -1,16 +1,33 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { siteConfig, getSiteContext } from '@/lib/config/routes'
 
 export function middleware(request: NextRequest) {
-  const hostname = request.headers.get('host')
+  const hostname = request.headers.get('host') || ''
   const pathname = request.nextUrl.pathname
   const isDev = process.env.NODE_ENV === 'development'
 
   // Add pathname to headers for metadata generation
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-pathname', pathname)
+  requestHeaders.set('x-site-context', getSiteContext(hostname, pathname))
 
-  // Skip for static files and API routes
+  // Handle favicons for both domains
+  if (pathname === '/favicon.ico') {
+    const referer = request.headers.get('referer') || ''
+    const isOnchainAgents = hostname.includes('onchain-agents.ai') || 
+      (isDev && referer.includes('/site-onchain-agents'))
+
+    const faviconPath = isOnchainAgents 
+      ? '/onchain-agents/favicon.ico'
+      : '/ensurance/favicon.ico'
+
+    return NextResponse.rewrite(new URL(faviconPath, request.url), {
+      request: { headers: requestHeaders }
+    })
+  }
+
+  // Skip for other static files and API routes
   if (pathname.startsWith('/_next') || 
       pathname.startsWith('/api')) {
     return NextResponse.next({
@@ -18,7 +35,7 @@ export function middleware(request: NextRequest) {
     })
   }
 
-  // For development testing
+  // Development mode handling
   if (isDev && pathname.startsWith('/site-onchain-agents')) {
     const newPath = pathname === '/site-onchain-agents'
       ? '/onchain-agents'
@@ -29,13 +46,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Production domain mapping for onchain-agents.ai
-  if (hostname?.includes('onchain-agents.ai')) {
-    // Always serve onchain-agents favicon for this domain
-    if (pathname === '/favicon.ico') {
-      return NextResponse.rewrite(new URL('/onchain-agents/favicon.ico', request.url), {
-        request: { headers: requestHeaders }
-      })
-    }
+  if (hostname?.includes(siteConfig.onchainAgents.prodDomain)) {
     // Handle other paths
     const newPathname = pathname === '/' ? '/onchain-agents' : pathname
     return NextResponse.rewrite(new URL(newPathname, request.url), {

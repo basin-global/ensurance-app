@@ -19,6 +19,14 @@ export default function CertificatesGrid({
 }: CertificatesGridProps) {
   const [assets, setAssets] = useState<Asset[]>([])
   const [loading, setLoading] = useState(true)
+  const site = useSite()
+  const isDev = process.env.NODE_ENV === 'development'
+  
+  const getPathPrefix = () => {
+    if (urlPrefix) return urlPrefix;
+    if (site !== 'onchain-agents') return '';
+    return isDev ? '/site-onchain-agents' : '';
+  };
 
   // Fetch all certificates
   const fetchCertificates = useCallback(async () => {
@@ -76,7 +84,7 @@ export default function CertificatesGrid({
           isEnsuranceTab={true}
           isTokenbound={false}
           isOwner={false}
-          customUrl={`${urlPrefix}/certificates/${asset.chain}/${asset.token_id}`}
+          customUrl={`${getPathPrefix()}/certificates/${asset.chain}/${asset.token_id}`}
           hideCollection={true}
         />
       ))}

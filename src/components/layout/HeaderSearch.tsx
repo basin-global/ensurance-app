@@ -1,3 +1,5 @@
+'use client'
+
 import React, { useState, useEffect, useRef } from 'react'
 import { Search } from 'lucide-react'
 import { AssetSearch } from '@/modules/assets/AssetSearch'
@@ -19,6 +21,13 @@ interface SearchResult {
 
 export function HeaderSearch() {
   const site = useSite()
+  const isDev = process.env.NODE_ENV === 'development'
+
+  const getPathPrefix = () => {
+    if (site !== 'onchain-agents') return '';
+    return isDev ? '/site-onchain-agents' : '';
+  };
+
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
@@ -26,6 +35,22 @@ export function HeaderSearch() {
   const debouncedSearch = useDebounce(searchQuery, 200)
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const abortControllerRef = useRef<AbortController | null>(null)
+
+  // Initial load of results
+  useEffect(() => {
+    async function loadInitialResults() {
+      setIsLoading(true)
+      try {
+        const response = await fetch('/api/search?q=')
+        const data = await response.json()
+        setResults(data.results || [])
+      } catch (error) {
+        console.error('Initial search failed:', error)
+      }
+      setIsLoading(false)
+    }
+    loadInitialResults()
+  }, [])
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -76,9 +101,8 @@ export function HeaderSearch() {
 
   React.useEffect(() => {
     async function performSearch() {
-      if (!debouncedSearch) {
-        setResults([])
-        return
+      if (!debouncedSearch && results.length > 0) {
+        return // Don't clear results if we already have initial results
       }
 
       if (abortControllerRef.current) {
@@ -90,7 +114,7 @@ export function HeaderSearch() {
       setIsLoading(true)
       try {
         const response = await fetch(
-          `/api/search?q=${encodeURIComponent(debouncedSearch)}`,
+          `/api/search?q=${encodeURIComponent(debouncedSearch || '')}`,
           { signal: abortControllerRef.current.signal }
         )
         const data = await response.json()
@@ -130,8 +154,8 @@ export function HeaderSearch() {
   }, [results])
 
   const searchPlaceholder = site === 'onchain-agents' 
-    ? "Search agents or groups..." 
-    : "Search accounts, groups, or certificates..."
+    ? "search all" 
+    : "search all"
 
   const modalContent = isOpen && (
     <>
@@ -157,13 +181,17 @@ export function HeaderSearch() {
           <div className="mt-4 max-h-96 overflow-y-auto">
             {isLoading ? (
               <div className="text-center py-4 text-[rgba(var(--foreground-rgb),0.5)] text-lg">
-                Searching...
+                searching...
+              </div>
+            ) : searchQuery && sortedResults.length === 0 ? (
+              <div className="text-center py-4 text-[rgba(var(--foreground-rgb),0.5)] text-lg">
+                No results found
               </div>
             ) : sortedResults.length > 0 ? (
               sortedResults.map((result, i) => (
                 <Link
                   key={i}
-                  href={result.path}
+                  href={`${getPathPrefix()}${result.path}`}
                   onClick={() => setIsOpen(false)}
                   className={cn(
                     "block px-4 py-2 hover:bg-[rgba(var(--foreground-rgb),0.1)]",

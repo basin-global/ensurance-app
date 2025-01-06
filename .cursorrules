@@ -1,0 +1,55 @@
+# Multi-Domain Next.js App Rules
+
+## Core Concept
+
+This is a Next.js app that serves two domains with shared code:
+- ensurance.app (main site)
+- onchain-agents.ai (secondary site)
+
+## Key Principles
+
+```
+/src
+  /app                     # Main application directory (shared + ensurance.app)
+    /(ensurance)          # Ensurance-specific routes
+    /onchain-agents       # Onchain Agents specific files
+   
+  /lib
+    /config
+      routes.ts         # Site configuration and helpers
+```
+
+3. **URL Management**
+   - Always use URL helpers
+   - Never hardcode paths
+   - Let routing utilities handle prefixes
+
+### Production
+- ensurance.app serves from `/app`
+- onchain-agents.ai serves from `/app/onchain-agents` but can use all files in `/app`
+
+### Development
+- `localhost:3000` → serves ensurance.app content
+- `localhost:3000/site-onchain-agents` → serves onchain-agents.ai content
+
+
+Use the `isSite` helper to conditionally render content:
+```typescript
+import { isSite } from '@/lib/config/routes'
+
+function MyComponent() {
+    const site = useSite()
+    
+    return (
+        <div>
+            {isSite(site, 'ensurance') && (
+                <div>Only shows on ensurance.app</div>
+            )}
+
+            {isSite(site, 'onchain-agents') && (
+                <div>Only shows on onchain-agents.ai</div>
+            )}
+        </div>
+    )
+}
+```

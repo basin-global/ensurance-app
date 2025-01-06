@@ -28,7 +28,7 @@ export function SubNavigation({ type, groupName }: SubNavigationProps) {
     ]
 
   return (
-    <nav className="mb-4">
+    <nav className="relative z-10">
       <div className="container mx-auto px-4 flex justify-center">
         <ul className="flex space-x-8">
           {links.map(({ href, label }) => {
@@ -38,7 +38,7 @@ export function SubNavigation({ type, groupName }: SubNavigationProps) {
                 <Link
                   href={href}
                   className={cn(
-                    "inline-block py-4 transition-colors",
+                    "inline-block py-2 transition-colors",
                     isActive 
                       ? "font-bold text-white" 
                       : "font-normal text-gray-500 hover:text-gray-300"

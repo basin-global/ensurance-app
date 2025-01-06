@@ -27,6 +27,7 @@ export default function AccountsGrid({
     agentsOnly = false
 }: AccountsGridProps) {
     const site = useSite()
+    const isDev = process.env.NODE_ENV === 'development'
     const [accounts, setAccounts] = useState<Account[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -34,6 +35,11 @@ export default function AccountsGrid({
     const ITEMS_PER_PAGE = 20
 
     const showOnlyAgents = site === 'onchain-agents' || agentsOnly
+
+    const getPathPrefix = () => {
+        if (site !== 'onchain-agents') return '';
+        return isDev ? '/site-onchain-agents' : '';
+    };
 
     // Memoized fetch function
     const fetchAccounts = useCallback(async () => {
@@ -206,7 +212,7 @@ export default function AccountsGrid({
                 {displayedAccounts.map((account) => (
                     <Link
                         key={account.full_account_name}
-                        href={`/accounts/${account.full_account_name}`}
+                        href={`${getPathPrefix()}/${account.full_account_name}`}
                         className="bg-primary dark:bg-primary-dark hover:bg-primary-dark dark:hover:bg-primary 
                                  text-primary-foreground dark:text-primary-dark-foreground font-bold py-4 px-6 
                                  rounded-lg transition duration-300 ease-in-out transform 
