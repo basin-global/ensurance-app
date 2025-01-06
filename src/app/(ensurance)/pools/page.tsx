@@ -33,7 +33,7 @@ export default function PoolsPage() {
 
   // Update URL when category changes
   const updateCategory = (category: Category) => {
-    const params = new URLSearchParams(searchParams)
+    const params = new URLSearchParams(Object.entries(searchParams.toString() ? Object.fromEntries(searchParams.entries()) : {}))
     if (category === 'all') {
       params.delete('category')
     } else {
