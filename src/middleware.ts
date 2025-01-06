@@ -28,8 +28,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Skip for other static files and API routes
-  if (pathname.startsWith('/_next') || 
-      pathname.startsWith('/api')) {
+  if (pathname.startsWith('/_next')) {
     return NextResponse.next({
       request: { headers: requestHeaders }
     })

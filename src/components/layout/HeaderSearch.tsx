@@ -117,6 +117,13 @@ export function HeaderSearch() {
           `/api/search?q=${encodeURIComponent(debouncedSearch || '')}`,
           { signal: abortControllerRef.current.signal }
         )
+        
+        if (!response.ok) {
+          const errorData = await response.json()
+          console.error('Search API error:', errorData)
+          throw new Error(errorData.error || 'Search failed')
+        }
+        
         const data = await response.json()
         
         if (abortControllerRef.current) {
@@ -183,7 +190,7 @@ export function HeaderSearch() {
               <div className="text-center py-4 text-[rgba(var(--foreground-rgb),0.5)] text-lg">
                 searching...
               </div>
-            ) : searchQuery && sortedResults.length === 0 ? (
+            ) : searchQuery && debouncedSearch && !isLoading && sortedResults.length === 0 ? (
               <div className="text-center py-4 text-[rgba(var(--foreground-rgb),0.5)] text-lg">
                 No results found
               </div>
