@@ -27,7 +27,8 @@ export function getSiteContext(hostname: string, pathname: string): SiteContext 
 // Get the API prefix for requests
 export function getApiPrefix(site: SiteContext): string {
     const isDev = process.env.NODE_ENV === 'development'
-    // In production, API calls don't need the prefix
+    // In dev mode for onchain-agents, prefix with /site-onchain-agents
+    // All other cases (prod and ensurance) just use /api
     return site === 'onchain-agents' && isDev ? '/site-onchain-agents/api' : '/api'
 }
 

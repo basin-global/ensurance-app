@@ -74,7 +74,7 @@ export default function AssetDetailPage({ params }: { params: { chain: string; c
     try {
       if (isEnsurance) {
         // For Ensurance tokens, fetch from our database
-        const response = await fetch(`/api/ensurance?chain=${params.chain}&tokenId=${params.tokenId}`);
+        const response = await fetch(`${apiPrefix}/ensurance?chain=${params.chain}&tokenId=${params.tokenId}`);
         if (!response.ok) throw new Error('Failed to fetch certificate details');
         const data = await response.json();
         
