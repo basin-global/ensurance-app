@@ -17,7 +17,7 @@ import { isEnsuranceToken } from '@/modules/ensurance/config'
 import { Asset, EnsureOperation } from '@/types';
 import { SplitsBar } from '@/modules/splits/components/SplitsBar';
 import { useSite } from '@/contexts/site-context';
-import { getBasePath } from '@/lib/config/routes';
+import { getBasePath, getApiPrefix } from '@/lib/config/routes';
 
 // Add type for ensurance data
 type EnsuranceData = {
@@ -40,7 +40,7 @@ export default function AssetDetailPage({ params }: { params: { chain: string; c
   const router = useRouter();
   const site = useSite();
   const isDev = process.env.NODE_ENV === 'development';
-  const apiPrefix = site === 'onchain-agents' && isDev ? '/site-onchain-agents/api' : '/api';
+  const apiPrefix = getApiPrefix(site);
   
   // Add site-aware path helper
   const getRoutePath = (path: string) => {
