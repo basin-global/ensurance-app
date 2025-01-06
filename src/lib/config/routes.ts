@@ -34,8 +34,9 @@ export function getApiPrefix(site: SiteContext): string {
 // Simple helper to get the URL prefix for client routes
 export function getBasePath(site: SiteContext): string {
     const isDev = process.env.NODE_ENV === 'development'
-    if (site === 'onchain-agents') {
-        return isDev ? '/site-onchain-agents' : '/onchain-agents'
+    // Only add prefix in development for onchain-agents
+    if (site === 'onchain-agents' && isDev) {
+        return '/site-onchain-agents'
     }
     return ''
 }
