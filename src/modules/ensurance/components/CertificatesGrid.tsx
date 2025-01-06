@@ -24,8 +24,10 @@ export default function CertificatesGrid({
   
   const getPathPrefix = () => {
     if (urlPrefix) return urlPrefix;
-    if (site !== 'onchain-agents') return '';
-    return isDev ? '/site-onchain-agents' : '';
+    if (isDev && site === 'onchain-agents') {
+      return '/site-onchain-agents';
+    }
+    return '';
   };
 
   // Fetch all certificates

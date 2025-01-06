@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import * as Tooltip from '@radix-ui/react-tooltip'
 import ChainDropdown from './ChainDropdown'
 import { useSite } from '@/contexts/site-context'
@@ -55,8 +55,23 @@ export function TabbedModules({
   console.log('TabbedModules initializing with address:', address)
   console.log('Initial chain:', initialChain)
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState(initialModule || 'assets')
-  const [selectedChain, setSelectedChain] = useState(initialChain || 'base')
+  const searchParams = useSearchParams()
+  
+  // Use URL params for state instead of local state
+  const currentModule = searchParams.get('module') || initialModule || 'assets'
+  const currentChain = searchParams.get('chain') || initialChain || 'base'
+  
+  const [activeTab, setActiveTab] = useState(currentModule)
+  const [selectedChain, setSelectedChain] = useState(currentChain)
+
+  // Listen for URL changes and update state
+  useEffect(() => {
+    const module = searchParams.get('module')
+    const chain = searchParams.get('chain')
+    
+    if (module) setActiveTab(module)
+    if (chain) setSelectedChain(chain)
+  }, [searchParams])
 
   const updateUrl = (tab: string, chain: string) => {
     const url = new URL(window.location.href)
@@ -69,7 +84,8 @@ export function TabbedModules({
       url.searchParams.delete('chain')
     }
 
-    router.push(url.toString())
+    // Use replace instead of push to avoid building up history stack
+    router.replace(url.toString())
   }
 
   const setActiveTabAndUpdateUrl = (tab: string) => {
