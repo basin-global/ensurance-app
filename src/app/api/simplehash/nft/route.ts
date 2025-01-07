@@ -1,123 +1,102 @@
-import { simpleHashApi } from '@/lib/simplehash';
-import { NextResponse } from 'next/server';
-import { isSpamContract } from '@/config/spamContracts';
-import { headers } from 'next/headers';
-import { getSiteContext } from '@/lib/config/routes';
+import { NextResponse } from 'next/server'
+import { fetchNFTsByAddress, fetchNFTDetails, fetchNFTsByContract } from '@/lib/simplehash'
+import { isSpamContract } from '@/config/spamContracts'
 
 export async function GET(request: Request) {
-  const headersList = headers();
-  const host = headersList.get('host') || '';
-  const siteContext = getSiteContext(host, '');
-  
-  const { searchParams } = new URL(request.url);
-  const address = searchParams.get('address');
-  const chain = searchParams.get('chain');
-  const contractAddress = searchParams.get('contractAddress');
-  const tokenId = searchParams.get('tokenId');
-  const fetchAll = searchParams.get('fetchAll') === 'true';
+  const { searchParams } = new URL(request.url)
+  const address = searchParams.get('address')
+  const chain = searchParams.get('chain')
+  const contractAddress = searchParams.get('contractAddress')
+  const tokenId = searchParams.get('tokenId')
 
-  console.log('NFT route params:', {
-    siteContext,
-    address,
-    chain,
-    contractAddress,
-    tokenId,
-    fetchAll
-  });
+  console.log('NFT route called with params:', { address, chain, contractAddress, tokenId })
 
   try {
     // Case 1: Fetch specific NFT by token ID
     if (chain && contractAddress && tokenId) {
-      try {
-        const response = await simpleHashApi.get(`/nfts/${chain}/${contractAddress}/${tokenId}`);
-        console.log('Token fetch response:', {
-          chain,
-          contractAddress,
-          tokenId,
-          status: response.status
-        });
-        return NextResponse.json(response.data);
-      } catch (error: any) {
-        console.error('Token fetch error:', error.response?.data || error.message);
-        return NextResponse.json({ 
-          error: 'Failed to fetch NFT',
-          details: error.response?.data || error.message
-        }, { status: 500 });
-      }
+      const data = await fetchNFTDetails(chain, contractAddress, tokenId)
+      return NextResponse.json(data)
     }
 
     // Case 2: Fetch all NFTs for a contract
     if (chain && contractAddress) {
-      try {
-        const response = await simpleHashApi.get(`/nfts/${chain}/${contractAddress}`);
-        console.log('Contract fetch response:', {
-          chain,
-          contractAddress,
-          nftsCount: response.data.nfts?.length || 0
-        });
-        return NextResponse.json(response.data);
-      } catch (error: any) {
-        console.error('Contract fetch error:', error.response?.data || error.message);
-        return NextResponse.json({ 
-          error: 'Failed to fetch contract NFTs',
-          details: error.response?.data || error.message
-        }, { status: 500 });
-      }
+      const data = await fetchNFTsByContract(chain, contractAddress)
+      return NextResponse.json(data)
     }
 
     // Case 3: Fetch NFTs by wallet address
     if (address) {
+      console.log('Fetching NFTs for wallet:', address)
+      console.log('Chain param from URL:', chain)
+      console.log('SimpleHash API Key present:', !!process.env.SIMPLEHASH_API_KEY)
+      
+      // If chain is 'all' or not provided, let fetchNFTsByAddress use its default ACTIVE_CHAINS
+      const chainsToUse = chain && chain !== 'all' ? chain : undefined
+      console.log('Chains being passed to fetchNFTsByAddress:', chainsToUse || 'using default ACTIVE_CHAINS')
+      
       try {
-        const params = {
-          wallet_addresses: address,
-          chains: chain === 'all' ? undefined : chain,
-          queried_wallet_balances: 1,
-          limit: 50
-        };
-
-        console.log('Wallet fetch params:', params);
-        const response = await simpleHashApi.get('/nfts/owners_v2', { params });
+        const data = await fetchNFTsByAddress(address, chainsToUse)
+        
+        console.log('Raw NFT data received:', {
+          totalNFTs: data.nfts?.length || 0,
+          hasNext: !!data.next
+        })
 
         // Filter out spam NFTs
-        const filteredNfts = response.data.nfts.filter((nft: any) => {
-          const isSpam = isSpamContract(nft.chain, nft.contract_address);
+        const filteredNfts = data.nfts.filter((nft: any) => {
+          const isSpam = isSpamContract(nft.chain, nft.contract_address)
           if (isSpam) {
-            console.log('Filtered spam NFT:', {
-              chain: nft.chain,
-              contract: nft.contract_address,
-              name: nft.name
-            });
+            console.log('Filtered spam NFT:', { chain: nft.chain, contract: nft.contract_address })
           }
-          return !isSpam;
-        });
+          return !isSpam
+        })
 
-        console.log('Wallet fetch response:', {
-          address,
-          totalNfts: response.data.nfts.length,
-          filteredNfts: filteredNfts.length,
-          spamFiltered: response.data.nfts.length - filteredNfts.length,
-          hasNext: !!response.data.next
-        });
+        console.log('Filtered NFTs:', {
+          before: data.nfts?.length || 0,
+          after: filteredNfts.length
+        })
 
         return NextResponse.json({
-          ...response.data,
+          ...data,
           nfts: filteredNfts
-        });
+        })
       } catch (error: any) {
-        console.error('Wallet fetch error:', error.response?.data || error.message);
-        return NextResponse.json({ 
-          error: 'Failed to fetch wallet NFTs',
-          details: error.response?.data || error.message
-        }, { status: 500 });
+        console.error('SimpleHash API error:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status
+        })
+        throw error
       }
     }
 
-    return NextResponse.json({ error: 'Invalid parameters' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid parameters' }, { status: 400 })
   } catch (error: any) {
-    console.error('Route error:', error);
+    console.error('NFT route error:', {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      config: error.config
+    })
+
+    // Check for specific error types
+    if (error.code === 'ECONNREFUSED') {
+      return NextResponse.json({ 
+        error: 'Connection refused',
+        details: 'Could not connect to SimpleHash API'
+      }, { status: 503 })
+    }
+
+    if (error.response?.status === 401) {
+      return NextResponse.json({ 
+        error: 'Unauthorized',
+        details: 'Invalid API key'
+      }, { status: 401 })
+    }
+
     return NextResponse.json({ 
       error: 'API request failed',
-      details: error.response?.data || error.message
-    }, { status: 500 });
+      details: error.message
+    }, { status: 500 })
   }
 }

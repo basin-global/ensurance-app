@@ -1,4 +1,4 @@
-import { TabbedModules } from '@/modules/shared/TabbedModules'
+import TabbedModules from '@/modules/tabbed-modules'
 import { notFound } from 'next/navigation'
 import { headers } from 'next/headers'
 import AccountHeader from '@/modules/accounts/AccountHeader'
