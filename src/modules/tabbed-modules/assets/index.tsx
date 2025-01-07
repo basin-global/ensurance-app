@@ -24,16 +24,25 @@ export default function AssetsTab({ address, selectedChain, isOwner }: AssetsTab
 
     setLoading(true)
     try {
+      // Construct the correct API URL based on the site
+      const baseUrl = site === 'onchain-agents' 
+        ? process.env.NODE_ENV === 'development'
+          ? '/site-onchain-agents/api'
+          : '/api'
+        : '/api';
+
+      const url = `${baseUrl}/simplehash/nft?address=${address}${
+        selectedChain !== 'all' ? `&chain=${selectedChain}` : ''
+      }`;
+
       console.log('[AssetsTab] Fetching assets:', {
+        url,
         address,
         selectedChain,
-        apiPrefix,
         site
       });
 
-      const response = await fetch(
-        `${apiPrefix}/simplehash/nft?address=${address}${selectedChain !== 'all' ? `&chain=${selectedChain}` : ''}`
-      );
+      const response = await fetch(url);
 
       if (!response.ok) {
         console.error('[AssetsTab] API error:', {
@@ -44,11 +53,6 @@ export default function AssetsTab({ address, selectedChain, isOwner }: AssetsTab
       }
 
       const data = await response.json();
-      console.log('[AssetsTab] Assets received:', {
-        total: data.nfts?.length || 0,
-        chains: data.nfts?.map(nft => nft.chain).filter((v, i, a) => a.indexOf(v) === i)
-      });
-      
       setAssets(data.nfts || []);
     } catch (error) {
       console.error('[AssetsTab] Error:', error);
@@ -56,7 +60,7 @@ export default function AssetsTab({ address, selectedChain, isOwner }: AssetsTab
     } finally {
       setLoading(false);
     }
-  }, [address, selectedChain, apiPrefix, site]);
+  }, [address, selectedChain, site]);
 
   // Fetch assets only when address changes
   useEffect(() => {

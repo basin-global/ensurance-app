@@ -23,9 +23,11 @@ export function HeaderSearch() {
   const site = useSite()
   const isDev = process.env.NODE_ENV === 'development'
 
-  const getPathPrefix = () => {
-    if (site !== 'onchain-agents') return '';
-    return isDev ? '/site-onchain-agents' : '';
+  const getApiPrefix = () => {
+    if (site === 'onchain-agents') {
+      return isDev ? '/site-onchain-agents/api' : '/api';
+    }
+    return '/api';
   };
 
   const [isOpen, setIsOpen] = useState(false)
@@ -41,7 +43,7 @@ export function HeaderSearch() {
     async function loadInitialResults() {
       setIsLoading(true)
       try {
-        const response = await fetch('/api/search?q=')
+        const response = await fetch(`${getApiPrefix()}/search?q=`)
         const data = await response.json()
         setResults(data.results || [])
       } catch (error) {
@@ -114,7 +116,7 @@ export function HeaderSearch() {
       setIsLoading(true)
       try {
         const response = await fetch(
-          `/api/search?q=${encodeURIComponent(debouncedSearch || '')}`,
+          `${getApiPrefix()}/search?q=${encodeURIComponent(debouncedSearch || '')}`,
           { signal: abortControllerRef.current.signal }
         )
         
@@ -198,7 +200,7 @@ export function HeaderSearch() {
               sortedResults.map((result, i) => (
                 <Link
                   key={i}
-                  href={`${getPathPrefix()}${result.path}`}
+                  href={`${getApiPrefix()}${result.path}`}
                   onClick={() => setIsOpen(false)}
                   className={cn(
                     "block px-4 py-2 hover:bg-[rgba(var(--foreground-rgb),0.1)]",
