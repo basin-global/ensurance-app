@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react'
-import axios from 'axios'
 import AssetCard from '@/modules/assets/AssetCard'
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -34,8 +33,10 @@ export default function CertificatesGrid({
   const fetchCertificates = useCallback(async () => {
     try {
       setLoading(true)
-      const response = await axios.get('/api/ensurance')
-      setAssets(response.data || [])
+      const response = await fetch('/api/ensurance')
+      if (!response.ok) throw new Error('Failed to fetch certificates')
+      const data = await response.json()
+      setAssets(data || [])
     } catch (error) {
       console.error(`Error in fetchCertificates:`, error)
     } finally {

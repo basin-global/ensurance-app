@@ -9,7 +9,7 @@ import { useDebounce } from '@/hooks/useDebounce'
 import { createPortal } from 'react-dom'
 import { poolNameMappings } from '@/modules/ensurance/poolMappings'
 import { useSite } from '@/contexts/site-context'
-import { getBaseUrl } from '@/lib/config/routes'
+import { getApiPrefix } from '@/lib/config/routes'
 
 interface SearchResult {
   name: string
@@ -22,17 +22,8 @@ interface SearchResult {
 
 export function HeaderSearch() {
   const site = useSite()
+  const apiPrefix = getApiPrefix(site)
   const isDev = process.env.NODE_ENV === 'development'
-
-  const getApiUrl = () => {
-    const baseUrl = getBaseUrl()
-    const apiPath = site === 'onchain-agents'
-      ? process.env.NODE_ENV === 'development'
-        ? '/site-onchain-agents/api'
-        : '/api'
-      : '/api'
-    return `${baseUrl}${apiPath}`
-  }
 
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -47,7 +38,7 @@ export function HeaderSearch() {
     async function loadInitialResults() {
       setIsLoading(true)
       try {
-        const response = await fetch(`${getApiUrl()}/search?q=`)
+        const response = await fetch(`${apiPrefix}/search?q=`)
         const data = await response.json()
         setResults(data.results || [])
       } catch (error) {
@@ -56,7 +47,7 @@ export function HeaderSearch() {
       setIsLoading(false)
     }
     loadInitialResults()
-  }, [])
+  }, [apiPrefix])
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -120,8 +111,14 @@ export function HeaderSearch() {
       setIsLoading(true)
       try {
         const response = await fetch(
-          `${getApiUrl()}/search?q=${encodeURIComponent(debouncedSearch || '')}`,
-          { signal: abortControllerRef.current.signal }
+          `${apiPrefix}/search?q=${encodeURIComponent(debouncedSearch || '')}`,
+          { 
+            signal: abortControllerRef.current.signal,
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            }
+          }
         )
         
         if (!response.ok) {
@@ -153,7 +150,7 @@ export function HeaderSearch() {
         abortControllerRef.current = null
       }
     }
-  }, [debouncedSearch])
+  }, [debouncedSearch, apiPrefix])
 
   const sortedResults = React.useMemo(() => {
     return results.sort((a, b) => {

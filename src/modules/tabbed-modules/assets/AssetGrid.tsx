@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useMemo } from 'react'
+import React, { useMemo, useState, useEffect, useCallback } from 'react'
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Asset } from '@/types'
@@ -8,24 +8,24 @@ import { useSite } from '@/contexts/site-context'
 import AssetCard from '@/modules/assets/AssetCard'
 
 interface AssetGridProps {
-  assets: Asset[]
-  loading?: boolean
+  address: string
+  selectedChain: string
+  isOwner: boolean
   searchQuery?: string
   setSearchQuery?: (query: string) => void
   urlPrefix?: string
-  address: string
-  isOwner: boolean
 }
 
 export default function AssetGrid({ 
-  assets = [],
-  loading = false,
+  address,
+  selectedChain,
+  isOwner,
   searchQuery = '',
   setSearchQuery = () => {},
-  urlPrefix = '',
-  address,
-  isOwner
+  urlPrefix = ''
 }: AssetGridProps) {
+  const [assets, setAssets] = useState<Asset[]>([])
+  const [loading, setLoading] = useState(true)
   const site = useSite()
   const isDev = process.env.NODE_ENV === 'development'
   
@@ -37,6 +37,28 @@ export default function AssetGrid({
     return '';
   };
 
+  const fetchAssets = useCallback(async () => {
+    if (!address) return
+    setLoading(true)
+    try {
+      const response = await fetch(`/api/simplehash/nft?address=${address}${
+        selectedChain !== 'all' ? `&chain=${selectedChain}` : ''
+      }`)
+      if (!response.ok) throw new Error('Failed to fetch assets')
+      const data = await response.json()
+      setAssets(data.nfts || [])
+    } catch (error) {
+      console.error('Error fetching assets:', error)
+      setAssets([])
+    } finally {
+      setLoading(false)
+    }
+  }, [address, selectedChain])
+
+  useEffect(() => {
+    fetchAssets()
+  }, [fetchAssets])
+
   // Filter assets based on search query
   const filteredAssets = useMemo(() => {
     return assets.filter(asset => {
@@ -44,7 +66,7 @@ export default function AssetGrid({
       return !searchQuery || (
         asset.name?.toLowerCase().includes(searchLower) ||
         asset.token_id?.toString().includes(searchLower) ||
-        asset.chain?.toLowerCase().includes(searchLower)  // Allow searching by chain name too
+        asset.chain?.toLowerCase().includes(searchLower)
       )
     })
   }, [assets, searchQuery])

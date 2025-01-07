@@ -45,12 +45,4 @@ export function getBasePath(site: SiteContext): string {
 // Helper to check if a feature should be shown on a site
 export function isSite(currentSite: SiteContext, site: SiteContext): boolean {
     return currentSite === site
-}
-
-export function getBaseUrl() {
-    if (typeof window === 'undefined') return ''; // Server-side
-    
-    const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
-    const host = window.location.host
-    return `${protocol}://${host}`
 } 
