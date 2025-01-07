@@ -27,8 +27,8 @@ export function middleware(request: NextRequest) {
     })
   }
 
-  // Skip for other static files and API routes
-  if (pathname.startsWith('/_next')) {
+  // Skip for static files and API routes
+  if (pathname.startsWith('/_next') || pathname.startsWith('/api/')) {
     return NextResponse.next({
       request: { headers: requestHeaders }
     })
@@ -46,6 +46,13 @@ export function middleware(request: NextRequest) {
 
   // Production domain mapping for onchain-agents.ai
   if (hostname?.includes(siteConfig.onchainAgents.prodDomain)) {
+    // Don't rewrite API routes
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.next({
+        request: { headers: requestHeaders }
+      })
+    }
+    
     const newPathname = pathname === '/' ? '/onchain-agents' : pathname
     return NextResponse.rewrite(new URL(newPathname, request.url), {
       request: { headers: requestHeaders }
