@@ -6,17 +6,18 @@ import { getSiteContext } from '@/lib/config/routes';
 export async function GET(request: Request) {
   const headersList = headers();
   const host = headersList.get('host') || '';
-  const siteContext = getSiteContext(host, '');
+  const siteContext = getSiteContext(host, new URL(request.url).pathname);
   
   const { searchParams } = new URL(request.url);
   const chain = searchParams.get('chain');
   const tokenId = searchParams.get('tokenId');
 
-  console.log('Ensurance API called:', {
+  console.log('[Ensurance API] Request details:', {
     siteContext,
     chain,
     tokenId,
-    host
+    host,
+    pathname: new URL(request.url).pathname
   });
 
   try {

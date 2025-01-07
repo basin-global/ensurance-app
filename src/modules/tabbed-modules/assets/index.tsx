@@ -24,22 +24,39 @@ export default function AssetsTab({ address, selectedChain, isOwner }: AssetsTab
 
     setLoading(true)
     try {
-      // Let the API handle active chains
-      const response = await fetch(`${apiPrefix}/simplehash/nft?address=${address}`)
-      
+      console.log('[AssetsTab] Fetching assets:', {
+        address,
+        selectedChain,
+        apiPrefix,
+        site
+      });
+
+      const response = await fetch(
+        `${apiPrefix}/simplehash/nft?address=${address}${selectedChain !== 'all' ? `&chain=${selectedChain}` : ''}`
+      );
+
       if (!response.ok) {
-        throw new Error('Failed to fetch assets')
+        console.error('[AssetsTab] API error:', {
+          status: response.status,
+          statusText: response.statusText
+        });
+        throw new Error('Failed to fetch assets');
       }
 
-      const data = await response.json()
-      setAssets(data.nfts || [])
+      const data = await response.json();
+      console.log('[AssetsTab] Assets received:', {
+        total: data.nfts?.length || 0,
+        chains: data.nfts?.map(nft => nft.chain).filter((v, i, a) => a.indexOf(v) === i)
+      });
+      
+      setAssets(data.nfts || []);
     } catch (error) {
-      console.error('Error fetching assets:', error)
-      setAssets([])
+      console.error('[AssetsTab] Error:', error);
+      setAssets([]);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [address, apiPrefix])
+  }, [address, selectedChain, apiPrefix, site]);
 
   // Fetch assets only when address changes
   useEffect(() => {

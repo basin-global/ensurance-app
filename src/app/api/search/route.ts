@@ -4,7 +4,7 @@ import { groups } from '@/lib/database/queries/groups';
 import { accounts } from '@/lib/database/queries/accounts';
 import { ensurance } from '@/lib/database/queries/ensurance';
 import { poolNameMappings } from '@/modules/ensurance/poolMappings';
-import { getSiteContext } from '@/lib/config/routes';
+import { getSiteContext, getBasePath } from '@/lib/config/routes';
 
 // Cache successful responses for 1 minute
 export const revalidate = 60;
@@ -28,23 +28,17 @@ export async function GET(request: NextRequest) {
         const query = searchParams.get('q')?.toLowerCase();
         const host = request.headers.get('host') || '';
         const siteContext = getSiteContext(host, request.nextUrl.pathname);
+        const basePath = getBasePath(siteContext);
         
         console.log('[Search API] Request context:', {
             query,
             host,
             siteContext,
+            basePath,
             pathname: request.nextUrl.pathname,
             fullUrl: request.url
         });
 
-        // Get the base path based on the context
-        const getBasePath = () => {
-            if (siteContext !== 'onchain-agents') return '';
-            return process.env.NODE_ENV === 'development' ? '/site-onchain-agents' : '/onchain-agents';
-        };
-
-        const basePath = getBasePath();
-        
         if (!query) {
             return NextResponse.json({ results: [] });
         }
