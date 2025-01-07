@@ -1,53 +1,42 @@
 # Multi-Domain Next.js App Rules
 
 ## Core Concept
+This is a Next.js app that serves two domains from a single codebase:
+- ensurance.app
+- onchain-agents.ai
 
-This is a Next.js app that serves two domains with shared code:
-- ensurance.app (main site)
-- onchain-agents.ai (secondary site)
-
-## Key Principles
-
+## Project Structure
 ```
+/                         # Project root (shared config, env files, etc)
 /src
-  /app                     # Main application directory (ensurance.app primarily uses this but onchain-agents.ai can use all files in /app)
-    /onchain-agents       # Onchain Agents specific files
-   
-  /lib
-    /config
-      routes.ts         # Site configuration and helpers
+  /app                   # Main app directory (shared by both sites)
+    /onchain-agents      # Entry point for onchain-agents.ai
 ```
 
-3. **URL Management**
-   -  use URL helpers as needed ie getBasePath
-   - Never hardcode paths
-   - Let routing utilities handle prefixes
+## How It Works
+- Both sites use the same project root and `/app` directory
+- onchain-agents.ai just has a different entry point at `/app/onchain-agents`
 
-### Production
-- ensurance.app serves from `/app`
-- onchain-agents.ai serves from `/app/onchain-agents` but can use all files in `/app`
+### URLs
+Development:
+- ensurance.app → `localhost:3000`
+- onchain-agents.ai → `localhost:3000/site-onchain-agents`
 
-### Development
-- `localhost:3000` → serves ensurance.app content
-- `localhost:3000/site-onchain-agents` → serves onchain-agents.ai content
+Production:
+- ensurance.app → `https://ensurance.app`
+- onchain-agents.ai → `https://onchain-agents.ai`
 
-
-Use the `isSite` helper to conditionally render content:
+### Helpers
+Use `isSite` for conditional rendering:
 ```typescript
 import { isSite } from '@/lib/config/routes'
 
 function MyComponent() {
     const site = useSite()
-    
     return (
         <div>
-            {isSite(site, 'ensurance') && (
-                <div>Only shows on ensurance.app</div>
-            )}
-
-            {isSite(site, 'onchain-agents') && (
-                <div>Only shows on onchain-agents.ai</div>
-            )}
+            {isSite(site, 'ensurance') && <div>Ensurance only</div>}
+            {isSite(site, 'onchain-agents') && <div>Onchain Agents only</div>}
         </div>
     )
 }

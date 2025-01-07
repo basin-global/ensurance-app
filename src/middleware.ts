@@ -46,14 +46,12 @@ export function middleware(request: NextRequest) {
 
   // Production domain mapping for onchain-agents.ai
   if (hostname?.includes(siteConfig.onchainAgents.prodDomain)) {
-    // Handle other paths
     const newPathname = pathname === '/' ? '/onchain-agents' : pathname
     return NextResponse.rewrite(new URL(newPathname, request.url), {
       request: { headers: requestHeaders }
     })
   }
 
-  // All other requests go to main app
   return NextResponse.next({
     request: {
       headers: requestHeaders,
