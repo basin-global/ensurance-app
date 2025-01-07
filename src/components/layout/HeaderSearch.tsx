@@ -9,6 +9,7 @@ import { useDebounce } from '@/hooks/useDebounce'
 import { createPortal } from 'react-dom'
 import { poolNameMappings } from '@/modules/ensurance/poolMappings'
 import { useSite } from '@/contexts/site-context'
+import { getBaseUrl } from '@/lib/config/routes'
 
 interface SearchResult {
   name: string
@@ -23,12 +24,15 @@ export function HeaderSearch() {
   const site = useSite()
   const isDev = process.env.NODE_ENV === 'development'
 
-  const getApiPrefix = () => {
-    if (site === 'onchain-agents') {
-      return isDev ? '/site-onchain-agents/api' : '/api';
-    }
-    return '/api';
-  };
+  const getApiUrl = () => {
+    const baseUrl = getBaseUrl()
+    const apiPath = site === 'onchain-agents'
+      ? process.env.NODE_ENV === 'development'
+        ? '/site-onchain-agents/api'
+        : '/api'
+      : '/api'
+    return `${baseUrl}${apiPath}`
+  }
 
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -43,7 +47,7 @@ export function HeaderSearch() {
     async function loadInitialResults() {
       setIsLoading(true)
       try {
-        const response = await fetch(`${getApiPrefix()}/search?q=`)
+        const response = await fetch(`${getApiUrl()}/search?q=`)
         const data = await response.json()
         setResults(data.results || [])
       } catch (error) {
@@ -116,7 +120,7 @@ export function HeaderSearch() {
       setIsLoading(true)
       try {
         const response = await fetch(
-          `${getApiPrefix()}/search?q=${encodeURIComponent(debouncedSearch || '')}`,
+          `${getApiUrl()}/search?q=${encodeURIComponent(debouncedSearch || '')}`,
           { signal: abortControllerRef.current.signal }
         )
         
@@ -166,6 +170,11 @@ export function HeaderSearch() {
     ? "search all" 
     : "search all"
 
+  const getPathPrefix = () => {
+    if (site !== 'onchain-agents') return '';
+    return process.env.NODE_ENV === 'development' ? '/site-onchain-agents' : '';
+  };
+
   const modalContent = isOpen && (
     <>
       <div 
@@ -200,7 +209,7 @@ export function HeaderSearch() {
               sortedResults.map((result, i) => (
                 <Link
                   key={i}
-                  href={`${getApiPrefix()}${result.path}`}
+                  href={`${getPathPrefix()}${result.path}`}
                   onClick={() => setIsOpen(false)}
                   className={cn(
                     "block px-4 py-2 hover:bg-[rgba(var(--foreground-rgb),0.1)]",

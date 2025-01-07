@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import AssetGrid from './AssetGrid'
 import { Asset } from '@/types'
 import { useSite } from '@/contexts/site-context'
-import { getApiPrefix } from '@/lib/config/routes'
+import { getBaseUrl } from '@/lib/config/routes'
 import { getActiveChains } from '@/config/chains'
 
 interface AssetsTabProps {
@@ -17,50 +17,44 @@ export default function AssetsTab({ address, selectedChain, isOwner }: AssetsTab
   const [loading, setLoading] = useState(true)
   const [assets, setAssets] = useState<Asset[]>([])
   const site = useSite()
-  const apiPrefix = getApiPrefix(site)
 
   const fetchAssets = useCallback(async () => {
     if (!address) return
 
     setLoading(true)
     try {
-      // Construct the correct API URL based on the site
-      const baseUrl = site === 'onchain-agents' 
+      const baseUrl = getBaseUrl()
+      const apiPath = site === 'onchain-agents' 
         ? process.env.NODE_ENV === 'development'
           ? '/site-onchain-agents/api'
           : '/api'
-        : '/api';
+        : '/api'
 
-      const url = `${baseUrl}/simplehash/nft?address=${address}${
+      const url = `${baseUrl}${apiPath}/simplehash/nft?address=${address}${
         selectedChain !== 'all' ? `&chain=${selectedChain}` : ''
-      }`;
+      }`
 
-      console.log('[AssetsTab] Fetching assets:', {
-        url,
-        address,
-        selectedChain,
-        site
-      });
+      console.log('[AssetsTab] Fetching assets:', { url, address, selectedChain, site })
 
-      const response = await fetch(url);
+      const response = await fetch(url)
 
       if (!response.ok) {
         console.error('[AssetsTab] API error:', {
           status: response.status,
           statusText: response.statusText
-        });
-        throw new Error('Failed to fetch assets');
+        })
+        throw new Error('Failed to fetch assets')
       }
 
-      const data = await response.json();
-      setAssets(data.nfts || []);
+      const data = await response.json()
+      setAssets(data.nfts || [])
     } catch (error) {
-      console.error('[AssetsTab] Error:', error);
-      setAssets([]);
+      console.error('[AssetsTab] Error:', error)
+      setAssets([])
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [address, selectedChain, site]);
+  }, [address, selectedChain, site])
 
   // Fetch assets only when address changes
   useEffect(() => {
