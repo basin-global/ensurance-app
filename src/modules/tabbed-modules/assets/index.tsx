@@ -80,6 +80,8 @@ export default function AssetsTab({ address, selectedChain, isOwner }: AssetsTab
       <AssetGrid
         assets={filteredAssets}
         loading={loading}
+        address={address}
+        isOwner={isOwner}
       />
     </div>
   )

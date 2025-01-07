@@ -10,7 +10,7 @@ import { getChainBySimplehashName, getActiveChains } from '@/config/chains';
 import { TokenboundClient } from "@tokenbound/sdk";
 import { getTokenBoundClientConfig } from '@/config/tokenbound';
 import { createTokenboundActions } from '@/lib/tokenbound';
-import { fetchNFTsByContracts } from '@/lib/simplehash';
+import { fetchNFTsByContract } from '@/lib/simplehash';
 import { getFeaturedTokensForOG } from '@/modules/ensurance/featured-config';
 import { BaseModuleProps } from '@/types/index';
 import { useSite } from '@/contexts/site-context';
@@ -116,7 +116,7 @@ export default function AssetsModule({
           // Fetch all ensurance contracts data first
           const ensuranceResults = await Promise.all(
             Object.entries(ensuranceContracts).map(async ([chain, contractAddress]) => {
-              const nfts = await fetchNFTsByContracts(address, { [chain]: contractAddress });
+              const nfts = await fetchNFTsByContract(chain, contractAddress);
               return { chain, nfts };
             })
           );
