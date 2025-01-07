@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { fetchNFTsByAddress, fetchNFTDetails, fetchNFTsByContract } from '@/lib/simplehash'
 import { isSpamContract } from '@/config/spamContracts'
+import { headers } from 'next/headers'
+import { getSiteContext } from '@/lib/config/routes'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -9,7 +11,14 @@ export async function GET(request: Request) {
   const contractAddress = searchParams.get('contractAddress')
   const tokenId = searchParams.get('tokenId')
 
-  console.log('NFT route called with params:', { address, chain, contractAddress, tokenId })
+  const headersList = headers()
+  const host = headersList.get('host') || ''
+  const siteContext = getSiteContext(host, new URL(request.url).pathname)
+
+  console.log('NFT route called with:', { 
+    params: { address, chain, contractAddress, tokenId },
+    context: { host, siteContext }
+  })
 
   try {
     // Case 1: Fetch specific NFT by token ID

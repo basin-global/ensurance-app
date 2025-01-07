@@ -4,6 +4,7 @@ import { groups } from '@/lib/database/queries/groups';
 import { accounts } from '@/lib/database/queries/accounts';
 import { ensurance } from '@/lib/database/queries/ensurance';
 import { poolNameMappings } from '@/modules/ensurance/poolMappings';
+import { getSiteContext } from '@/lib/config/routes';
 
 // Cache successful responses for 1 minute
 export const revalidate = 60;
@@ -25,46 +26,30 @@ export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
         const query = searchParams.get('q')?.toLowerCase();
-        
-        // Add debug logging
-        console.log('Search API called with:', {
-            query,
-            host: request.headers.get('host'),
-            pathname: request.nextUrl.pathname,
-            isDev: process.env.NODE_ENV === 'development'
-        });
-        
-        // Determine if we're in onchain-agents context from the host
         const host = request.headers.get('host') || '';
-        const isDev = process.env.NODE_ENV === 'development';
+        const siteContext = getSiteContext(host, request.nextUrl.pathname);
         
-        // Add more debug logging
-        console.log('Context determination:', {
+        console.log('[Search API] Request context:', {
+            query,
             host,
-            isDev,
-            isOnchainAgents: host.includes('onchain-agents.ai') || 
-                (isDev && request.nextUrl.pathname.startsWith('/site-onchain-agents'))
+            siteContext,
+            pathname: request.nextUrl.pathname,
+            fullUrl: request.url
         });
-
-        // In production, onchain-agents.ai serves from /onchain-agents
-        // In development, we use /site-onchain-agents
-        const isOnchainAgents = host.includes('onchain-agents.ai') || 
-            (isDev && request.nextUrl.pathname.startsWith('/site-onchain-agents'));
 
         // Get the base path based on the context
         const getBasePath = () => {
-            if (!isOnchainAgents) return '';
-            if (isDev) return '/site-onchain-agents';
-            return '/onchain-agents';
+            if (siteContext !== 'onchain-agents') return '';
+            return process.env.NODE_ENV === 'development' ? '/site-onchain-agents' : '/onchain-agents';
         };
 
+        const basePath = getBasePath();
+        
         if (!query) {
             return NextResponse.json({ results: [] });
         }
 
         const searchLower = query.toLowerCase();
-        const basePath = getBasePath();
-        
         console.log('Starting database queries with basePath:', basePath);
 
         try {
