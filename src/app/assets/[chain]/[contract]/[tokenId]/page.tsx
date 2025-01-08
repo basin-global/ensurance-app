@@ -382,53 +382,8 @@ export default function AssetDetailPage({ params }: { params: { chain: string; c
             </div>
           </div>
 
-          {/* Data Section */}
-          <div className="mt-8 p-6 bg-gray-800 rounded-lg mx-auto" style={{ width: '66%' }}>
-            <h2 className="text-xl font-semibold mb-3 text-gray-200">Data</h2>
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-8">
-                <div>
-                  <p className="text-gray-400 text-sm mb-1">Collection</p>
-                  <p className="text-gray-200 text-sm font-mono">
-                    {isEnsurance ? 'Ensurance' : truncateAddress(assetDetails.contract_address || '')}
-                  </p>
-                  <p className="text-gray-500 text-xs mt-1 capitalize">{params.chain}</p>
-                </div>
-                <div>
-                  <p className="text-gray-400 text-sm mb-1">ID</p>
-                  <p className="text-gray-200 text-sm font-mono">{assetDetails.token_id}</p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <a
-                  href={`https://rarible.com/token/base/${params.contract}:${params.tokenId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:opacity-80 transition-opacity"
-                >
-                  <Image
-                    src="/assets/icons/rarible.svg"
-                    alt="View on Rarible"
-                    width={24}
-                    height={24}
-                  />
-                </a>
-                <a
-                  href={`https://opensea.io/assets/${params.chain}/${params.contract}/${params.tokenId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:opacity-80 transition-opacity"
-                >
-                  <Image
-                    src="/assets/icons/opensea.svg"
-                    alt="View on OpenSea"
-                    width={24}
-                    height={24}
-                  />
-                </a>
-              </div>
-            </div>
-          </div>
+          {/* Remove Data Section */}
+
         </div>
       )}
 
@@ -483,6 +438,6 @@ export default function AssetDetailPage({ params }: { params: { chain: string; c
 
 // Helper function to truncate address
 const truncateAddress = (address: string) => {
-  if (!address || address.length <= 10) return address;
+  if (!address) return '';
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 };

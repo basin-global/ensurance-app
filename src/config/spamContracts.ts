@@ -36,6 +36,7 @@ export const spamContracts: SpamContractConfig = {
     '0x282A0745dBB8e14a0E796c30FDc63764751aC581',
     '0x2F720426b882b9BAb564c9bb036E2ae8b34EBcbE',
     '0x48b7446ced56848580348d06b4fb84d4b5824130',
+    '0xeaC847526DEBE674aFf8FF3967F78f32C8d61FAF',
     '0x47759df99EAc1cA21e356a52b905b57749a757D7',
     // Add Base spam contract addresses
   ],

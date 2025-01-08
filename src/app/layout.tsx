@@ -52,18 +52,18 @@ export default function RootLayout({
         <SiteProvider>
           <SiteWrapper>
             <PrivyProviderWrapper>
-              <Header />
-              <ToastContainer 
-                theme="dark"
-                position="top-right"
-                toastClassName="!bg-gray-900 !text-gray-100"
-                progressClassName="!bg-blue-500"
-                closeButton={false}
-              />
-              <main className="flex-1">
-                {children}
-              </main>
-              <Footer />
+                <Header />
+                <ToastContainer 
+                  theme="dark"
+                  position="top-right"
+                  toastClassName="!bg-gray-900 !text-gray-100"
+                  progressClassName="!bg-blue-500"
+                  closeButton={false}
+                />
+                <main className="flex-1">
+                  {children}
+                </main>
+                <Footer />
             </PrivyProviderWrapper>
           </SiteWrapper>
         </SiteProvider>

@@ -22,10 +22,11 @@ function isCacheValid(type: keyof typeof cache) {
     return cacheEntry.data && (Date.now() - cacheEntry.timestamp) < CACHE_DURATION;
 }
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
     try {
-        const { searchParams } = new URL(request.url);
-        const query = searchParams.get('q')?.toLowerCase();
+        const query = request.nextUrl.searchParams.get('q')?.toLowerCase();
         const host = request.headers.get('host') || '';
         const siteContext = getSiteContext(host, request.nextUrl.pathname);
         const basePath = getBasePath(siteContext);
@@ -35,8 +36,7 @@ export async function GET(request: NextRequest) {
             host,
             siteContext,
             basePath,
-            pathname: request.nextUrl.pathname,
-            fullUrl: request.url
+            pathname: request.nextUrl.pathname
         });
 
         if (!query) {

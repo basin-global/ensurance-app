@@ -15,7 +15,7 @@ export default function CertificatesPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <SubNavigation type="ensurance" />
+      <SubNavigation type="certificates" />
       <div className="container mx-auto px-4 pt-0 pb-4 flex-1">
         <div className="space-y-4">
           <div className="flex justify-center">

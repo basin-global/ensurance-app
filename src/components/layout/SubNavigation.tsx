@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { useSite } from '@/contexts/site-context'
 
 interface SubNavigationProps {
-  type: 'accounts' | 'og' | 'assets' | 'ensurance';
+  type: 'accounts' | 'og' | 'assets' | 'certificates';
   groupName?: string;
 }
 
@@ -19,17 +19,27 @@ export function SubNavigation({ type, groupName }: SubNavigationProps) {
   // In production, onchain-agents.ai serves directly from root
   const basePath = site === 'onchain-agents' && isDev ? '/site-onchain-agents' : ''
   
-  const links = groupName 
-    ? [
-        { href: `${basePath}/groups/${groupName}/all`, label: 'all' },
-        { href: `${basePath}/groups/${groupName}/create`, label: 'create' },
-        { href: `${basePath}/groups/${groupName}/mine`, label: 'mine' }
-      ]
-    : [
-        { href: `${basePath}/all`, label: 'all' },
-        { href: `${basePath}/create`, label: 'create' },
-        { href: `${basePath}/mine`, label: 'mine' }
+  let links;
+  
+  if (groupName) {
+    links = [
+      { href: `${basePath}/groups/${groupName}/all`, label: 'all' },
+      { href: `${basePath}/groups/${groupName}/create`, label: 'create' },
+      { href: `${basePath}/groups/${groupName}/mine`, label: 'mine' }
     ]
+  } else if (type === 'certificates') {
+    links = [
+      { href: '/certificates/all', label: 'all' },
+      { href: '/certificates/create', label: 'create' },
+      { href: '/certificates/mine', label: 'mine' }
+    ]
+  } else {
+    links = [
+      { href: `${basePath}/all`, label: 'all' },
+      { href: `${basePath}/create`, label: 'create' },
+      { href: `${basePath}/mine`, label: 'mine' }
+    ]
+  }
 
   return (
     <nav className="relative z-10">

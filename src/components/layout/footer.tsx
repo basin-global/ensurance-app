@@ -1,5 +1,6 @@
 import { ReferralButton } from '@/modules/rewards/RewardsLink';
 import { GroupLinks } from '@/modules/groups/GroupLinks';
+import { Verify } from './Verify';
 
 export default function Footer() {
   return (
@@ -10,6 +11,7 @@ export default function Footer() {
             <ReferralButton />
           </div>
           <GroupLinks />
+          <Verify />
         </div>
       </div>
     </footer>
