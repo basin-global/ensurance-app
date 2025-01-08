@@ -16,6 +16,7 @@ This is a Next.js app that serves two domains from a single codebase:
 ## How It Works
 - Both sites use the same project root and `/app` directory
 - onchain-agents.ai just has a different entry point at `/app/onchain-agents`
+- API routes (`/api/*`) are shared and work identically for both domains
 
 ### URLs
 Development:
