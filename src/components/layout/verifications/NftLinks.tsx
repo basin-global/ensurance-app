@@ -42,14 +42,10 @@ export default function NftLinks({ contractAddress, tokenId, chain = 'base', sho
     ? OPENSEA_CHAIN_NAMES[cleanChain as keyof typeof OPENSEA_CHAIN_NAMES]
     : cleanChain
 
-  // Check if this is an Ensurance certificate by checking each contract
-  const isEnsuranceCertificate = cleanContractAddress === ENSURANCE_CONTRACTS.base ||
-    cleanContractAddress === ENSURANCE_CONTRACTS.zora ||
-    cleanContractAddress === ENSURANCE_CONTRACTS.arbitrum ||
-    cleanContractAddress === ENSURANCE_CONTRACTS.optimism
-
-  // Log values for debugging
-  console.log('NftLinks:', { cleanContractAddress, cleanChain, openSeaChain, tokenId })
+  // Check if this is an Ensurance certificate
+  const isEnsuranceCertificate = Object.values(ENSURANCE_CONTRACTS)
+    .map(addr => addr.toLowerCase())
+    .includes(cleanContractAddress.toLowerCase())
 
   return (
     <div className="flex justify-center gap-2">
@@ -61,8 +57,9 @@ export default function NftLinks({ contractAddress, tokenId, chain = 'base', sho
       >
         opensea
       </Link>
-      {/* Only show Rarible for non-Zora chains */}
-      {(!isEnsuranceCertificate || chain !== 'zora') && (
+
+      {/* Show Rarible for non-Zora chains */}
+      {!(isEnsuranceCertificate && chain === 'zora') && (
         <Link
           href={`https://rarible.com/token/${cleanChain}/${cleanContractAddress}:${tokenId}`}
           target="_blank"
@@ -72,6 +69,7 @@ export default function NftLinks({ contractAddress, tokenId, chain = 'base', sho
           rarible
         </Link>
       )}
+
       {/* Show Zora for Ensurance certificates */}
       {isEnsuranceCertificate && chain in ZORA_CHAIN_PREFIXES && (
         <Link
@@ -83,6 +81,7 @@ export default function NftLinks({ contractAddress, tokenId, chain = 'base', sho
           zora
         </Link>
       )}
+
       {showTokenbound && (
         <Link
           href={`https://tokenbound.org/assets/${cleanChain}/${cleanContractAddress}/${tokenId}`}

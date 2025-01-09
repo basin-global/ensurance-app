@@ -22,6 +22,9 @@ export default function AccountHeader({
 }: AccountHeaderProps) {
   console.log('Description prop:', description)
 
+  // Decode the account name if it's URL encoded
+  const decodedAccountName = decodeURIComponent(accountName)
+
   return (
     <div className="relative group/main py-8">
       <div className="flex items-center gap-6">
@@ -36,7 +39,7 @@ export default function AccountHeader({
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <h2 className="text-3xl font-bold text-white">
-              {accountName}
+              {decodedAccountName}
             </h2>
             {isAgent && (
               <span className="text-xs px-1.5 py-0.5 rounded bg-gray-800/80 text-purple-300/50 font-mono ml-2 translate-y-[2px]">

@@ -64,6 +64,7 @@ export interface Asset extends BaseAsset {
     image_url?: string;
     video_url?: string;
     audio_url?: string;
+    animation_url?: string;
     description?: string;
     nft_id?: string;
     isTokenbound?: boolean;

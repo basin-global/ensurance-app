@@ -10,6 +10,7 @@ export default function CustomAudioPlayer({ src }: CustomAudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
+    console.log('CustomAudioPlayer mounted with src:', src);
     const audio = audioRef.current;
     if (!audio) return;
 
@@ -20,7 +21,7 @@ export default function CustomAudioPlayer({ src }: CustomAudioPlayerProps) {
 
     audio.addEventListener('timeupdate', updateProgress);
     return () => audio.removeEventListener('timeupdate', updateProgress);
-  }, []);
+  }, [src]);
 
   const togglePlay = () => {
     if (audioRef.current) {
@@ -44,9 +45,19 @@ export default function CustomAudioPlayer({ src }: CustomAudioPlayerProps) {
     }
   };
 
+  if (!src) {
+    console.log('CustomAudioPlayer: No src provided');
+    return null;
+  }
+
   return (
     <div className="w-full bg-black/50 backdrop-blur-sm rounded-xl p-4 flex flex-col gap-2">
-      <audio ref={audioRef} src={src} className="hidden" />
+      <audio 
+        ref={audioRef} 
+        src={src} 
+        className="hidden" 
+        onError={(e) => console.error('Audio error:', e)}
+      />
       
       <div className="flex items-center gap-4">
         <button
