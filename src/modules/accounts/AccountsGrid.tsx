@@ -19,12 +19,14 @@ interface AccountsGridProps {
     groupName?: string;
     searchQuery?: string;
     agentsOnly?: boolean;
+    walletAddress?: string;
 }
 
 export default function AccountsGrid({ 
     groupName, 
     searchQuery = '', 
-    agentsOnly = false
+    agentsOnly = false,
+    walletAddress
 }: AccountsGridProps) {
     const site = useSite()
     const isDev = process.env.NODE_ENV === 'development'
@@ -44,33 +46,108 @@ export default function AccountsGrid({
     // Memoized fetch function
     const fetchAccounts = useCallback(async () => {
         try {
-            const response = await fetch('/api/accounts')
-            if (!response.ok) throw new Error('Failed to fetch accounts')
-            const data = await response.json()
-            setAccounts(data)
+            console.log('AccountsGrid fetching with:', { walletAddress, groupName })
+
+            // For "mine" view: fetch wallet's NFTs filtered by contract(s)
+            if (walletAddress) {
+                let contractAddresses;
+                let groups;
+                
+                // First get all groups data
+                const groupsResponse = await fetch('/api/groups')
+                if (!groupsResponse.ok) throw new Error('Failed to fetch groups')
+                groups = await groupsResponse.json()
+                console.log('Found groups:', groups)
+
+                // If groupName provided, filter to single group
+                if (groupName) {
+                    const group = groups.find((g: any) => 
+                        g.og_name === (groupName.startsWith('.') ? groupName : `.${groupName}`)
+                    )
+                    if (!group) throw new Error('Group not found')
+                    contractAddresses = [group.contract_address.toLowerCase()]
+                }
+                // For root /mine, use all group contracts
+                else {
+                    contractAddresses = groups
+                        .filter((group: any) => group.contract_address) // Ensure we have a contract
+                        .map((group: any) => group.contract_address.toLowerCase())
+                }
+
+                console.log('Using contract addresses:', contractAddresses)
+
+                // Format contract IDs with chain prefix
+                const contractIds = contractAddresses.map(addr => `base.${addr}`)
+                console.log('Formatted contract IDs:', contractIds)
+
+                // Build SimpleHash API URL with comma-separated contract_ids
+                const apiUrl = `/api/simplehash/nft?address=${walletAddress}&contract_ids=${contractIds.join(',')}`
+                console.log('Full SimpleHash API URL:', apiUrl)
+                console.log('Contract IDs parameter:', contractIds.join(','))
+
+                // Fetch wallet's NFTs filtered by contract(s)
+                const nftResponse = await fetch(apiUrl)
+                if (!nftResponse.ok) throw new Error('Failed to fetch NFTs')
+                const nftData = await nftResponse.json()
+                console.log('Raw SimpleHash response:', nftData)
+
+                // Transform NFTs to match Account interface
+                const transformedNfts = nftData.nfts.map((nft: any) => {
+                    // Find matching group for og_name
+                    const contractAddress = nft.contract_address.toLowerCase()
+                    const matchingGroup = groups.find((group: any) => 
+                        group.contract_address.toLowerCase() === contractAddress
+                    )
+                    const ogName = matchingGroup?.og_name || nft.collection?.name || ''
+
+                    return {
+                        full_account_name: nft.name,
+                        token_id: parseInt(nft.token_id),
+                        og_name: ogName,
+                        is_agent: false // TODO: Determine if this is an agent based on metadata
+                    }
+                })
+
+                console.log('Transformed NFTs:', transformedNfts)
+                return transformedNfts
+            } 
+            // For regular view: use existing DB accounts endpoint
+            else {
+                const endpoint = groupName 
+                    ? `/api/accounts?group=${encodeURIComponent(groupName)}`
+                    : '/api/accounts'
+                console.log('Fetching DB accounts from:', endpoint)
+                
+                const response = await fetch(endpoint)
+                if (!response.ok) throw new Error('Failed to fetch accounts')
+                const data = await response.json()
+                console.log('DB accounts:', data)
+                return data
+            }
         } catch (err) {
-            setError('Failed to load accounts')
-        } finally {
-            setLoading(false)
+            console.error('Error fetching accounts:', err)
+            throw err
         }
-    }, [])
+    }, [walletAddress, groupName])
 
     // Initial fetch with cleanup
     useEffect(() => {
         let mounted = true;
+        setLoading(true)
         
         const load = async () => {
             try {
-                const response = await fetch('/api/accounts')
-                if (!response.ok) throw new Error('Failed to fetch accounts')
-                const data = await response.json()
+                const data = await fetchAccounts()
                 if (mounted) {
                     setAccounts(data)
-                    setLoading(false)
                 }
             } catch (err) {
+                console.error('Error loading accounts:', err)
                 if (mounted) {
                     setError('Failed to load accounts')
+                }
+            } finally {
+                if (mounted) {
                     setLoading(false)
                 }
             }
@@ -81,12 +158,12 @@ export default function AccountsGrid({
         return () => {
             mounted = false
         }
-    }, [])
+    }, [fetchAccounts])
 
     // Reset page when filters change
     useEffect(() => {
         setPage(1)
-    }, [groupName, searchQuery, showOnlyAgents])
+    }, [groupName, searchQuery, showOnlyAgents, walletAddress])
 
     // Memoized filtered accounts
     const filteredAccounts = useMemo(() => {

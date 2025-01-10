@@ -16,6 +16,7 @@ interface NFTParams {
   queried_wallet_balances?: number;
   limit?: number;
   cursor?: string;
+  contract_ids?: string;
 }
 
 // Core SimpleHash client setup
@@ -38,11 +39,12 @@ export const simpleHashApi = axios.create({
 });
 
 // Core NFT fetching functionality
-export async function fetchNFTsByAddress(address: string, chains = ACTIVE_CHAINS) {
+export async function fetchNFTsByAddress(address: string, chains = ACTIVE_CHAINS, contractIds?: string[]) {
   try {
     console.log('fetchNFTsByAddress called with:');
     console.log('- address:', address);
     console.log('- chains param:', chains);
+    console.log('- contract_ids:', contractIds);
     console.log('- ACTIVE_CHAINS constant:', ACTIVE_CHAINS);
     console.log('- API Key present:', !!SIMPLEHASH_API_KEY);
 
@@ -57,13 +59,13 @@ export async function fetchNFTsByAddress(address: string, chains = ACTIVE_CHAINS
       limit: 50
     };
 
+    if (contractIds?.length) {
+      params.contract_ids = contractIds.join(',');
+    }
+
     console.log('Attempting fetch with native fetch API as fallback');
-    const queryString = new URLSearchParams({
-      wallet_addresses: address,
-      chains: chains?.toString() || ACTIVE_CHAINS,
-      queried_wallet_balances: '1',
-      limit: '50'
-    }).toString();
+    const queryString = new URLSearchParams(params as Record<string, string>).toString();
+    console.log('Full SimpleHash API URL:', `https://api.simplehash.com/api/v0/nfts/owners_v2?${queryString}`);
 
     const response = await fetch(`https://api.simplehash.com/api/v0/nfts/owners_v2?${queryString}`, {
       headers: {

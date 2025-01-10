@@ -1,45 +1,42 @@
 'use client'
 
-import Image from 'next/image'
+import { useState } from 'react'
+import { usePrivy } from '@privy-io/react-auth'
+import AccountsGrid from '@/modules/accounts/AccountsGrid'
+import { AssetSearch } from '@/modules/assets/AssetSearch'
 import { useSite } from '@/contexts/site-context'
-import { SubNavigation } from '@/components/layout/SubNavigation'
 
-export default function MyAccountsPage() {
+export default function MinePage() {
+  const [searchQuery, setSearchQuery] = useState('')
   const site = useSite()
-  const isOnchainAgents = site === 'onchain-agents'
-  const orbImage = isOnchainAgents ? '/groups/orbs/ai-orb.png' : '/groups/orbs/ensurance-orb.png'
+  const { user, ready } = usePrivy()
+  const walletAddress = user?.wallet?.address
+  const placeholder = site === 'onchain-agents' ? 'Search agents...' : 'Search accounts...'
+
+  // If not ready or not connected, show appropriate message
+  if (!ready || !walletAddress) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <p className="text-gray-500 font-mono">
+          {!ready ? 'Loading...' : 'Please connect your wallet to view your accounts'}
+        </p>
+      </div>
+    )
+  }
 
   return (
-    <>
-      <SubNavigation type="accounts" />
-      <div className="flex items-center justify-center py-24">
-        <div className="w-20 h-20 flex-shrink-0 mr-6">
-          <Image
-            src={orbImage}
-            alt={isOnchainAgents ? 'AI orb' : 'Ensurance orb'}
-            width={80}
-            height={80}
-            className="rounded-full"
-          />
-        </div>
-        <div>
-          <p className="text-xl font-mono text-white-400 mb-4">
-            {isOnchainAgents ? 'View and manage your onchain agents...' : 'View and manage your accounts...'}
-          </p>
-          <p className="text-gray-500 font-mono">
-            {isOnchainAgents ? 'Agent' : 'Account'} management is coming soon.{' '}
-            <a 
-              href="https://x.com/onchain_agents" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-blue-400 hover:text-blue-300 transition-colors"
-            >
-              follow updates here
-            </a>
-            .
-          </p>
-        </div>
+    <div className="space-y-4">
+      <div className="flex justify-center">
+        <AssetSearch 
+          searchQuery={searchQuery} 
+          setSearchQuery={setSearchQuery}
+          placeholder={placeholder}
+        />
       </div>
-    </>
+      <AccountsGrid 
+        searchQuery={searchQuery}
+        walletAddress={walletAddress}
+      />
+    </div>
   )
 } 

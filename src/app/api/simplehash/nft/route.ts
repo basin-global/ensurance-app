@@ -10,13 +10,14 @@ export async function GET(request: Request) {
   const chain = searchParams.get('chain')
   const contractAddress = searchParams.get('contractAddress')
   const tokenId = searchParams.get('tokenId')
+  const contractIds = searchParams.get('contract_ids')
 
   const headersList = headers()
   const host = headersList.get('host') || ''
   const siteContext = getSiteContext(host, new URL(request.url).pathname)
 
   console.log('NFT route called with:', { 
-    params: { address, chain, contractAddress, tokenId },
+    params: { address, chain, contractAddress, tokenId, contractIds },
     context: { host, siteContext }
   })
 
@@ -37,6 +38,7 @@ export async function GET(request: Request) {
     if (address) {
       console.log('Fetching NFTs for wallet:', address)
       console.log('Chain param from URL:', chain)
+      console.log('Contract IDs from URL:', contractIds)
       console.log('SimpleHash API Key present:', !!process.env.SIMPLEHASH_API_KEY)
       
       // If chain is 'all' or not provided, let fetchNFTsByAddress use its default ACTIVE_CHAINS
@@ -44,7 +46,7 @@ export async function GET(request: Request) {
       console.log('Chains being passed to fetchNFTsByAddress:', chainsToUse || 'using default ACTIVE_CHAINS')
       
       try {
-        const data = await fetchNFTsByAddress(address, chainsToUse)
+        const data = await fetchNFTsByAddress(address, chainsToUse, contractIds ? contractIds.split(',') : undefined)
         
         console.log('Raw NFT data received:', {
           totalNFTs: data.nfts?.length || 0,

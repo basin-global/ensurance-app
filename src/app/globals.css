@@ -12,6 +12,86 @@
   --tab-panel-bg: rgba(var(--foreground-rgb), 0.05);
 }
 
+/* Privy Modal Customization */
+:root {
+  /* Background colors - dark theme */
+  --privy-color-background: hsl(0, 0%, 0%);
+  --privy-color-background-2: hsl(0, 0%, 9%);
+  --privy-color-background-3: hsl(0, 0%, 13%);
+  
+  /* Text colors */
+  --privy-color-foreground: hsl(0, 0%, 100%);
+  --privy-color-foreground-2: hsl(0, 0%, 80%);
+  --privy-color-foreground-3: hsl(0, 0%, 60%);
+  --privy-color-foreground-4: hsl(0, 0%, 40%);
+  
+  /* Accent colors - using your green theme */
+  --privy-color-accent: hsl(142, 71%, 45%);
+  --privy-color-accent-light: hsl(142, 71%, 55%);
+  --privy-color-accent-lightest: hsl(142, 71%, 65%);
+  --privy-color-accent-dark: hsl(142, 71%, 35%);
+  
+  /* Status colors */
+  --privy-color-success: hsl(142, 71%, 45%);
+  --privy-color-error: hsl(0, 84%, 60%);
+  --privy-color-error-light: hsl(0, 84%, 90%);
+  
+  /* Border radius */
+  --privy-border-radius-sm: 4px;
+  --privy-border-radius-md: 6px;
+  --privy-border-radius-lg: 8px;
+  --privy-border-radius-full: 9999px;
+
+  /* Modal dimensions and spacing */
+  --privy-height-modal-compact: 420px;
+  --privy-spacing-modal-header: 12px;
+  --privy-spacing-modal-content: 16px;
+}
+
+/* Force Space Mono font on all Privy elements */
+[data-privy-dialog] *,
+div[role="dialog"] *,
+[data-radix-popper-content-wrapper] * {
+  font-family: 'Space Mono', monospace !important;
+}
+
+/* Additional Privy modal spacing adjustments */
+[data-privy-dialog] [role="dialog"] > div:first-child {
+  gap: 12px !important;
+}
+
+/* Style Privy's sign and wallet messages */
+[data-privy-dialog] [role="dialog"] h2,
+[data-privy-dialog] [role="dialog"] h3,
+[data-privy-dialog] [role="dialog"] [role="heading"] {
+  font-size: 14px !important;
+  opacity: 0.7;
+  letter-spacing: -0.01em;
+  font-family: 'Space Mono', monospace !important;
+}
+
+[data-privy-dialog] [role="dialog"] p,
+[data-privy-dialog] [role="dialog"] span {
+  font-size: 12px !important;
+  opacity: 0.5;
+  letter-spacing: -0.01em;
+  font-family: 'Space Mono', monospace !important;
+}
+
+/* Style Privy footer/branding */
+.ModalFooter-sc-c97bf02f-1 {
+  font-family: 'Space Mono', monospace !important;
+  opacity: 0.75 !important;
+}
+
+.ModalFooter-sc-c97bf02f-1 svg {
+  opacity: 0.75 !important;
+}
+
+.ModalFooter-sc-c97bf02f-1 svg g {
+  fill: hsl(0, 0%, 58%) !important;
+}
+
 /* Onchain agents theme */
 .onchain-agents {
   /* Blue theme tabs */

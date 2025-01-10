@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useSite } from '@/contexts/site-context'
 import { getBasePath } from '@/lib/config/routes'
 
@@ -22,6 +22,7 @@ export function GroupInfo({ groupName }: { groupName: string }) {
     const cleanGroupName = groupName.startsWith('.') ? groupName.slice(1) : groupName
     const site = useSite()
     const basePath = getBasePath(site)
+    const router = useRouter()
 
     useEffect(() => {
         async function fetchGroupData() {
@@ -41,6 +42,13 @@ export function GroupInfo({ groupName }: { groupName: string }) {
 
         fetchGroupData()
     }, [groupName])
+
+    const handleGroupClick = (e: React.MouseEvent) => {
+        // Only navigate if not clicking a link
+        if (!(e.target as HTMLElement).closest('a')) {
+            router.push(`${basePath}/groups/${cleanGroupName}`)
+        }
+    }
 
     // Show loading state
     if (!groupData && !error) {
@@ -72,7 +80,10 @@ export function GroupInfo({ groupName }: { groupName: string }) {
     if (!groupData) return null
 
     return (
-        <Link href={`${basePath}/groups/${cleanGroupName}`} className="block border border-gray-800 rounded-xl overflow-hidden hover:border-gray-700 transition-colors w-3/4 mx-auto mb-16">
+        <div 
+            onClick={handleGroupClick}
+            className="block border border-gray-800 rounded-xl overflow-hidden hover:border-gray-700 transition-colors w-3/4 mx-auto mb-16 cursor-pointer"
+        >
             <div className="relative h-24">
                 <Image
                     src={`/groups/banners/${cleanGroupName}-banner.jpg`}
@@ -112,7 +123,6 @@ export function GroupInfo({ groupName }: { groupName: string }) {
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
-                                    onClick={e => e.stopPropagation()}
                                 >
                                     Website
                                 </a>
@@ -123,7 +133,6 @@ export function GroupInfo({ groupName }: { groupName: string }) {
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
-                                    onClick={e => e.stopPropagation()}
                                 >
                                     Chat
                                 </a>
@@ -132,7 +141,6 @@ export function GroupInfo({ groupName }: { groupName: string }) {
                                 <a 
                                     href={`mailto:${groupData.email}`}
                                     className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
-                                    onClick={e => e.stopPropagation()}
                                 >
                                     Email
                                 </a>
@@ -141,6 +149,6 @@ export function GroupInfo({ groupName }: { groupName: string }) {
                     </div>
                 </div>
             </div>
-        </Link>
+        </div>
     )
 } 
