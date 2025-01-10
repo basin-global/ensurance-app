@@ -46,43 +46,45 @@ export function ConnectedAccount() {
     await logout()
   }
 
+  const statusDotClasses = "w-2 h-2 rounded-full relative after:content-[''] after:absolute after:inset-0 after:rounded-full after:animate-pulse"
+
   return (
-    <div className="relative connected-account">
-      <button 
-        onClick={handleClick}
-        className="flex items-center gap-2 text-base font-mono text-gray-500 hover:text-gray-300 transition-colors"
-      >
-        <span>{authenticated ? 'connected' : 'connect'}</span>
-        {authenticated && (
-          <ChevronDown className="w-4 h-4 translate-y-[1px] opacity-60" />
-        )}
-        <span className={cn(
-          "w-2 h-2 rounded-full relative translate-y-[1px]",
-          "after:content-[''] after:absolute after:inset-0",
-          "after:rounded-full after:animate-pulse",
-          authenticated 
-            ? "bg-green-500 after:bg-green-500/50" 
-            : "bg-red-500 after:bg-red-500/50"
-        )} />
-      </button>
-      
-      {showDropdown && (
-        <div className="absolute top-full right-0 mt-2 py-1 bg-gray-800 rounded-md shadow-lg border border-gray-700">
-          <div className="px-4 py-2 text-sm font-mono text-gray-400 border-b border-gray-700">
-            {truncateAddress(user?.wallet?.address)}
+    <div className="relative connected-account flex justify-end">
+      <div className="flex flex-col items-end">
+        <button 
+          onClick={handleClick}
+          className="flex items-center text-base font-mono text-gray-500 hover:text-gray-300 transition-colors"
+        >
+          <span>{authenticated ? 'connected' : 'connect'}</span>
+          {authenticated && <ChevronDown className="w-4 h-4 ml-1 opacity-60" />}
+          <span className={cn(
+            statusDotClasses,
+            "ml-2",
+            authenticated 
+              ? "bg-green-500 after:bg-green-500/50" 
+              : "bg-red-500 after:bg-red-500/50"
+          )} />
+        </button>
+        
+        {showDropdown && (
+          <div className="absolute top-full mt-2 z-50">
+            <div className="text-sm font-mono text-gray-400 text-right mb-2">
+              {truncateAddress(user?.wallet?.address)}
+            </div>
+            <button
+              onClick={handleDisconnect}
+              className="flex items-center text-base font-mono text-gray-300 hover:text-gray-100 transition-colors"
+            >
+              <span>disconnect</span>
+              <span className={cn(
+                statusDotClasses,
+                "ml-2",
+                "bg-yellow-500 after:bg-yellow-500/50"
+              )} />
+            </button>
           </div>
-          <button
-            onClick={handleDisconnect}
-            className="w-full px-4 py-2 text-left text-base font-mono text-gray-300 hover:bg-gray-700 flex items-center gap-2"
-          >
-            <span>disconnect</span>
-            <span className={cn(
-              "w-2 h-2 rounded-full relative translate-y-[1px]",
-              "bg-yellow-500"
-            )} />
-          </button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 } 
