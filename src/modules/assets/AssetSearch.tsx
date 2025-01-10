@@ -11,19 +11,19 @@ interface AssetSearchProps {
 export function AssetSearch({ 
   searchQuery, 
   setSearchQuery, 
-  placeholder = "Search assets...",
+  placeholder = "search assets...",
   autoFocus
 }: AssetSearchProps) {
   return (
     <div className="w-full max-w-md">
       <input
         type="text"
-        placeholder={placeholder}
+        placeholder={placeholder.toLowerCase()}
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         autoFocus={autoFocus}
         className={cn(
-          "w-full px-4 py-2 rounded-lg",
+          "w-full px-4 py-2 rounded-lg text-center",
           "bg-[rgb(var(--background-rgb))]",
           "border border-[rgba(var(--foreground-rgb),0.1)]",
           "text-[rgb(var(--foreground-rgb))]",

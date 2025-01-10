@@ -29,9 +29,9 @@ export function SubNavigation({ type, groupName }: SubNavigationProps) {
     ]
   } else if (type === 'certificates') {
     links = [
-      { href: '/certificates/all', label: 'all' },
-      { href: '/certificates/create', label: 'create' },
-      { href: '/certificates/mine', label: 'mine' }
+      { href: `${basePath}/certificates/all`, label: 'all' },
+      { href: `${basePath}/certificates/create`, label: 'create' },
+      { href: `${basePath}/certificates/mine`, label: 'mine' }
     ]
   } else {
     links = [
@@ -42,17 +42,17 @@ export function SubNavigation({ type, groupName }: SubNavigationProps) {
   }
 
   return (
-    <nav className="relative z-10">
+    <nav className="relative z-20">
       <div className="container mx-auto px-4 flex justify-center">
         <ul className="flex space-x-8">
           {links.map(({ href, label }) => {
             const isActive = pathname === href
             return (
-              <li key={href}>
+              <li key={href} className="block">
                 <Link
                   href={href}
                   className={cn(
-                    "inline-block py-2 transition-colors",
+                    "block px-4 py-2 transition-colors",
                     isActive 
                       ? "font-bold text-white" 
                       : "font-normal text-gray-500 hover:text-gray-300"

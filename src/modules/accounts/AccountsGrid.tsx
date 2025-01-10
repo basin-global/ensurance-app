@@ -248,37 +248,21 @@ export default function AccountsGrid({
 
     if (filteredAccounts.length === 0) {
         return (
-            <div className="flex items-center justify-center py-12">
-                {groupName && (
-                    <div className="w-20 h-20 flex-shrink-0 mr-6">
-                        <Image
-                            src={`/groups/orbs/${groupName}-orb.png`}
-                            alt={`${groupName} orb`}
-                            width={80}
-                            height={80}
-                            className="rounded-full"
-                        />
-                    </div>
-                )}
-                <div>
-                    <p className="text-xl font-mono text-gray-400 mb-4">
-                        No {groupName ? `.${groupName}` : ''} accounts found{searchQuery ? ' matching your search' : ''}
-                    </p>
+            <div className="text-center py-8">
+                <p className="text-lg text-gray-600 dark:text-gray-400">
+                    No{groupName ? ` .${groupName}` : ''} accounts found{searchQuery ? ' matching your search' : ''}.
                     {!searchQuery && (
-                        <p className="text-gray-500 font-mono">
-                            Any account can become an agent with a few clicks.{' '}
-                            <a 
-                                href="https://x.com/onchain_agents" 
-                                target="_blank" 
-                                rel="noopener noreferrer"
+                        <>
+                            {' '}You can create one{' '}
+                            <Link 
+                                href={`${getPathPrefix()}/accounts/create`}
                                 className="text-blue-400 hover:text-blue-300 transition-colors"
                             >
-                                Contact us
-                            </a>
-                            {' '}to make it happen.
-                        </p>
+                                here
+                            </Link>.
+                        </>
                     )}
-                </div>
+                </p>
             </div>
         )
     }

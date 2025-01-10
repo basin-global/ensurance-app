@@ -14,7 +14,7 @@ export default function CertificatesPage() {
   const urlPrefix = site === 'onchain-agents' ? (isDev ? '/site-onchain-agents' : '') : ''
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex flex-col">
       <SubNavigation type="certificates" />
       <div className="container mx-auto px-4 pt-0 pb-4 flex-1">
         <div className="space-y-4">

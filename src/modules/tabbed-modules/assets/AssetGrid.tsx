@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Asset } from '@/types'
 import { useSite } from '@/contexts/site-context'
 import AssetCard from '@/modules/assets/AssetCard'
+import Link from 'next/link'
 
 interface AssetGridProps {
   address: string
@@ -104,6 +105,17 @@ export default function AssetGrid({
     <div className="text-center py-8">
       <p className="text-lg text-gray-600 dark:text-gray-400">
         No assets found{searchQuery ? ' matching your search' : ''}.
+        {!searchQuery && (
+          <>
+            {' '}You can create one{' '}
+            <Link 
+              href={`${getPathPrefix()}/assets/create`}
+              className="text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              here
+            </Link>.
+          </>
+        )}
       </p>
     </div>
   )

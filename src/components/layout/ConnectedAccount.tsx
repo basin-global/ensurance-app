@@ -1,17 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 import { ChevronDown } from 'lucide-react'
 import { usePrivy } from '@privy-io/react-auth'
 
-interface ConnectedAccountProps {
-  isConnected?: boolean
-}
-
 export function ConnectedAccount() {
   const { login, ready, authenticated, logout, user } = usePrivy()
   const [showDropdown, setShowDropdown] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   const truncateAddress = (address?: string) => {
     if (!address) return ''
@@ -19,37 +17,35 @@ export function ConnectedAccount() {
   }
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement
-      if (!target.closest('.connected-account')) {
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setShowDropdown(false)
       }
     }
-
-    document.addEventListener('click', handleClickOutside)
-    return () => document.removeEventListener('click', handleClickOutside)
+    window.addEventListener('click', handleClick)
+    return () => window.removeEventListener('click', handleClick)
   }, [])
 
-  const handleClick = async () => {
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
     if (!ready) return
-    
     if (!authenticated) {
-      await login()
+      login()
     } else {
       setShowDropdown(!showDropdown)
     }
   }
 
-  const handleDisconnect = async (e: React.MouseEvent) => {
+  const handleDisconnect = (e: React.MouseEvent) => {
     e.stopPropagation()
+    logout()
     setShowDropdown(false)
-    await logout()
   }
 
   const statusDotClasses = "w-2 h-2 rounded-full relative after:content-[''] after:absolute after:inset-0 after:rounded-full after:animate-pulse"
 
   return (
-    <div className="relative connected-account flex justify-end">
+    <div ref={menuRef} className="relative flex justify-end">
       <div className="flex flex-col items-end">
         <button 
           onClick={handleClick}
@@ -66,23 +62,30 @@ export function ConnectedAccount() {
           )} />
         </button>
         
-        {showDropdown && (
-          <div className="absolute top-full mt-2 z-50">
+        {showDropdown && typeof window !== 'undefined' && createPortal(
+          <div 
+            className="absolute z-[1000001]"
+            style={{
+              top: (menuRef.current?.getBoundingClientRect().bottom || 0) + 8,
+              right: window.innerWidth - (menuRef.current?.getBoundingClientRect().right || 0)
+            }}
+          >
             <div className="text-sm font-mono text-gray-400 text-right mb-2">
               {truncateAddress(user?.wallet?.address)}
             </div>
             <button
               onClick={handleDisconnect}
-              className="flex items-center text-base font-mono text-gray-300 hover:text-gray-100 transition-colors"
+              className="flex items-center justify-end text-base font-mono text-gray-300 hover:text-gray-100 transition-colors cursor-pointer w-full"
             >
-              <span>disconnect</span>
+              disconnect
               <span className={cn(
                 statusDotClasses,
                 "ml-2",
                 "bg-yellow-500 after:bg-yellow-500/50"
               )} />
             </button>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </div>
