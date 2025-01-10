@@ -255,7 +255,7 @@ export default function AccountsGrid({
                         <>
                             {' '}You can create one{' '}
                             <Link 
-                                href={`${getPathPrefix()}/accounts/create`}
+                                href={`${getPathPrefix()}/create`}
                                 className="text-blue-400 hover:text-blue-300 transition-colors"
                             >
                                 here

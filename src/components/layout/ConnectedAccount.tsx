@@ -64,10 +64,12 @@ export function ConnectedAccount() {
         
         {showDropdown && typeof window !== 'undefined' && createPortal(
           <div 
-            className="absolute z-[1000001]"
+            className="fixed z-[1000001]"
             style={{
-              top: (menuRef.current?.getBoundingClientRect().bottom || 0) + 8,
-              right: window.innerWidth - (menuRef.current?.getBoundingClientRect().right || 0)
+              top: menuRef.current?.getBoundingClientRect().bottom,
+              right: window.innerWidth - (menuRef.current?.getBoundingClientRect().right || 0),
+              transform: 'translateY(8px)',
+              position: 'fixed'
             }}
           >
             <div className="text-sm font-mono text-gray-400 text-right mb-2">
