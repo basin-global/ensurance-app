@@ -30,7 +30,7 @@ Production:
 ### Helpers
 Use `isSite` for conditional rendering:
 ```typescript
-import { isSite } from '@/lib/config/routes'
+import { isSite } from '@/config/routes'
 
 function MyComponent() {
     const site = useSite()

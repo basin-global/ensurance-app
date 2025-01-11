@@ -5,7 +5,7 @@ import { ShieldCheck } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { useSite } from '@/contexts/site-context'
-import { isSite } from '@/lib/config/routes'
+import { isSite } from '@/config/routes'
 import CertificateVerification from './verifications/CertificateVerification'
 
 // Base link style that all verification links will use

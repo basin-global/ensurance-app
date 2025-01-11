@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getActiveChains } from '@/config/chains';
 import { headers } from 'next/headers';
-import { getSiteContext } from '@/lib/config/routes';
+import { getSiteContext } from '@/config/routes';
 import { isSpamContract } from '@/config/spamContracts';
 import { calculateTokenPrice, calculateNativeTokenPrice } from '@/modules/tabbed-modules/currency/utils';
 import type { ActiveChain } from '@/lib/simplehash';

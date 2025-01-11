@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { siteConfig, getSiteContext } from '@/lib/config/routes'
+import { siteConfig, getSiteContext } from '@/config/routes'
 
 export function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || ''

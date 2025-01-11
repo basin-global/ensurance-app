@@ -4,7 +4,7 @@ import { groups } from '@/lib/database/queries/groups';
 import { accounts } from '@/lib/database/queries/accounts';
 import { ensurance } from '@/lib/database/queries/ensurance';
 import { poolNameMappings } from '@/modules/ensurance/poolMappings';
-import { getSiteContext, getBasePath } from '@/lib/config/routes';
+import { getSiteContext, getBasePath } from '@/config/routes';
 
 // Cache successful responses for 1 minute
 export const revalidate = 60;

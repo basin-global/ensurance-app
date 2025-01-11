@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { fetchNFTsByAddress, fetchNFTDetails, fetchNFTsByContract } from '@/lib/simplehash'
 import { isSpamContract } from '@/config/spamContracts'
 import { headers } from 'next/headers'
-import { getSiteContext } from '@/lib/config/routes'
+import { getSiteContext } from '@/config/routes'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensurance } from '@/lib/database/queries/ensurance';
 import { headers } from 'next/headers';
-import { getSiteContext } from '@/lib/config/routes';
+import { getSiteContext } from '@/config/routes';
 
 export async function GET(request: Request) {
   const headersList = headers();

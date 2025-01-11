@@ -7,7 +7,7 @@ import { Asset, EnsureOperation } from '@/types';
 import { AssetDetailView } from '@/modules/assets/details/AssetDetailView';
 import { CertificateActions } from '@/modules/ensurance/details/CertificateActions';
 import { useSite } from '@/contexts/site-context';
-import { getApiPrefix } from '@/lib/config/routes';
+import { getApiPrefix } from '@/config/routes';
 import { usePrivy } from '@privy-io/react-auth';
 import { EnsureModal } from '@/modules/ensure/ensure-modal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";

@@ -6,7 +6,7 @@ import { isSpamContract } from '@/config/spamContracts';
 import { Asset } from '@/types';
 import { AssetDetailView } from '@/modules/assets/details/AssetDetailView';
 import { useSite } from '@/contexts/site-context';
-import { getApiPrefix, getBasePath } from '@/lib/config/routes';
+import { getApiPrefix, getBasePath } from '@/config/routes';
 import { isEnsuranceToken } from '@/modules/ensurance/config';
 
 interface AssetPageProps {

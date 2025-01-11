@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
-import { SiteContext as SiteContextType, getSiteContext } from '@/lib/config/routes'
+import { SiteContext as SiteContextType, getSiteContext } from '@/config/routes'
 
 const SiteContext = createContext<SiteContextType>('ensurance')
 

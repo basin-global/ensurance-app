@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useSite } from '@/contexts/site-context'
-import { getBasePath } from '@/lib/config/routes'
+import { getBasePath } from '@/config/routes'
 
 interface GroupData {
     og_name: string;
