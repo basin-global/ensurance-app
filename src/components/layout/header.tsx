@@ -1,7 +1,7 @@
 'use client'
 
 import { HeaderSearch } from './HeaderSearch'
-import { ConnectedAccount } from './ConnectedAccount'
+import { ConnectOperator } from './ConnectOperator'
 import { HeaderLogo } from './HeaderLogo'
 
 export default function Header() {
@@ -15,7 +15,7 @@ export default function Header() {
               <HeaderSearch />
               <span className="text-sm font-mono opacity-50 mr-8">⌘K</span>
             </div>
-            <ConnectedAccount />
+            <ConnectOperator />
           </div>
         </nav>
       </div>

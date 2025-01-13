@@ -1,7 +1,7 @@
 import { Plus } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { SplitsBar } from '@/modules/splits/components/SplitsBar';
-import { getBasePath } from '@/lib/config/routes';
+import { getBasePath } from '@/config/routes';
 import { useSite } from '@/contexts/site-context';
 import { Asset, EnsureOperation } from '@/types';
 

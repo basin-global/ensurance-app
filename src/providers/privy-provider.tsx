@@ -12,7 +12,6 @@ export function PrivyProviderWrapper({ children }: { children: React.ReactNode }
   const site = useSite();
   const isOnchainAgents = site === 'onchain-agents';
 
-  // Only render provider after component mounts
   useEffect(() => {
     setMounted(true);
   }, []);

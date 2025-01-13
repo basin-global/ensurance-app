@@ -8,7 +8,7 @@ import { EnsureMenuItems } from '@/modules/ensure/ensure-menu'
 import { EnsureModal } from '@/modules/ensure/ensure-modal'
 import { Asset } from '@/types'
 import { useSite } from '@/contexts/site-context'
-import { getApiPrefix } from '@/lib/config/routes';
+import { getApiPrefix } from '@/config/routes';
 
 // Helper function to format numbers
 const formatNumber = (value: string | number | null | undefined, decimals: number = 2): string => {

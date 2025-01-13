@@ -1,5 +1,5 @@
 import { useSite } from '@/contexts/site-context'
-import { getBasePath } from '@/lib/config/routes'
+import { getBasePath } from '@/config/routes'
 
 export function useUrlBuilder() {
   const site = useSite()

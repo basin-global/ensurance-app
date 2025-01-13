@@ -10,20 +10,34 @@ import { useSite } from '@/contexts/site-context'
 export default function CertificatesMinePage() {
   const [searchQuery, setSearchQuery] = useState('')
   const site = useSite()
-  const { user, ready } = usePrivy()
+  const { user, ready, authenticated } = usePrivy()
   const walletAddress = user?.wallet?.address
   const isDev = process.env.NODE_ENV === 'development'
   
   const urlPrefix = site === 'onchain-agents' ? (isDev ? '/site-onchain-agents' : '') : ''
 
-  // If not ready or not connected, show appropriate message
-  if (!ready || !walletAddress) {
+  // If not ready, show loading
+  if (!ready) {
     return (
       <div className="min-h-screen flex flex-col">
         <SubNavigation type="certificates" />
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-gray-500 font-mono">
-            {!ready ? 'Loading...' : 'Please connect your wallet to view your certificates'}
+        <div className="flex-1 flex flex-col items-center justify-center p-8">
+          <p className="text-xl text-center mb-4">Loading...</p>
+          <p className="text-gray-500 text-center">Please wait...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // If not connected, show connect message
+  if (!authenticated || !walletAddress) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <SubNavigation type="certificates" />
+        <div className="flex-1 flex flex-col items-center justify-center p-8">
+          <p className="text-xl text-center mb-4">👋 Connect your wallet</p>
+          <p className="text-gray-500 text-center">
+            Connect your wallet to view your certificates
           </p>
         </div>
       </div>

@@ -7,7 +7,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent } from '@/compon
 import { EnsureMenuItems } from '@/modules/ensure/ensure-menu'
 import { EnsureModal } from '@/modules/ensure/ensure-modal'
 import { useSite } from '@/contexts/site-context'
-import { getApiPrefix } from '@/lib/config/routes'
+import { getApiPrefix } from '@/config/routes'
 import { getChainIcon, chainOrder } from '@/config/chains'
 import { EnsureOperation } from '@/types'
 import { 

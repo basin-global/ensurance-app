@@ -9,7 +9,7 @@ import { useDebounce } from '@/hooks/useDebounce'
 import { createPortal } from 'react-dom'
 import { poolNameMappings } from '@/modules/ensurance/poolMappings'
 import { useSite } from '@/contexts/site-context'
-import { getApiPrefix } from '@/lib/config/routes'
+import { getApiPrefix } from '@/config/routes'
 
 interface SearchResult {
   name: string

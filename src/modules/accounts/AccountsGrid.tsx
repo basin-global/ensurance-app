@@ -190,6 +190,10 @@ export default function AccountsGrid({
         // Sort: agents first, then alphabetically
         return filtered.sort((a, b) => {
             if (a.is_agent !== b.is_agent) return a.is_agent ? -1 : 1
+            // Handle null names
+            if (!a.full_account_name && !b.full_account_name) return 0
+            if (!a.full_account_name) return 1  // null values go to end
+            if (!b.full_account_name) return -1
             return a.full_account_name.localeCompare(b.full_account_name)
         })
     }, [accounts, groupName, showOnlyAgents, searchQuery])

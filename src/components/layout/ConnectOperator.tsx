@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { ChevronDown } from 'lucide-react'
 import { usePrivy } from '@privy-io/react-auth'
 
-export function ConnectedAccount() {
+export function ConnectOperator() {
   const { login, ready, authenticated, logout, user } = usePrivy()
   const [showDropdown, setShowDropdown] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)

@@ -14,7 +14,7 @@ import { fetchNFTsByContract } from '@/lib/simplehash';
 import { getFeaturedTokensForOG } from '@/modules/ensurance/featured-config';
 import { BaseModuleProps } from '@/types/index';
 import { useSite } from '@/contexts/site-context';
-import { getApiPrefix } from '@/lib/config/routes';
+import { getApiPrefix } from '@/config/routes';
 
 // Export the existing Asset interface
 export interface Asset {
