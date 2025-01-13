@@ -15,6 +15,7 @@ export const accounts = {
                 const query = `
                     SELECT 
                         full_account_name,
+                        token_id,
                         is_agent
                     FROM "${tableName}"
                 `;
@@ -23,10 +24,17 @@ export const accounts = {
                 allAccounts = [...allAccounts, ...result.rows];
             }
             
-            // Sort results
-            return allAccounts.sort((a, b) => 
-                a.full_account_name.localeCompare(b.full_account_name)
-            );
+            // Sort results: agents first, then alphabetically
+            return allAccounts.sort((a, b) => {
+                // First sort by is_agent
+                if (a.is_agent !== b.is_agent) return a.is_agent ? -1 : 1;
+                
+                // Then handle null names and sort alphabetically
+                if (!a.full_account_name && !b.full_account_name) return 0;
+                if (!a.full_account_name) return 1;  // null values go to end
+                if (!b.full_account_name) return -1;
+                return a.full_account_name.localeCompare(b.full_account_name);
+            });
             
         } catch (error) {
             console.error('Database query error:', error);
@@ -58,10 +66,17 @@ export const accounts = {
                 allAccounts = [...allAccounts, ...result.rows];
             }
             
-            // Sort results
-            return allAccounts.sort((a, b) => 
-                a.full_account_name.localeCompare(b.full_account_name)
-            );
+            // Sort results: agents first, then alphabetically
+            return allAccounts.sort((a, b) => {
+                // First sort by is_agent
+                if (a.is_agent !== b.is_agent) return a.is_agent ? -1 : 1;
+                
+                // Then handle null names and sort alphabetically
+                if (!a.full_account_name && !b.full_account_name) return 0;
+                if (!a.full_account_name) return 1;  // null values go to end
+                if (!b.full_account_name) return -1;
+                return a.full_account_name.localeCompare(b.full_account_name);
+            });
             
         } catch (error) {
             console.error('Database query error:', error);
