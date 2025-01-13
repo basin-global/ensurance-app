@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 import { ChevronDown } from 'lucide-react'
 import { usePrivy } from '@privy-io/react-auth'
@@ -45,49 +44,46 @@ export function ConnectOperator() {
   const statusDotClasses = "w-2 h-2 rounded-full relative after:content-[''] after:absolute after:inset-0 after:rounded-full after:animate-pulse"
 
   return (
-    <div ref={menuRef} className="relative flex justify-end">
+    <div ref={menuRef} className="relative flex justify-end z-50">
       <div className="flex flex-col items-end">
         <button 
           onClick={handleClick}
           className="flex items-center text-base font-mono text-gray-500 hover:text-gray-300 transition-colors"
         >
           <span>{authenticated ? 'connected' : 'connect'}</span>
+          <div className="inline-flex items-center ml-[10px]">
+            <span className={cn(
+              statusDotClasses,
+              authenticated 
+                ? "bg-green-500 after:bg-green-500/50" 
+                : "bg-red-500 after:bg-red-500/50"
+            )} />
+          </div>
           {authenticated && <ChevronDown className="w-4 h-4 ml-1 opacity-60" />}
-          <span className={cn(
-            statusDotClasses,
-            "ml-2",
-            authenticated 
-              ? "bg-green-500 after:bg-green-500/50" 
-              : "bg-red-500 after:bg-red-500/50"
-          )} />
         </button>
         
-        {showDropdown && typeof window !== 'undefined' && createPortal(
+        {showDropdown && (
           <div 
-            className="fixed z-[1000001]"
-            style={{
-              top: menuRef.current?.getBoundingClientRect().bottom,
-              right: window.innerWidth - (menuRef.current?.getBoundingClientRect().right || 0),
-              transform: 'translateY(8px)',
-              position: 'fixed'
-            }}
+            className="absolute top-full right-0 mt-2 bg-black/80 backdrop-blur-sm rounded-lg p-4 shadow-xl"
           >
-            <div className="text-sm font-mono text-gray-400 text-right mb-2">
-              {truncateAddress(user?.wallet?.address)}
+            <div className="flex flex-col items-end space-y-2">
+              <div className="text-sm font-mono text-gray-400">
+                {truncateAddress(user?.wallet?.address)}
+              </div>
+              <button
+                onClick={handleDisconnect}
+                className="flex items-center text-base font-mono text-gray-300 hover:text-gray-100 transition-colors cursor-pointer"
+              >
+                <span>disconnect</span>
+                <div className="inline-flex items-center ml-[10px]">
+                  <span className={cn(
+                    statusDotClasses,
+                    "bg-yellow-500 after:bg-yellow-500/50"
+                  )} />
+                </div>
+              </button>
             </div>
-            <button
-              onClick={handleDisconnect}
-              className="flex items-center justify-end text-base font-mono text-gray-300 hover:text-gray-100 transition-colors cursor-pointer w-full"
-            >
-              disconnect
-              <span className={cn(
-                statusDotClasses,
-                "ml-2",
-                "bg-yellow-500 after:bg-yellow-500/50"
-              )} />
-            </button>
-          </div>,
-          document.body
+          </div>
         )}
       </div>
     </div>
