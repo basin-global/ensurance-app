@@ -1,23 +1,14 @@
 import { NextResponse } from 'next/server';
 import { ensurance } from '@/lib/database/queries/ensurance';
-import { headers } from 'next/headers';
-import { getSiteContext } from '@/config/routes';
 
 export async function GET(request: Request) {
-  const headersList = headers();
-  const host = headersList.get('host') || '';
-  const siteContext = getSiteContext(host, new URL(request.url).pathname);
-  
   const { searchParams } = new URL(request.url);
   const chain = searchParams.get('chain');
   const tokenId = searchParams.get('tokenId');
 
   console.log('[Ensurance API] Request details:', {
-    siteContext,
     chain,
-    tokenId,
-    host,
-    pathname: new URL(request.url).pathname
+    tokenId
   });
 
   try {

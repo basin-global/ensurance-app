@@ -9,29 +9,11 @@ import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify'
 import { SiteProvider } from '@/contexts/site-context'
 import { SiteWrapper } from '@/components/layout/SiteWrapper'
-import { headers } from 'next/headers'
 import { Metadata } from 'next'
 
-export async function generateMetadata(): Promise<Metadata> {
-  const hostname = headers().get('host') || ''
-  const pathname = headers().get('x-pathname') || ''
-  
-  // Use same logic as site-context
-  const isOnchainAgents = 
-    hostname === 'onchain-agents.ai' || 
-    pathname.startsWith('/site-onchain-agents')
-
-  if (isOnchainAgents) {
-    return {
-      title: 'onchain .ai agents',
-      description: 'Onchain Agents for Everyone'
-    }
-  }
-
-  return {
-    title: 'ensurance agents',
-    description: 'Ensuring Nature & the Benefits It Provides'
-  }
+export const metadata: Metadata = {
+  title: 'ensurance agents',
+  description: 'Ensuring Nature & the Benefits It Provides'
 }
 
 export const viewport = {

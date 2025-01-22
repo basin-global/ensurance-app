@@ -183,7 +183,7 @@ export default function AccountsGrid({
         if (searchQuery) {
             const searchLower = searchQuery.toLowerCase()
             filtered = filtered.filter(account => 
-                account.full_account_name.toLowerCase().includes(searchLower)
+                account?.full_account_name?.toLowerCase()?.includes(searchLower) ?? false
             )
         }
 

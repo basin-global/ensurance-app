@@ -4,7 +4,6 @@ import { groups } from '@/lib/database/queries/groups';
 import { accounts } from '@/lib/database/queries/accounts';
 import { ensurance } from '@/lib/database/queries/ensurance';
 import { poolNameMappings } from '@/modules/ensurance/poolMappings';
-import { getSiteContext, getBasePath } from '@/config/routes';
 
 // Cache successful responses for 1 minute
 export const revalidate = 60;
@@ -27,25 +26,13 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
         const query = request.nextUrl.searchParams.get('q')?.toLowerCase();
-        const host = request.headers.get('host') || '';
-        const siteContext = getSiteContext(host, request.nextUrl.pathname);
-        const basePath = getBasePath(siteContext);
         
-        console.log('[Search API] Request context:', {
-            query,
-            host,
-            siteContext,
-            basePath,
-            pathname: request.nextUrl.pathname
-        });
-
         if (!query) {
             return NextResponse.json({ results: [] });
         }
 
         const searchLower = query.toLowerCase();
-        console.log('Starting database queries with basePath:', basePath);
-
+        
         // Initialize data arrays with cached or empty values
         let groupsData = isCacheValid('groups') ? cache.groups.data : [];
         let accountsData = isCacheValid('accounts') ? cache.accounts.data : [];
@@ -70,7 +57,6 @@ export async function GET(request: NextRequest) {
             }
         } catch (error) {
             console.error('[Search API] Failed to load accounts:', error);
-            // Use empty array or cached data if available
             accountsData = accountsData || [];
         }
 
@@ -81,15 +67,8 @@ export async function GET(request: NextRequest) {
             }
         } catch (error) {
             console.error('[Search API] Failed to load certificates:', error);
-            // Use empty array or cached data if available
             certificatesData = certificatesData || [];
         }
-
-        console.log('Database results:', {
-            groupsCount: groupsData?.length || 0,
-            accountsCount: accountsData?.length || 0,
-            certificatesCount: certificatesData?.length || 0
-        });
 
         // Process results in parallel with null checks
         const [matchingGroups, matchingAccounts, matchingCertificates] = await Promise.all([
@@ -100,7 +79,7 @@ export async function GET(request: NextRequest) {
                 )
                 .map(group => ({
                     name: group.name_front || group.og_name,
-                    path: `${basePath}/groups/${group.og_name.replace(/^\./, '')}/all`,
+                    path: `/groups/${group.og_name.replace(/^\./, '')}/all`,
                     type: 'group'
                 })),
             accountsData
@@ -109,7 +88,7 @@ export async function GET(request: NextRequest) {
                 )
                 .map(account => ({
                     name: account.full_account_name,
-                    path: `${basePath}/${account.full_account_name}`,
+                    path: `/${account.full_account_name}`,
                     type: 'account',
                     is_agent: account.is_agent,
                     is_pool: account.full_account_name in poolNameMappings
@@ -121,21 +100,24 @@ export async function GET(request: NextRequest) {
                 )
                 .map(cert => ({
                     name: cert.name || `Certificate #${cert.token_id}`,
-                    path: `${basePath}/certificates/${cert.chain}/${cert.token_id}`,
+                    path: `/certificates/${cert.chain}/${cert.token_id}`,
                     type: 'certificate'
                 }))
         ]);
 
-        return NextResponse.json({ 
-            results: [...matchingGroups, ...matchingAccounts, ...matchingCertificates] 
-        });
+        // Combine and sort results
+        const results = [
+            ...matchingGroups,
+            ...matchingAccounts,
+            ...matchingCertificates
+        ];
 
+        return NextResponse.json(results);
     } catch (error) {
-        console.error('[Search API] Search failed:', error);
-        // Return empty results instead of error
-        return NextResponse.json({ 
-            results: [],
-            error: process.env.NODE_ENV === 'development' ? error.message : 'Search error'
-        });
+        console.error('[Search API] Error:', error);
+        return NextResponse.json(
+            { error: 'Search failed' },
+            { status: 500 }
+        );
     }
 } 

@@ -1,44 +1,27 @@
-# Multi-Domain Next.js App Rules
+# Ensurance App - Domain Setup History
 
-## Core Concept
-This is a Next.js app that serves two domains from a single codebase:
-- ensurance.app
-- onchain-agents.ai
+## Historical Setup (Deprecated)
+This app was originally built to serve two domains from a single codebase:
+- ensurance.app (primary)
+- onchain-agents.ai (secondary)
 
-## Project Structure
-```
-/                         # Project root (shared config, env files, etc)
-/src
-  /app                   # Main app directory (shared by both sites)
-    /onchain-agents      # Entry point for onchain-agents.ai
-```
+The multi-domain setup used:
+- Shared `/app` directory for common components
+- `/app/onchain-agents` as entry point for onchain-agents.ai
+- Middleware for domain-specific routing
+- Conditional rendering with `isSite` helper
 
-## How It Works
-- Both sites use the same project root and `/app` directory
-- onchain-agents.ai just has a different entry point at `/app/onchain-agents`
-- API routes (`/api/*`) are shared and work identically for both domains
+## Current Setup
+The app now serves only ensurance.app, with onchain-agents.ai redirecting to it via DNS:
 
 ### URLs
-Development:
-- ensurance.app → `localhost:3000`
-- onchain-agents.ai → `localhost:3000/site-onchain-agents`
+- Production: `https://ensurance.app`
+- Development: `localhost:3000`
 
-Production:
-- ensurance.app → `https://ensurance.app`
-- onchain-agents.ai → `https://onchain-agents.ai`
+### Legacy Code Notice
+Some multi-domain code may still exist in the codebase:
+- `isSite` checks in components
+- Site context providers
+- Domain-specific routing logic
 
-### Helpers
-Use `isSite` for conditional rendering:
-```typescript
-import { isSite } from '@/config/routes'
-
-function MyComponent() {
-    const site = useSite()
-    return (
-        <div>
-            {isSite(site, 'ensurance') && <div>Ensurance only</div>}
-            {isSite(site, 'onchain-agents') && <div>Onchain Agents only</div>}
-        </div>
-    )
-}
-```
+These remnants are gradually being cleaned up but don't affect functionality as all traffic now routes to ensurance.app.

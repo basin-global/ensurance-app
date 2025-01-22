@@ -40,9 +40,10 @@ export function HeaderSearch() {
       try {
         const response = await fetch(`${apiPrefix}/search?q=`)
         const data = await response.json()
-        setResults(data.results || [])
+        setResults(Array.isArray(data) ? data : [])
       } catch (error) {
         console.error('Initial search failed:', error)
+        setResults([])
       }
       setIsLoading(false)
     }
@@ -128,9 +129,10 @@ export function HeaderSearch() {
         }
         
         const data = await response.json()
+        console.log('Search API response:', data) // Add logging to debug
         
         if (abortControllerRef.current) {
-          setResults(data.results || [])
+          setResults(Array.isArray(data) ? data : [])
         }
       } catch (error) {
         if (error.name !== 'AbortError') {
@@ -153,7 +155,11 @@ export function HeaderSearch() {
   }, [debouncedSearch, apiPrefix])
 
   const sortedResults = React.useMemo(() => {
-    return results.sort((a, b) => {
+    if (!Array.isArray(results)) {
+      console.warn('Results is not an array:', results)
+      return []
+    }
+    return [...results].sort((a, b) => {
       const typeOrder = {
         group: 1,
         account: a.is_pool ? 2 : (a.is_agent ? 3 : 4),
