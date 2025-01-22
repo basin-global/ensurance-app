@@ -75,16 +75,16 @@ function TableOfContents() {
   return (
     <nav className="w-64 pl-8 hidden lg:block">
       <div className="sticky top-24">
-        <h5 className="text-sm font-semibold text-[rgba(var(--foreground-rgb),0.7)] uppercase tracking-wide mb-3 font-mono">
+        <h5 className="text-xs font-semibold text-[rgba(var(--foreground-rgb),0.5)] uppercase tracking-wide mb-3 font-mono">
           On this page
         </h5>
-        <ul className="space-y-2">
+        <ul className="space-y-1.5">
           {headings.map((heading) => (
             <li key={heading.id}>
               <a
                 href={`#${heading.id}`}
-                className={`block py-1 text-[rgba(var(--foreground-rgb),0.7)] hover:text-[rgb(var(--foreground-rgb))] font-grotesk ${
-                  heading.level === 3 ? 'pl-4' : ''
+                className={`block py-0.5 text-sm text-[rgba(var(--foreground-rgb),0.5)] hover:text-[rgba(var(--foreground-rgb),0.8)] font-grotesk transition-colors ${
+                  heading.level === 3 ? 'pl-3 text-xs' : ''
                 }`}
               >
                 {heading.text}
