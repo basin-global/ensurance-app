@@ -4,8 +4,6 @@ import Link from 'next/link'
 import { ShieldCheck } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { useSite } from '@/contexts/site-context'
-import { isSite } from '@/config/routes'
 import CertificateVerification from './verifications/CertificateVerification'
 
 // Base link style that all verification links will use
@@ -41,14 +39,13 @@ const NftLinks = dynamic(() => import('./verifications/NftLinks'), {
 
 export function Verify() {
   const pathname = usePathname()
-  const site = useSite()
   const isDev = process.env.NODE_ENV === 'development'
   
   // Match any path under /groups/[group]
-  const groupMatch = pathname?.match(/^\/(?:site-onchain-agents\/)?groups\/([^\/]+)(?:\/.*)?$/)
+  const groupMatch = pathname?.match(/^\/groups\/([^\/]+)(?:\/.*)?$/)
   
   // Only match accounts at root level with a dot (e.g., /name.group)
-  const accountMatch = pathname?.match(/^\/(?:site-onchain-agents\/)?([^\/]+\.[^\/]+)$/)
+  const accountMatch = pathname?.match(/^\/([^\/]+\.[^\/]+)$/)
   
   // Match certificate pages - capture chain and tokenId
   const certificateMatch = pathname?.match(/\/certificates\/([^\/]+)\/(\d+)/)
@@ -56,7 +53,7 @@ export function Verify() {
   const isOnCertificatesPath = pathname?.includes('/certificates')
   
   // Match asset pages - capture chain, contract, and tokenId
-  const assetMatch = pathname?.match(/^\/(?:site-onchain-agents\/)?assets\/([^\/]+)\/([^\/]+)\/([^\/]+)$/)
+  const assetMatch = pathname?.match(/^\/assets\/([^\/]+)\/([^\/]+)\/([^\/]+)$/)
   
   // Extract group name from group route - first capture group is the group name
   const groupName = groupMatch?.[1]

@@ -1,8 +1,6 @@
 'use client'
 
 import { usePrivy } from '@privy-io/react-auth'
-import { useSite } from '@/contexts/site-context'
-import { isSite } from '@/config/routes'
 import Link from 'next/link'
 
 function VaultsList({ authenticated }: { authenticated: boolean }) {
@@ -19,7 +17,6 @@ function VaultsList({ authenticated }: { authenticated: boolean }) {
 
 export default function VaultsPage() {
   const { authenticated } = usePrivy()
-  const site = useSite()
 
   return (
     <div className="container mx-auto p-6">

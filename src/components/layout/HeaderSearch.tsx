@@ -7,9 +7,6 @@ import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { useDebounce } from '@/hooks/useDebounce'
 import { createPortal } from 'react-dom'
-import { poolNameMappings } from '@/modules/ensurance/poolMappings'
-import { useSite } from '@/contexts/site-context'
-import { getApiPrefix } from '@/config/routes'
 
 interface SearchResult {
   name: string
@@ -21,8 +18,6 @@ interface SearchResult {
 }
 
 export function HeaderSearch() {
-  const site = useSite()
-  const apiPrefix = getApiPrefix(site)
   const isDev = process.env.NODE_ENV === 'development'
 
   const [isOpen, setIsOpen] = useState(false)
@@ -38,7 +33,7 @@ export function HeaderSearch() {
     async function loadInitialResults() {
       setIsLoading(true)
       try {
-        const response = await fetch(`${apiPrefix}/search?q=`)
+        const response = await fetch('/api/search?q=')
         const data = await response.json()
         setResults(Array.isArray(data) ? data : [])
       } catch (error) {
@@ -48,7 +43,7 @@ export function HeaderSearch() {
       setIsLoading(false)
     }
     loadInitialResults()
-  }, [apiPrefix])
+  }, [])
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -112,7 +107,7 @@ export function HeaderSearch() {
       setIsLoading(true)
       try {
         const response = await fetch(
-          `${apiPrefix}/search?q=${encodeURIComponent(debouncedSearch || '')}`,
+          `/api/search?q=${encodeURIComponent(debouncedSearch || '')}`,
           { 
             signal: abortControllerRef.current.signal,
             headers: {
@@ -129,7 +124,7 @@ export function HeaderSearch() {
         }
         
         const data = await response.json()
-        console.log('Search API response:', data) // Add logging to debug
+        console.log('Search API response:', data)
         
         if (abortControllerRef.current) {
           setResults(Array.isArray(data) ? data : [])
@@ -152,7 +147,7 @@ export function HeaderSearch() {
         abortControllerRef.current = null
       }
     }
-  }, [debouncedSearch, apiPrefix])
+  }, [debouncedSearch])
 
   const sortedResults = React.useMemo(() => {
     if (!Array.isArray(results)) {
@@ -169,14 +164,7 @@ export function HeaderSearch() {
     })
   }, [results])
 
-  const searchPlaceholder = site === 'onchain-agents' 
-    ? "search all" 
-    : "search all"
-
-  const getPathPrefix = () => {
-    if (site !== 'onchain-agents') return '';
-    return process.env.NODE_ENV === 'development' ? '/site-onchain-agents' : '';
-  };
+  const searchPlaceholder = "search all"
 
   const modalContent = isOpen && (
     <>
@@ -212,7 +200,7 @@ export function HeaderSearch() {
               sortedResults.map((result, i) => (
                 <Link
                   key={i}
-                  href={`${getPathPrefix()}${result.path}`}
+                  href={result.path}
                   onClick={() => setIsOpen(false)}
                   className={cn(
                     "block px-4 py-2 hover:bg-[rgba(var(--foreground-rgb),0.1)]",

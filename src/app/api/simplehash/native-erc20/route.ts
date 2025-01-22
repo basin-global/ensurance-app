@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getActiveChains } from '@/config/chains';
 import { headers } from 'next/headers';
-import { getSiteContext } from '@/config/routes';
 import { isSpamContract } from '@/config/spamContracts';
 import { calculateTokenPrice, calculateNativeTokenPrice } from '@/modules/tabbed-modules/currency/utils';
 import type { ActiveChain } from '@/lib/simplehash';
@@ -14,13 +13,8 @@ export async function GET(request: Request) {
   const address = searchParams.get('address');
   const chain = searchParams.get('chain');
 
-  const headersList = headers();
-  const host = headersList.get('host') || '';
-  const siteContext = getSiteContext(host, new URL(request.url).pathname);
-
   console.log('Native-ERC20 route called with:', { 
-    params: { address, chain },
-    context: { host, siteContext }
+    params: { address, chain }
   });
 
   if (!address) {

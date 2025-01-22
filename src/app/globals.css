@@ -92,15 +92,6 @@ div[role="dialog"] *,
   fill: hsl(0, 0%, 58%) !important;
 }
 
-/* Onchain agents theme */
-.onchain-agents {
-  /* Blue theme tabs */
-  --tab-active: rgb(59, 130, 246); /* blue-500 */
-  --tab-text: rgb(255, 255, 255); /* white */
-  --tab-bg: rgba(0, 0, 0, 0.2); /* darker background */
-  --tab-panel-bg: rgba(0, 0, 0, 0.1); /* darker panels */
-}
-
 html {
   height: 100%;
   overflow-y: auto;

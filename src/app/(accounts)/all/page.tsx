@@ -4,12 +4,9 @@ import { useState } from 'react'
 import AccountsGrid from '@/modules/accounts/AccountsGrid'
 import { AssetSearch } from '@/modules/assets/AssetSearch'
 import { SubNavigation } from '@/components/layout/SubNavigation'
-import { useSite } from '@/contexts/site-context'
 
 export default function AllAccountsPage() {
   const [searchQuery, setSearchQuery] = useState('')
-  const site = useSite()
-  const placeholder = site === 'onchain-agents' ? 'Search agents...' : 'Search accounts...'
 
   return (
     <div>
@@ -20,7 +17,7 @@ export default function AllAccountsPage() {
             <AssetSearch 
               searchQuery={searchQuery} 
               setSearchQuery={setSearchQuery}
-              placeholder={placeholder}
+              placeholder="Search accounts..."
             />
           </div>
           <AccountsGrid searchQuery={searchQuery} />

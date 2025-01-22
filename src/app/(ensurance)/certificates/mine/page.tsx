@@ -5,16 +5,11 @@ import { usePrivy } from '@privy-io/react-auth'
 import { AssetSearch } from '@/modules/assets/AssetSearch'
 import { SubNavigation } from '@/components/layout/SubNavigation'
 import CertificatesGrid from '@/modules/ensurance/components/CertificatesGrid'
-import { useSite } from '@/contexts/site-context'
 
 export default function CertificatesMinePage() {
   const [searchQuery, setSearchQuery] = useState('')
-  const site = useSite()
   const { user, ready, authenticated } = usePrivy()
   const walletAddress = user?.wallet?.address
-  const isDev = process.env.NODE_ENV === 'development'
-  
-  const urlPrefix = site === 'onchain-agents' ? (isDev ? '/site-onchain-agents' : '') : ''
 
   // If not ready, show loading
   if (!ready) {
@@ -60,7 +55,6 @@ export default function CertificatesMinePage() {
             <CertificatesGrid
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
-              urlPrefix={urlPrefix}
               walletAddress={walletAddress}
             />
           </div>

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
-import { useSite } from '@/contexts/site-context'
 import AccountImage from './AccountImage'
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -18,29 +17,22 @@ interface Account {
 interface AccountsGridProps {
     groupName?: string;
     searchQuery?: string;
-    agentsOnly?: boolean;
     walletAddress?: string;
 }
 
 export default function AccountsGrid({ 
     groupName, 
     searchQuery = '', 
-    agentsOnly = false,
     walletAddress
 }: AccountsGridProps) {
-    const site = useSite()
-    const isDev = process.env.NODE_ENV === 'development'
     const [accounts, setAccounts] = useState<Account[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [page, setPage] = useState(1)
     const ITEMS_PER_PAGE = 20
 
-    const showOnlyAgents = site === 'onchain-agents' || agentsOnly
-
     const getPathPrefix = () => {
-        if (site !== 'onchain-agents') return '';
-        return isDev ? '/site-onchain-agents' : '';
+        return '';
     };
 
     // Memoized fetch function
@@ -163,7 +155,7 @@ export default function AccountsGrid({
     // Reset page when filters change
     useEffect(() => {
         setPage(1)
-    }, [groupName, searchQuery, showOnlyAgents, walletAddress])
+    }, [groupName, searchQuery])
 
     // Memoized filtered accounts
     const filteredAccounts = useMemo(() => {
@@ -172,11 +164,6 @@ export default function AccountsGrid({
         // Filter by group
         if (groupName) {
             filtered = filtered.filter(account => account.og_name === `.${groupName}`)
-        }
-
-        // Filter for agents
-        if (showOnlyAgents) {
-            filtered = filtered.filter(account => account.is_agent)
         }
 
         // Filter by search
@@ -189,14 +176,13 @@ export default function AccountsGrid({
 
         // Sort: agents first, then alphabetically
         return filtered.sort((a, b) => {
-            if (a.is_agent !== b.is_agent) return a.is_agent ? -1 : 1
             // Handle null names
             if (!a.full_account_name && !b.full_account_name) return 0
             if (!a.full_account_name) return 1  // null values go to end
             if (!b.full_account_name) return -1
             return a.full_account_name.localeCompare(b.full_account_name)
         })
-    }, [accounts, groupName, showOnlyAgents, searchQuery])
+    }, [accounts, groupName, searchQuery])
 
     // Memoized paginated accounts
     const displayedAccounts = useMemo(() => {

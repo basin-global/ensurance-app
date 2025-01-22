@@ -7,8 +7,6 @@ import { DeclarativeSection } from '@/components/layout/DeclarativeSection'
 import { DeclarativeHero } from '@/components/layout/DeclarativeHero'
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify'
-import { SiteProvider } from '@/contexts/site-context'
-import { SiteWrapper } from '@/components/layout/SiteWrapper'
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -31,24 +29,20 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${spaceGrotesk.variable} ${spaceMono.variable}`}>
       <body className="antialiased min-h-screen flex flex-col font-grotesk">
-        <SiteProvider>
-          <SiteWrapper>
-            <PrivyProviderWrapper>
-                <Header />
-                <ToastContainer 
-                  theme="dark"
-                  position="top-right"
-                  toastClassName="!bg-gray-900 !text-gray-100"
-                  progressClassName="!bg-blue-500"
-                  closeButton={false}
-                />
-                <main className="flex-1">
-                  {children}
-                </main>
-                <Footer />
-            </PrivyProviderWrapper>
-          </SiteWrapper>
-        </SiteProvider>
+        <PrivyProviderWrapper>
+          <Header />
+          <ToastContainer 
+            theme="dark"
+            position="top-right"
+            toastClassName="!bg-gray-900 !text-gray-100"
+            progressClassName="!bg-blue-500"
+            closeButton={false}
+          />
+          <main className="flex-1">
+            {children}
+          </main>
+          <Footer />
+        </PrivyProviderWrapper>
         <div id="modal-root" />
       </body>
     </html>

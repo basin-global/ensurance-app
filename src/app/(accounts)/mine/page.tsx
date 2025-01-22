@@ -5,14 +5,11 @@ import { usePrivy } from '@privy-io/react-auth'
 import AccountsGrid from '@/modules/accounts/AccountsGrid'
 import { AssetSearch } from '@/modules/assets/AssetSearch'
 import { SubNavigation } from '@/components/layout/SubNavigation'
-import { useSite } from '@/contexts/site-context'
 
 export default function MinePage() {
   const [searchQuery, setSearchQuery] = useState('')
-  const site = useSite()
   const { user, ready, authenticated } = usePrivy()
   const walletAddress = user?.wallet?.address
-  const placeholder = site === 'onchain-agents' ? 'Search agents...' : 'Search accounts...'
 
   // If not ready or not connected, show appropriate message
   if (!ready) {
@@ -50,7 +47,7 @@ export default function MinePage() {
             <AssetSearch 
               searchQuery={searchQuery} 
               setSearchQuery={setSearchQuery}
-              placeholder={placeholder}
+              placeholder="Search accounts..."
             />
           </div>
           <AccountsGrid 

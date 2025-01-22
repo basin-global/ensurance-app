@@ -4,14 +4,9 @@ import { useState } from 'react'
 import { AssetSearch } from '@/modules/assets/AssetSearch'
 import { SubNavigation } from '@/components/layout/SubNavigation'
 import CertificatesGrid from '@/modules/ensurance/components/CertificatesGrid'
-import { useSite } from '@/contexts/site-context'
 
 export default function CertificatesPage() {
   const [searchQuery, setSearchQuery] = useState('')
-  const site = useSite()
-  const isDev = process.env.NODE_ENV === 'development'
-  
-  const urlPrefix = site === 'onchain-agents' ? (isDev ? '/site-onchain-agents' : '') : ''
 
   return (
     <div className="flex flex-col">
@@ -29,7 +24,6 @@ export default function CertificatesPage() {
             <CertificatesGrid
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
-              urlPrefix={urlPrefix}
             />
           </div>
         </div>

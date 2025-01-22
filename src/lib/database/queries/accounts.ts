@@ -16,7 +16,8 @@ export const accounts = {
                     SELECT 
                         full_account_name,
                         token_id,
-                        is_agent
+                        is_agent,
+                        '${group.og_name}' as og_name
                     FROM "${tableName}"
                 `;
                 
@@ -53,11 +54,17 @@ export const accounts = {
             // Query each group's table sequentially to avoid connection issues
             for (const group of groups.rows) {
                 const tableName = `situs_accounts_${group.og_name.replace('.', '')}`;
+                const isEnsurance = group.og_name === '.ensurance';
+                
+                // Conditionally include pool_type and display_name only for .ensurance group
+                const ensuranceColumns = isEnsurance ? 'pool_type, display_name,' : '';
+                
                 const query = `
                     SELECT 
                         full_account_name,
                         token_id,
                         is_agent,
+                        ${ensuranceColumns}
                         '${group.og_name}' as og_name
                     FROM "${tableName}"
                 `;
@@ -88,6 +95,10 @@ export const accounts = {
     getByFullName: async (fullAccountName: string) => {
         const groupName = fullAccountName.split('.')[1];
         const tableName = `situs_accounts_${groupName}`;
+        const isEnsurance = groupName === 'ensurance';
+        
+        // Conditionally include pool_type and display_name only for .ensurance group
+        const ensuranceColumns = isEnsurance ? 'pool_type, display_name,' : '';
         
         const query = `
             SELECT 
@@ -95,6 +106,7 @@ export const accounts = {
                 tba_address,
                 token_id,
                 is_agent,
+                ${ensuranceColumns}
                 description,
                 '${groupName}' as og_name
             FROM "${tableName}"
@@ -117,7 +129,11 @@ export const accounts = {
             token_id: row.token_id,
             is_agent: row.is_agent,
             description: row.description,
-            og_name: groupName
+            og_name: groupName,
+            ...(isEnsurance && { 
+                pool_type: row.pool_type,
+                display_name: row.display_name 
+            })
         };
         console.log('Returning object:', returnObj);
         

@@ -6,7 +6,6 @@ import Image from 'next/image'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import SwarmAccountImage from '@/modules/accounts/SwarmAccountImage'
 import Link from 'next/link'
-import { useSite } from '@/contexts/site-context'
 
 interface SwarmItem {
   id: number
@@ -32,14 +31,10 @@ interface ImageSwarmProps {
 const ImageSwarm: React.FC<ImageSwarmProps> = ({ images }) => {
   const [swarmItems, setSwarmItems] = useState<SwarmItem[]>([])
   const [selectedItem, setSelectedItem] = useState<SwarmItem | null>(null)
-  const site = useSite()
 
   // Helper function to get the correct URL
   const getAccountUrl = (accountName: string) => {
-    // Only add the prefix in development environment
-    const isDev = process.env.NODE_ENV === 'development'
-    const basePath = (isDev && site === 'onchain-agents') ? '/site-onchain-agents' : ''
-    return `${basePath}/${accountName}`
+    return `/${accountName}`
   }
 
   useEffect(() => {

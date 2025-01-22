@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { useSite } from '@/contexts/site-context'
 
 interface SubNavigationProps {
   type: 'accounts' | 'og' | 'assets' | 'certificates';
@@ -12,32 +11,26 @@ interface SubNavigationProps {
 
 export function SubNavigation({ type, groupName }: SubNavigationProps) {
   const pathname = usePathname()
-  const site = useSite()
-  const isDev = process.env.NODE_ENV === 'development'
-  
-  // In development, we need the /site-onchain-agents prefix
-  // In production, onchain-agents.ai serves directly from root
-  const basePath = site === 'onchain-agents' && isDev ? '/site-onchain-agents' : ''
   
   let links;
   
   if (groupName) {
     links = [
-      { href: `${basePath}/groups/${groupName}/all`, label: 'all' },
-      { href: `${basePath}/groups/${groupName}/create`, label: 'create' },
-      { href: `${basePath}/groups/${groupName}/mine`, label: 'mine' }
+      { href: `/groups/${groupName}/all`, label: 'all' },
+      { href: `/groups/${groupName}/create`, label: 'create' },
+      { href: `/groups/${groupName}/mine`, label: 'mine' }
     ]
   } else if (type === 'certificates') {
     links = [
-      { href: `${basePath}/certificates/all`, label: 'all' },
-      { href: `${basePath}/certificates/create`, label: 'create' },
-      { href: `${basePath}/certificates/mine`, label: 'mine' }
+      { href: '/certificates/all', label: 'all' },
+      { href: '/certificates/create', label: 'create' },
+      { href: '/certificates/mine', label: 'mine' }
     ]
   } else {
     links = [
-      { href: `${basePath}/all`, label: 'all' },
-      { href: `${basePath}/create`, label: 'create' },
-      { href: `${basePath}/mine`, label: 'mine' }
+      { href: '/all', label: 'all' },
+      { href: '/create', label: 'create' },
+      { href: '/mine', label: 'mine' }
     ]
   }
 

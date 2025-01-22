@@ -2,30 +2,23 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useSite } from '@/contexts/site-context'
 import AccountImage from '@/modules/accounts/AccountImage'
 import { cn } from '@/lib/utils'
-import { poolNameMappings } from '@/modules/ensurance/poolMappings'
 
 interface Account {
     full_account_name: string;
     token_id: number;
     og_name: string;
     is_agent: boolean;
+    pool_type: string | null;
+    display_name: string | null;
 }
 
 interface EnsurancePoolGridProps {
     groupName?: string;
     searchQuery?: string;
-    activeCategory: 'all' | 'Ecosystems' | 'Core Benefits';
+    activeCategory: 'all' | 'stocks' | 'flows';
     urlPrefix?: string;
-}
-
-type Category = 'all' | 'Ecosystems' | 'Core Benefits'
-
-interface PoolMapping {
-  displayName: string;
-  category: 'Ecosystems' | 'Core Benefits';
 }
 
 export default function EnsurancePoolGrid({ 
@@ -34,13 +27,8 @@ export default function EnsurancePoolGrid({
   activeCategory,
   urlPrefix = ''
 }: EnsurancePoolGridProps) {
-    const site = useSite()
-    const isDev = process.env.NODE_ENV === 'development'
-    
     const getPathPrefix = () => {
-        if (urlPrefix) return urlPrefix;
-        if (site !== 'onchain-agents') return '';
-        return isDev ? '/site-onchain-agents' : '';
+        return urlPrefix || '';
     };
 
     const [accounts, setAccounts] = useState<Account[]>([])
@@ -74,14 +62,13 @@ export default function EnsurancePoolGrid({
         fetchAccounts()
     }, [groupName])
 
-    const getDisplayName = (fullAccountName: string): string => {
-        const mapping = poolNameMappings[fullAccountName];
-        return mapping ? mapping.displayName : fullAccountName;
+    const getDisplayName = (account: Account): string => {
+        return account.display_name || account.full_account_name;
     }
 
-    const getCategory = (fullAccountName: string): string => {
-        const mapping = poolNameMappings[fullAccountName];
-        return mapping ? mapping.category : '';
+    const getCategory = (account: Account): string => {
+        if (!account.pool_type) return '';
+        return account.pool_type === 'stock' ? 'stocks' : 'flows';
     }
 
     if (loading) return <div>Loading pools...</div>
@@ -92,32 +79,32 @@ export default function EnsurancePoolGrid({
             {accounts
                 .filter(account => {
                     if (activeCategory === 'all') return true;
-                    return getCategory(account.full_account_name) === activeCategory;
+                    return getCategory(account) === activeCategory;
                 })
                 .filter(account => account.full_account_name !== 'situs.ensurance')
                 .filter(account => {
                     if (!searchQuery) return true;
-                    const displayName = getDisplayName(account.full_account_name).toLowerCase();
+                    const displayName = getDisplayName(account).toLowerCase();
                     return displayName.includes(searchQuery.toLowerCase());
                 })
-                .sort((a, b) => getDisplayName(a.full_account_name)
-                    .localeCompare(getDisplayName(b.full_account_name)))
+                .sort((a, b) => getDisplayName(a)
+                    .localeCompare(getDisplayName(b)))
                 .map((account) => (
                     <Link
                         key={account.token_id}
                         href={`${getPathPrefix()}/${account.full_account_name}`}
-                        className="bg-background-light dark:bg-background-dark rounded-lg overflow-hidden hover:shadow-lg transition-all duration-300"
+                        className="bg-background-light dark:bg-background-dark rounded-lg overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col items-center p-6"
                     >
-                        <div className="aspect-video relative">
+                        <div className="aspect-square relative w-64 h-64">
                             <AccountImage
                                 tokenId={account.token_id}
                                 groupName={groupName || 'default'}
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-cover rounded-full"
                             />
                         </div>
-                        <div className="p-4">
+                        <div className="p-4 text-center">
                             <h3 className="text-lg font-semibold mb-1">
-                                {getDisplayName(account.full_account_name)}
+                                {getDisplayName(account)}
                             </h3>
                             <p className="text-sm font-mono text-gray-500">
                                 {account.full_account_name}

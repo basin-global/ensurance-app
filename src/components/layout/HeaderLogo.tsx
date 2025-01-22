@@ -3,7 +3,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useParams } from 'next/navigation'
-import { useSite } from '@/contexts/site-context'
 
 interface Params {
   group?: string
@@ -13,13 +12,10 @@ interface Params {
 export function HeaderLogo() {
   const pathname = usePathname()
   const params = useParams() as Params
-  const site = useSite()
-  const isDev = process.env.NODE_ENV === 'development'
   
   // Get group name from either group page or account page
   let groupName = null
   
-  // Check both standard and onchain-agents dev paths
   if (pathname.includes('/groups/')) {
     groupName = `.${params.group}`
   } else if (params.account?.includes('.')) {
@@ -36,27 +32,18 @@ export function HeaderLogo() {
     ? "/groups/orbs/ensurance-orb.png"
     : groupName 
       ? `/groups/orbs/${groupName.replace(/^\./, '')}-orb.png`
-      : site === 'onchain-agents'
-        ? "/onchain-agents/onchain-agents-orb.png"
-        : "/groups/orbs/ensurance-orb.png"
+      : "/groups/orbs/ensurance-orb.png"
 
   // Determine header text
-  const baseText = site === 'onchain-agents' ? 'onchain agents' : 'ensurance agents'
   const headerText = isEnsurancePools
     ? 'ensurance pools'
     : groupName 
-      ? `${groupName} ${baseText}`
-      : baseText
+      ? `${groupName} ensurance agents`
+      : 'ensurance agents'
 
   // Determine URLs
-  const homeUrl = site === 'onchain-agents'
-    ? (isDev ? '/site-onchain-agents' : '/')
-    : '/'
-    
-  const poolsUrl = site === 'onchain-agents'
-    ? (isDev ? '/site-onchain-agents/pools' : '/pools')
-    : '/pools'
-    
+  const homeUrl = '/'
+  const poolsUrl = '/pools'
   const groupUrl = isEnsurancePools
     ? poolsUrl
     : groupName && `/groups/${groupName.replace(/^\./, '')}`

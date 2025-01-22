@@ -5,15 +5,12 @@ import { usePrivy } from '@privy-io/react-auth'
 import AccountsGrid from '@/modules/accounts/AccountsGrid'
 import { AssetSearch } from '@/modules/assets/AssetSearch'
 import { SubNavigation } from '@/components/layout/SubNavigation'
-import { useSite } from '@/contexts/site-context'
 import { GroupInfo } from '@/modules/groups/GroupInfo'
 
 export default function GroupMinePage({ params }: { params: { group: string } }) {
   const [searchQuery, setSearchQuery] = useState('')
-  const site = useSite()
   const { user, ready, authenticated } = usePrivy()
   const walletAddress = user?.wallet?.address
-  const placeholder = site === 'onchain-agents' ? 'Search agents...' : 'Search accounts...'
 
   // If not ready, show loading
   if (!ready) {
@@ -52,9 +49,9 @@ export default function GroupMinePage({ params }: { params: { group: string } })
         <div className="space-y-4">
           <div className="flex justify-center">
             <AssetSearch 
-              searchQuery={searchQuery} 
+              searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
-              placeholder={placeholder}
+              placeholder="Search accounts..."
             />
           </div>
           <AccountsGrid 

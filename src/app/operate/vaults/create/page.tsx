@@ -1,8 +1,6 @@
 'use client'
 
 import { usePrivy } from '@privy-io/react-auth'
-import { useSite } from '@/contexts/site-context'
-import { isSite } from '@/config/routes'
 import { isAdmin } from '@/config/admin'
 import Link from 'next/link'
 
@@ -31,7 +29,6 @@ function CreateVaultForm({ authenticated, address }: { authenticated: boolean, a
 
 export default function CreateVaultPage() {
   const { authenticated, user } = usePrivy()
-  const site = useSite()
 
   return (
     <div className="container mx-auto p-6">

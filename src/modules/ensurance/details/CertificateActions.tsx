@@ -1,8 +1,6 @@
 import { Plus } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { SplitsBar } from '@/modules/splits/components/SplitsBar';
-import { getBasePath } from '@/config/routes';
-import { useSite } from '@/contexts/site-context';
 import { Asset, EnsureOperation } from '@/types';
 
 interface CertificateActionsProps {
@@ -29,8 +27,6 @@ export function CertificateActions({
   onEnsureClick,
   chain
 }: CertificateActionsProps) {
-  const site = useSite();
-
   return (
     <div className="flex flex-col gap-4">
       <Button 
@@ -43,7 +39,7 @@ export function CertificateActions({
 
       {ensuranceData?.creator_reward_recipient_split && (
         <a 
-          href={getBasePath(site) + `/flow/${chain}/${ensuranceData.creator_reward_recipient}`}
+          href={`/flow/${chain}/${ensuranceData.creator_reward_recipient}`}
           target="_blank"
           rel="noopener noreferrer"
           className="w-full p-4 bg-background dark:bg-background-dark rounded-xl hover:bg-gray-900 transition-colors duration-200"

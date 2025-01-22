@@ -3,7 +3,6 @@ import { sql } from '@vercel/postgres';
 import { groups } from '@/lib/database/queries/groups';
 import { accounts } from '@/lib/database/queries/accounts';
 import { ensurance } from '@/lib/database/queries/ensurance';
-import { poolNameMappings } from '@/modules/ensurance/poolMappings';
 
 // Cache successful responses for 1 minute
 export const revalidate = 60;
@@ -91,7 +90,7 @@ export async function GET(request: NextRequest) {
                     path: `/${account.full_account_name}`,
                     type: 'account',
                     is_agent: account.is_agent,
-                    is_pool: account.full_account_name in poolNameMappings
+                    is_pool: account.og_name === '.ensurance' && account.full_account_name !== 'situs.ensurance' // All .ensurance accounts are pools except situs.ensurance
                 })),
             certificatesData
                 .filter(cert => 

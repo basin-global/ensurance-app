@@ -6,8 +6,6 @@ import { isSpamContract } from '@/config/spamContracts';
 import { Asset, EnsureOperation } from '@/types';
 import { AssetDetailView } from '@/modules/assets/details/AssetDetailView';
 import { CertificateActions } from '@/modules/ensurance/details/CertificateActions';
-import { useSite } from '@/contexts/site-context';
-import { getApiPrefix } from '@/config/routes';
 import { usePrivy } from '@privy-io/react-auth';
 import { EnsureModal } from '@/modules/ensure/ensure-modal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -38,8 +36,6 @@ type EnsuranceData = {
 
 export default function CertificatePage({ params }: CertificatePageProps) {
   const pathname = usePathname();
-  const site = useSite();
-  const apiPrefix = getApiPrefix(site);
   const { user, authenticated, login } = usePrivy();
   
   const [assetDetails, setAssetDetails] = useState<Asset | null>(null);
@@ -63,7 +59,7 @@ export default function CertificatePage({ params }: CertificatePageProps) {
 
       setLoading(true);
       try {
-        const response = await fetch(`${apiPrefix}/ensurance?chain=${params.chain}&tokenId=${params.tokenId}`);
+        const response = await fetch(`/api/ensurance?chain=${params.chain}&tokenId=${params.tokenId}`);
         if (!response.ok) throw new Error('Failed to fetch certificate details');
         const data = await response.json();
         
@@ -101,7 +97,7 @@ export default function CertificatePage({ params }: CertificatePageProps) {
     };
 
     fetchCertificateDetails();
-  }, [params.chain, params.tokenId, apiPrefix, contractAddress]);
+  }, [params.chain, params.tokenId, contractAddress]);
 
   const handleOperation = useCallback((operation: EnsureOperation) => {
     if (!authenticated) {

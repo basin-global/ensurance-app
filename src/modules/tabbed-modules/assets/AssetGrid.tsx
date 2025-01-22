@@ -4,9 +4,8 @@ import React, { useMemo, useState, useEffect, useCallback } from 'react'
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Asset } from '@/types'
-import { useSite } from '@/contexts/site-context'
-import AssetCard from '@/modules/assets/AssetCard'
 import Link from 'next/link'
+import AssetCard from '@/modules/assets/AssetCard'
 
 interface AssetGridProps {
   address: string
@@ -27,15 +26,9 @@ export default function AssetGrid({
 }: AssetGridProps) {
   const [assets, setAssets] = useState<Asset[]>([])
   const [loading, setLoading] = useState(true)
-  const site = useSite()
-  const isDev = process.env.NODE_ENV === 'development'
-  
+
   const getPathPrefix = () => {
-    if (urlPrefix) return urlPrefix;
-    if (isDev && site === 'onchain-agents') {
-      return '/site-onchain-agents';
-    }
-    return '';
+    return urlPrefix || '';
   };
 
   const fetchAssets = useCallback(async () => {

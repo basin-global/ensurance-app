@@ -5,8 +5,6 @@ import { useRouter, usePathname } from 'next/navigation';
 import { isSpamContract } from '@/config/spamContracts';
 import { Asset } from '@/types';
 import { AssetDetailView } from '@/modules/assets/details/AssetDetailView';
-import { useSite } from '@/contexts/site-context';
-import { getApiPrefix, getBasePath } from '@/config/routes';
 import { isEnsuranceToken } from '@/modules/ensurance/config';
 
 interface AssetPageProps {
@@ -20,8 +18,6 @@ interface AssetPageProps {
 export default function AssetPage({ params }: AssetPageProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const site = useSite();
-  const apiPrefix = getApiPrefix(site);
   
   const [assetDetails, setAssetDetails] = useState<Asset | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,7 +33,7 @@ export default function AssetPage({ params }: AssetPageProps) {
 
     // Check if this is an Ensurance token before any data fetching
     if (isEnsuranceToken(params.chain, params.contract)) {
-      const certificatePath = `${getBasePath(site)}/certificates/${params.chain}/${params.tokenId}`;
+      const certificatePath = `/certificates/${params.chain}/${params.tokenId}`;
       router.replace(certificatePath);
       return;
     }
@@ -47,7 +43,7 @@ export default function AssetPage({ params }: AssetPageProps) {
       setLoading(true);
       try {
         const response = await fetch(
-          `${apiPrefix}/simplehash/nft?chain=${params.chain}&contractAddress=${params.contract}&tokenId=${params.tokenId}`
+          `/api/simplehash/nft?chain=${params.chain}&contractAddress=${params.contract}&tokenId=${params.tokenId}`
         );
         if (!response.ok) throw new Error('Failed to fetch asset details');
         const data = await response.json();
@@ -61,7 +57,7 @@ export default function AssetPage({ params }: AssetPageProps) {
     };
 
     fetchAssetDetails();
-  }, [params.chain, params.contract, params.tokenId, apiPrefix, router, pathname, site]);
+  }, [params.chain, params.contract, params.tokenId, router, pathname]);
 
   if (loading) {
     return <div className="flex justify-center items-center h-screen">Loading asset details...</div>;

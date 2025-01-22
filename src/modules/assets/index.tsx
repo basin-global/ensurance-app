@@ -13,8 +13,6 @@ import { createTokenboundActions } from '@/lib/tokenbound';
 import { fetchNFTsByContract } from '@/lib/simplehash';
 import { getFeaturedTokensForOG } from '@/modules/ensurance/featured-config';
 import { BaseModuleProps } from '@/types/index';
-import { useSite } from '@/contexts/site-context';
-import { getApiPrefix } from '@/config/routes';
 
 // Export the existing Asset interface
 export interface Asset {
@@ -85,8 +83,6 @@ export default function AssetsModule({
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const ITEMS_PER_PAGE = 12;
-  const site = useSite();
-  const apiPrefix = getApiPrefix(site);
 
   console.log('AssetsModule rendered with address:', address, 'selectedChain:', selectedChain)
 
@@ -122,7 +118,7 @@ export default function AssetsModule({
           );
 
           // Get ownership data once
-          const ownedResponse = await axios.get(`${apiPrefix}/simplehash/nft?address=${address}&fetchAll=true`);
+          const ownedResponse = await axios.get(`/api/simplehash/nft?address=${address}&fetchAll=true`);
           setOwnedNFTs(ownedResponse.data.nfts || []);
 
           // Store data by chain
@@ -136,7 +132,7 @@ export default function AssetsModule({
           setDisplayedChains([Object.keys(chainData)[0]]);
         } else {
           // For assets tab: Get all owned NFTs in one call
-          const response = await axios.get(`${apiPrefix}/simplehash/nft?address=${address}&fetchAll=true`);
+          const response = await axios.get(`/api/simplehash/nft?address=${address}&fetchAll=true`);
           const nfts = response.data.nfts || [];
           setCursor(response.data.next);
 
@@ -155,7 +151,7 @@ export default function AssetsModule({
         // Single chain fetch with pagination
         if (isEnsuranceTab) {
           if (address && window.location.pathname.includes('/mine')) {
-            const response = await axios.get(`${apiPrefix}/simplehash/nft`, {
+            const response = await axios.get(`/api/simplehash/nft`, {
               params: { 
                 address,
                 chain: selectedChain,
@@ -176,7 +172,7 @@ export default function AssetsModule({
             setHasMore(false);
           }
         } else {
-          const response = await axios.get(`${apiPrefix}/simplehash/nft`, {
+          const response = await axios.get(`/api/simplehash/nft`, {
             params: {
               address,
               chain: selectedChain,

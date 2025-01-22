@@ -3,8 +3,6 @@
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { useSite } from '@/contexts/site-context'
-import { getBasePath } from '@/config/routes'
 
 interface GroupData {
     og_name: string;
@@ -20,8 +18,6 @@ export function GroupInfo({ groupName }: { groupName: string }) {
     const [groupData, setGroupData] = useState<GroupData | null>(null)
     const [error, setError] = useState<string | null>(null)
     const cleanGroupName = groupName.startsWith('.') ? groupName.slice(1) : groupName
-    const site = useSite()
-    const basePath = getBasePath(site)
     const router = useRouter()
 
     useEffect(() => {
@@ -46,7 +42,7 @@ export function GroupInfo({ groupName }: { groupName: string }) {
     const handleGroupClick = (e: React.MouseEvent) => {
         // Only navigate if not clicking a link
         if (!(e.target as HTMLElement).closest('a')) {
-            router.push(`${basePath}/groups/${cleanGroupName}`)
+            router.push(`/groups/${cleanGroupName}`)
         }
     }
 

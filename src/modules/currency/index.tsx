@@ -7,8 +7,6 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent } from '@/compon
 import { EnsureMenuItems } from '@/modules/ensure/ensure-menu'
 import { EnsureModal } from '@/modules/ensure/ensure-modal'
 import { Asset } from '@/types'
-import { useSite } from '@/contexts/site-context'
-import { getApiPrefix } from '@/config/routes';
 
 // Helper function to format numbers
 const formatNumber = (value: string | number | null | undefined, decimals: number = 2): string => {
@@ -103,14 +101,12 @@ export default function CurrencyModule({ address, selectedChain, isTokenbound = 
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedOperation, setSelectedOperation] = useState<'send' | 'swap' | 'buy' | null>(null)
   const [selectedToken, setSelectedToken] = useState<TokenBalance | null>(null)
-  const site = useSite()
-  const apiPrefix = getApiPrefix(site)
 
   const fetchBalances = useCallback(async () => {
     setLoading(true)
     try {
       console.log('Fetching balances for address:', address)
-      const response = await axios.get(`${apiPrefix}/simplehash/native-erc20?address=${address}`)
+      const response = await axios.get(`/api/simplehash/native-erc20?address=${address}`)
       console.log('Raw API response:', JSON.stringify(response.data, null, 2))
       const fetchedBalances = response.data.groupedBalances
       setEthPrice(response.data.ethPrice)
@@ -126,7 +122,7 @@ export default function CurrencyModule({ address, selectedChain, isTokenbound = 
     } finally {
       setLoading(false)
     }
-  }, [address, apiPrefix])
+  }, [address])
 
   useEffect(() => {
     fetchBalances()

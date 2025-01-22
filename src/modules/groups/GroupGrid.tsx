@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useSite } from '@/contexts/site-context'
 
 interface Group {
     og_name: string;
@@ -18,8 +17,6 @@ interface GroupGridProps {
 }
 
 export default function GroupGrid({ searchQuery }: GroupGridProps) {
-    const site = useSite()
-    const isDev = process.env.NODE_ENV === 'development'
     const [groups, setGroups] = useState<Group[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -42,8 +39,7 @@ export default function GroupGrid({ searchQuery }: GroupGridProps) {
     }, [])
 
     const getGroupUrl = (groupName: string) => {
-        const basePath = site === 'onchain-agents' && isDev ? '/site-onchain-agents' : ''
-        return `${basePath}/groups/${groupName.replace(/^\./, '')}/all`
+        return `/groups/${groupName.replace(/^\./, '')}/all`
     }
 
     const filteredGroups = groups.filter(group => 

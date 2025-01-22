@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useSite } from '@/contexts/site-context'
 
 interface Group {
     og_name: string;
@@ -12,12 +11,6 @@ interface Group {
 export function GroupLinks() {
     const [groups, setGroups] = useState<Group[]>([])
     const [loading, setLoading] = useState(true)
-    const site = useSite()
-    const isDev = process.env.NODE_ENV === 'development'
-    const isOnchainAgentsRoute = site === 'onchain-agents'
-    
-    // Match header's URL generation
-    const baseUrl = isOnchainAgentsRoute && isDev ? '/site-onchain-agents' : ''
 
     useEffect(() => {
         async function fetchGroups() {
@@ -44,7 +37,7 @@ export function GroupLinks() {
                 {groups.map((group) => (
                     <Link
                         key={group.og_name}
-                        href={`${baseUrl}/groups/${group.og_name.replace(/^\./, '')}/all`}
+                        href={`/groups/${group.og_name.replace(/^\./, '')}/all`}
                         className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors truncate px-2"
                     >
                         {group.og_name}

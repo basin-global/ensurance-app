@@ -6,8 +6,6 @@ import { Send, ArrowLeftRight, DollarSign } from 'lucide-react'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent } from '@/components/ui/dropdown-menu'
 import { EnsureMenuItems } from '@/modules/ensure/ensure-menu'
 import { EnsureModal } from '@/modules/ensure/ensure-modal'
-import { useSite } from '@/contexts/site-context'
-import { getApiPrefix } from '@/config/routes'
 import { getChainIcon, chainOrder } from '@/config/chains'
 import { EnsureOperation } from '@/types'
 import { 
@@ -33,14 +31,12 @@ export default function CurrencyTab({ address, selectedChain, isOwner = false }:
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedOperation, setSelectedOperation] = useState<EnsureOperation | null>(null)
   const [selectedToken, setSelectedToken] = useState<TokenBalance | null>(null)
-  const site = useSite()
-  const apiPrefix = getApiPrefix(site)
 
   const fetchBalances = useCallback(async () => {
     setLoading(true)
     try {
       console.log('Fetching balances for address:', address)
-      const response = await fetch(`${apiPrefix}/simplehash/native-erc20?address=${address}`)
+      const response = await fetch(`/api/simplehash/native-erc20?address=${address}`)
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
@@ -56,7 +52,7 @@ export default function CurrencyTab({ address, selectedChain, isOwner = false }:
     } finally {
       setLoading(false)
     }
-  }, [address, apiPrefix])
+  }, [address])
 
   useEffect(() => {
     fetchBalances()

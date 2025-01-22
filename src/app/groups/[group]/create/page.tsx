@@ -3,12 +3,8 @@
 import { SubNavigation } from '@/components/layout/SubNavigation'
 import { GroupInfo } from '@/modules/groups/GroupInfo'
 import Image from 'next/image'
-import { useSite } from '@/contexts/site-context'
 
 export default function GroupCreatePage({ params }: { params: { group: string } }) {
-    const site = useSite()
-    const isOnchainAgents = site === 'onchain-agents'
-
     return (
         <div className="min-h-screen flex flex-col">
             <SubNavigation type="accounts" groupName={params.group} />
@@ -25,12 +21,12 @@ export default function GroupCreatePage({ params }: { params: { group: string } 
                     </div>
                     <div>
                         <p className="text-xl font-mono text-white-400 mb-4">
-                            Create your own .{params.group} {isOnchainAgents ? 'agent' : 'account'}...
+                            Create your own .{params.group} account...
                         </p>
                         <p className="text-gray-500 font-mono">
-                            {isOnchainAgents ? 'Agent' : 'Account'} creation is coming soon.{' '}
+                            Account creation is coming soon.{' '}
                             <a 
-                                href="https://x.com/onchain_agents" 
+                                href="https://x.com/ensurance_app" 
                                 target="_blank" 
                                 rel="noopener noreferrer"
                                 className="text-blue-400 hover:text-blue-300 transition-colors"

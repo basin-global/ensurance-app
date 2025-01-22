@@ -3,7 +3,6 @@ import AssetCard from '@/modules/assets/AssetCard'
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Asset } from '@/types'
-import { useSite } from '@/contexts/site-context'
 import { ensuranceContracts } from '@/modules/ensurance/config'
 import Link from 'next/link'
 
@@ -22,17 +21,7 @@ export default function CertificatesGrid({
 }: CertificatesGridProps) {
   const [assets, setAssets] = useState<Asset[]>([])
   const [loading, setLoading] = useState(true)
-  const site = useSite()
-  const isDev = process.env.NODE_ENV === 'development'
   
-  const getPathPrefix = () => {
-    if (urlPrefix) return urlPrefix;
-    if (isDev && site === 'onchain-agents') {
-      return '/site-onchain-agents';
-    }
-    return '';
-  };
-
   // Fetch certificates - either from SimpleHash for wallet or from DB for all
   const fetchCertificates = useCallback(async () => {
     try {
@@ -109,7 +98,7 @@ export default function CertificatesGrid({
           isEnsuranceTab={true}
           isTokenbound={false}
           isOwner={!!walletAddress}
-          customUrl={`${getPathPrefix()}/certificates/${asset.chain}/${asset.token_id}`}
+          customUrl={`${urlPrefix}/certificates/${asset.chain}/${asset.token_id}`}
           hideCollection={true}
         />
       ))}
@@ -122,7 +111,7 @@ export default function CertificatesGrid({
           <>
             {' '}You can create one{' '}
             <Link 
-              href={`${getPathPrefix()}/certificates/create`}
+              href={`${urlPrefix}/certificates/create`}
               className="text-blue-400 hover:text-blue-300 transition-colors"
             >
               here

@@ -15,6 +15,11 @@ export function middleware(request: NextRequest) {
     })
   }
 
+  // Redirect /groups/ensurance/all to /pools
+  if (pathname === '/groups/ensurance/all') {
+    return NextResponse.redirect(new URL('/pools', request.url))
+  }
+
   // Skip for static files and API routes
   if (pathname.startsWith('/_next') || pathname.startsWith('/api/')) {
     return NextResponse.next({
