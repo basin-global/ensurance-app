@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import useSWR from 'swr'
-import { baseVerifyLinkStyle } from '../Verify'
+import { baseVerifyLinkStyle } from '../BasedOnchain'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 

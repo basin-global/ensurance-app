@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { baseVerifyLinkStyle } from '../Verify'
+import { baseVerifyLinkStyle } from '../BasedOnchain'
 import { getEnsuranceContractForChain } from '@/modules/ensurance/config'
 import NftLinks from './NftLinks'
 

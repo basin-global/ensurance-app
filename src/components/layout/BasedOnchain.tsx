@@ -15,9 +15,8 @@ const FactoryLink = () => (
     href="https://basescan.org/address/0x67c814835e1920324634fd6da416a0e79c949970#readContract#F3"
     target="_blank"
     rel="noopener noreferrer"
-    className={baseVerifyLinkStyle}
   >
-    SITUS
+    <span className="text-gray-200">SITUS</span>
   </Link>
 )
 
@@ -37,7 +36,7 @@ const NftLinks = dynamic(() => import('./verifications/NftLinks'), {
   loading: () => null
 })
 
-export function Verify() {
+export function BasedOnchain() {
   const pathname = usePathname()
   const isDev = process.env.NODE_ENV === 'development'
   
@@ -76,20 +75,8 @@ export function Verify() {
   // Show certificates verification when on certificates path
   const showCertificates = isOnCertificatesPath
 
-  // Log detailed path matching info
-  console.log('Path Matching:', {
-    rawPathname: pathname,
-    certificateMatch,
-    isAllCertificates,
-    isOnCertificatesPath,
-    chain,
-    tokenId,
-    showCertificates,
-    isSingleCertificate: Boolean(chain && tokenId)
-  })
-
   return (
-    <div className="mt-4 pt-3 border-t border-gray-800/30">
+    <div>
       <div className="flex flex-col items-center text-center">
         <div className="flex items-center gap-1 mb-1.5">
           <ShieldCheck className="w-2.5 h-2.5 text-gray-200" />
@@ -98,6 +85,11 @@ export function Verify() {
         </div>
         
         <div className="flex flex-col gap-1.5 font-mono text-[9px]">
+          {/* SITUS line */}
+          <div className="flex justify-center">
+            <FactoryLink />
+          </div>
+
           {/* Certificates line */}
           {(isAllCertificates || (chain && tokenId)) && (
             <div className="flex justify-center gap-2">
@@ -128,13 +120,10 @@ export function Verify() {
             </div>
           )}
           
-          {/* Account verification (includes group and tokenbound) */}
+          {/* Account verification */}
           {accountInfo && (
             <AccountVerification name={accountInfo.name} group={accountInfo.group} />
           )}
-          
-          {/* Factory line */}
-          <FactoryLink />
         </div>
       </div>
     </div>
