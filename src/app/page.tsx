@@ -9,7 +9,7 @@ export default function HomePage() {
       <HomeSwarm />
       <DeclarativeHero />
       <DeclarativeSection />
-      <NaturalCapitalGrid />
+      <NaturalCapitalGrid activeCategory="all" />
     </main>
   )
 }

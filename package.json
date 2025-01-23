@@ -39,6 +39,7 @@
     "react-dom": "18.2.0",
     "react-infinite-scroll-component": "^6.1.0",
     "react-markdown": "^9.0.1",
+    "react-spring": "^9.7.5",
     "react-toastify": "^11.0.2",
     "reactflow": "^11.11.4",
     "recharts": "^2.15.0",

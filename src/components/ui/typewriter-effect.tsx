@@ -22,7 +22,7 @@ export function TypewriterEffect({ words, className }: TypewriterEffectProps) {
         setCurrentIndex((prev) => (prev + 1) % words.length)
         setIsVisible(true)
       }, 400) // Faster fade out
-    }, 3000) // More time to read each word
+    }, 2000) // More time to read each word
 
     return () => clearInterval(intervalId)
   }, [words.length])
