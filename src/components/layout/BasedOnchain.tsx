@@ -43,6 +43,9 @@ export function BasedOnchain() {
   // Match any path under /groups/[group]
   const groupMatch = pathname?.match(/^\/groups\/([^\/]+)(?:\/.*)?$/)
   
+  // Special case for /pools which is equivalent to /groups/ensurance/all
+  const isPoolsPage = pathname === '/pools'
+  
   // Only match accounts at root level with a dot (e.g., /name.group)
   const accountMatch = pathname?.match(/^\/([^\/]+\.[^\/]+)$/)
   
@@ -55,7 +58,7 @@ export function BasedOnchain() {
   const assetMatch = pathname?.match(/^\/assets\/([^\/]+)\/([^\/]+)\/([^\/]+)$/)
   
   // Extract group name from group route - first capture group is the group name
-  const groupName = groupMatch?.[1]
+  const groupName = groupMatch?.[1] || (isPoolsPage ? 'ensurance' : undefined)
 
   // Extract account info only if we have an account match
   const accountInfo = accountMatch?.[1] ? {
@@ -114,7 +117,7 @@ export function BasedOnchain() {
           )}
           
           {/* Group verification */}
-          {groupMatch && (
+          {(groupMatch || isPoolsPage) && (
             <div className="flex justify-center gap-2">
               <GroupVerification name={groupName} />
             </div>
