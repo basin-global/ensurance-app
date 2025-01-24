@@ -1,13 +1,11 @@
 'use client'
 
-import { SubNavigation } from '@/components/layout/SubNavigation'
 import { GroupInfo } from '@/modules/groups/GroupInfo'
 import Image from 'next/image'
 
 export default function GroupCreatePage({ params }: { params: { group: string } }) {
     return (
         <div className="min-h-screen flex flex-col">
-            <SubNavigation type="accounts" groupName={params.group} />
             <div className="flex-1">
                 <div className="flex items-center justify-center py-24">
                     <div className="w-20 h-20 flex-shrink-0 mr-6">

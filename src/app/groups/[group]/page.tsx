@@ -1,7 +1,6 @@
 import { groups } from '@/lib/database/queries/groups'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
-import { SubNavigation } from '@/components/layout/SubNavigation'
 
 export default async function GroupPage({ params }: { params: { group: string } }) {
     const groupData = await groups.getByName(`.${params.group}`)
@@ -11,7 +10,6 @@ export default async function GroupPage({ params }: { params: { group: string } 
 
     return (
         <div className="flex flex-col min-h-screen">
-            <SubNavigation type="accounts" groupName={params.group} />
             <div className="flex-1">
                 {/* Hero Section with Banner */}
                 <div className="relative h-[40vh] min-h-[400px]">

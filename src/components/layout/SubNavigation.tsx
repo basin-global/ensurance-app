@@ -7,9 +7,10 @@ import { cn } from '@/lib/utils'
 interface SubNavigationProps {
   type: 'accounts' | 'og' | 'assets' | 'certificates';
   groupName?: string;
+  compact?: boolean;
 }
 
-export function SubNavigation({ type, groupName }: SubNavigationProps) {
+export function SubNavigation({ type, groupName, compact = false }: SubNavigationProps) {
   const pathname = usePathname()
   
   let links;
@@ -35,9 +36,15 @@ export function SubNavigation({ type, groupName }: SubNavigationProps) {
   }
 
   return (
-    <nav className="relative z-20">
-      <div className="container mx-auto px-4 flex justify-center">
-        <ul className="flex space-x-8">
+    <nav className={cn("relative", compact ? "z-10" : "z-20")}>
+      <div className={cn(
+        "flex justify-center",
+        compact ? "" : "container mx-auto px-4"
+      )}>
+        <ul className={cn(
+          "flex",
+          compact ? "space-x-4" : "space-x-8"
+        )}>
           {links.map(({ href, label }) => {
             const isActive = pathname === href
             return (
@@ -45,7 +52,8 @@ export function SubNavigation({ type, groupName }: SubNavigationProps) {
                 <Link
                   href={href}
                   className={cn(
-                    "block px-4 py-2 transition-colors",
+                    "block transition-colors",
+                    compact ? "px-2 py-1 text-sm" : "px-4 py-2",
                     isActive 
                       ? "font-bold text-white" 
                       : "font-normal text-gray-500 hover:text-gray-300"

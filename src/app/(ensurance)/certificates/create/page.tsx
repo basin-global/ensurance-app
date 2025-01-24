@@ -1,12 +1,10 @@
 'use client'
 
-import { SubNavigation } from '@/components/layout/SubNavigation'
 import Image from 'next/image'
 
 export default function CertificatesCreatePage() {
   return (
     <div className="min-h-screen flex flex-col">
-      <SubNavigation type="certificates" />
       <div className="flex-1">
         <div className="flex items-center justify-center py-24">
           <div className="w-20 h-20 flex-shrink-0 mr-6">

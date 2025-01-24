@@ -1,12 +1,10 @@
 'use client'
 
 import Image from 'next/image'
-import { SubNavigation } from '@/components/layout/SubNavigation'
 
 export default function CreateAccountPage() {
   return (
     <>
-      <SubNavigation type="accounts" />
       <div className="flex items-center justify-center py-24">
         <div className="w-20 h-20 flex-shrink-0 mr-6">
           <Image

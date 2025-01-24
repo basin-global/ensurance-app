@@ -10,22 +10,11 @@ interface ReputationTabProps {
 
 export default function ReputationTab({ address, selectedChain, isOwner }: ReputationTabProps) {
   return (
-    <div className="flex flex-col items-left justify-left gap-4">
-      <p className="text-2xl text-white-600 font-semibold self-start pl-4">
-        Reputation Module Coming Soon
+    <div className="flex flex-col items-center justify-center py-16">
+      <h2 className="text-2xl font-bold text-gray-200 mb-2">Reputation Module</h2>
+      <p className="text-lg text-gray-400">
+        Coming soon: View and manage your agent's reputation and credentials
       </p>
-      <img 
-        src="/tab-placeholders/reputation.jpg" 
-        alt="Reputation Module Coming Soon"
-        className="w-full max-w-[1024px] h-auto rounded-lg shadow-lg"
-      />
-      
-      {/* Debug info */}
-      <div className="text-sm text-gray-500 pl-4">
-        <p>Address: {address}</p>
-        <p>Chain: {selectedChain}</p>
-        <p>Is Owner: {isOwner.toString()}</p>
-      </div>
     </div>
   )
 } 

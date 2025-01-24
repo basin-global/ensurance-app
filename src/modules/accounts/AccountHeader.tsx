@@ -8,7 +8,6 @@ interface AccountHeaderProps {
   tokenId: number
   tbaAddress: string
   groupName: string
-  description?: string
   isAgent?: boolean
 }
 
@@ -17,16 +16,13 @@ export default function AccountHeader({
   tokenId, 
   tbaAddress, 
   groupName,
-  description,
   isAgent 
 }: AccountHeaderProps) {
-  console.log('Description prop:', description)
-
   // Decode the account name if it's URL encoded
   const decodedAccountName = decodeURIComponent(accountName)
 
   return (
-    <div className="relative group/main py-8">
+    <div className="relative group/main">
       <div className="flex items-center gap-6">
         <div className="w-20 h-20 bg-gray-800 rounded-full">
           <SingleAccountImage 
@@ -47,11 +43,6 @@ export default function AccountHeader({
               </span>
             )}
           </div>
-          {description && (
-            <p className="text-gray-400 text-sm max-w-2xl">
-              {description}
-            </p>
-          )}
           <div 
             className="cursor-pointer text-sm font-mono text-gray-500 opacity-0 group-hover/main:opacity-70 transition-opacity duration-300 delay-300 hover:text-gray-300"
             onClick={() => {

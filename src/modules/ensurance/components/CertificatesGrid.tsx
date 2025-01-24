@@ -1,3 +1,5 @@
+'use client'
+
 import React, { useEffect, useState, useCallback, useMemo } from 'react'
 import AssetCard from '@/modules/assets/AssetCard'
 import { Card, CardContent } from "@/components/ui/card"
@@ -11,13 +13,15 @@ interface CertificatesGridProps {
   setSearchQuery?: (query: string) => void
   urlPrefix?: string
   walletAddress?: string
+  hideSearch?: boolean
 }
 
 export default function CertificatesGrid({ 
   searchQuery = '',
   setSearchQuery = () => {},
   urlPrefix = '',
-  walletAddress
+  walletAddress,
+  hideSearch = false
 }: CertificatesGridProps) {
   const [assets, setAssets] = useState<Asset[]>([])
   const [loading, setLoading] = useState(true)
@@ -62,14 +66,23 @@ export default function CertificatesGrid({
 
   // Filter assets based on search query
   const filteredAssets = useMemo(() => {
+    if (!searchQuery) return assets;
+    
+    const keywords = searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
+    console.log('Filtering with keywords:', keywords);
+    
     return assets.filter(asset => {
-      const searchLower = (searchQuery || '').toLowerCase()
-      return !searchQuery || (
-        asset.name?.toLowerCase().includes(searchLower) ||
-        asset.token_id?.toString().includes(searchLower) ||
-        asset.chain?.toLowerCase().includes(searchLower)
-      )
-    })
+      // Only search in name and description of certificates
+      const searchableFields = [
+        asset.name?.toLowerCase() || '',
+        asset.description?.toLowerCase() || ''
+      ];
+      
+      // Match if any keyword matches any field
+      return keywords.some(keyword => 
+        searchableFields.some(field => field.includes(keyword))
+      );
+    });
   }, [assets, searchQuery])
 
   if (loading) {

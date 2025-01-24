@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
 import { AssetSearch } from '@/modules/assets/AssetSearch'
-import { SubNavigation } from '@/components/layout/SubNavigation'
 import CertificatesGrid from '@/modules/ensurance/components/CertificatesGrid'
 
 export default function CertificatesMinePage() {
@@ -15,7 +14,6 @@ export default function CertificatesMinePage() {
   if (!ready) {
     return (
       <div className="min-h-screen flex flex-col">
-        <SubNavigation type="certificates" />
         <div className="flex-1 flex flex-col items-center justify-center p-8">
           <p className="text-xl text-center mb-4">Loading...</p>
           <p className="text-gray-500 text-center">Please wait...</p>
@@ -28,7 +26,6 @@ export default function CertificatesMinePage() {
   if (!authenticated || !walletAddress) {
     return (
       <div className="min-h-screen flex flex-col">
-        <SubNavigation type="certificates" />
         <div className="flex-1 flex flex-col items-center justify-center p-8">
           <p className="text-xl text-center mb-4">👋 Connect your wallet</p>
           <p className="text-gray-500 text-center">
@@ -41,7 +38,6 @@ export default function CertificatesMinePage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <SubNavigation type="certificates" />
       <div className="container mx-auto px-4 pt-0 pb-4 flex-1">
         <div className="space-y-4">
           <div className="flex justify-center">

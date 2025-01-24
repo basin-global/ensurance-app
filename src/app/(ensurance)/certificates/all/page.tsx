@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { AssetSearch } from '@/modules/assets/AssetSearch'
-import { SubNavigation } from '@/components/layout/SubNavigation'
 import CertificatesGrid from '@/modules/ensurance/components/CertificatesGrid'
 
 export default function CertificatesPage() {
@@ -10,7 +9,6 @@ export default function CertificatesPage() {
 
   return (
     <div className="flex flex-col">
-      <SubNavigation type="certificates" />
       <div className="container mx-auto px-4 pt-0 pb-4 flex-1">
         <div className="space-y-4">
           <div className="flex justify-center">

@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
 import AccountsGrid from '@/modules/accounts/AccountsGrid'
 import { AssetSearch } from '@/modules/assets/AssetSearch'
-import { SubNavigation } from '@/components/layout/SubNavigation'
 import { GroupInfo } from '@/modules/groups/GroupInfo'
 
 export default function GroupMinePage({ params }: { params: { group: string } }) {
@@ -16,7 +15,6 @@ export default function GroupMinePage({ params }: { params: { group: string } })
   if (!ready) {
     return (
       <div className="min-h-screen flex flex-col">
-        <SubNavigation type="accounts" groupName={params.group} />
         <div className="flex-1 flex flex-col items-center justify-center p-8">
           <p className="text-xl text-center mb-4">Loading...</p>
           <p className="text-gray-500 text-center">Please wait...</p>
@@ -30,7 +28,6 @@ export default function GroupMinePage({ params }: { params: { group: string } })
   if (!authenticated || !walletAddress) {
     return (
       <div className="min-h-screen flex flex-col">
-        <SubNavigation type="accounts" groupName={params.group} />
         <div className="flex-1 flex flex-col items-center justify-center p-8">
           <p className="text-xl text-center mb-4">👋 Connect your wallet</p>
           <p className="text-gray-500 text-center">
@@ -44,7 +41,6 @@ export default function GroupMinePage({ params }: { params: { group: string } })
 
   return (
     <div className="min-h-screen flex flex-col">
-      <SubNavigation type="accounts" groupName={params.group} />
       <div className="container mx-auto px-4 pt-0 pb-4 flex-1">
         <div className="space-y-4">
           <div className="flex justify-center">

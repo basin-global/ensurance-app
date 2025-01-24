@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
 import AccountsGrid from '@/modules/accounts/AccountsGrid'
 import { AssetSearch } from '@/modules/assets/AssetSearch'
-import { SubNavigation } from '@/components/layout/SubNavigation'
 
 export default function MinePage() {
   const [searchQuery, setSearchQuery] = useState('')
@@ -15,11 +14,10 @@ export default function MinePage() {
   if (!ready) {
     return (
       <div className="min-h-screen flex flex-col">
-        <SubNavigation type="accounts" />
         <div className="flex-1 flex flex-col items-center justify-center p-8">
           <p className="text-xl text-center mb-4">Loading...</p>
           <p className="text-gray-500 text-center">Please wait...</p>
-        </div>
+        </div>  
       </div>
     )
   }
@@ -27,7 +25,6 @@ export default function MinePage() {
   if (!authenticated || !walletAddress) {
     return (
       <div className="min-h-screen flex flex-col">
-        <SubNavigation type="accounts" />
         <div className="flex-1 flex flex-col items-center justify-center p-8">
           <p className="text-xl text-center mb-4">👋 Connect your wallet</p>
           <p className="text-gray-500 text-center">
@@ -40,7 +37,6 @@ export default function MinePage() {
 
   return (
     <div>
-      <SubNavigation type="accounts" />
       <div className="container mx-auto px-4 pt-0 pb-4">
         <div className="space-y-4">
           <div className="flex justify-center">
