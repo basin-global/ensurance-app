@@ -43,6 +43,8 @@ export default async function AccountHoldPage({
           tbaAddress={accountData.tba_address}
           groupName={group}
           isAgent={accountData.is_agent}
+          displayName={accountData.display_name}
+          isPool={group === 'ensurance' && accountName !== 'situs.ensurance'}
         />
       </div>
 

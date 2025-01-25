@@ -45,6 +45,8 @@ export default async function AccountIdentityPage({
           tbaAddress={accountData.tba_address}
           groupName={group}
           isAgent={accountData.is_agent}
+          displayName={accountData.display_name}
+          isPool={group === 'ensurance' && accountName !== 'situs.ensurance'}
         />
       </div>
 

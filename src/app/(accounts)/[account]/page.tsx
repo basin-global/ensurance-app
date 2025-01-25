@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { headers } from 'next/headers'
 import AccountHeader from '@/modules/accounts/AccountHeader'
 import ChatTab from '@/modules/tabbed-modules/chat'
+import OverviewTab from '@/modules/tabbed-modules/overview'
 import { AccountNavigation } from '@/components/layout/AccountNavigation'
 
 export default async function AccountPage({
@@ -38,6 +39,8 @@ export default async function AccountPage({
           tbaAddress={accountData.tba_address}
           groupName={group}
           isAgent={accountData.is_agent}
+          displayName={accountData.display_name}
+          isPool={group === 'ensurance' && accountName !== 'situs.ensurance'}
         />
       </div>
 
@@ -46,18 +49,11 @@ export default async function AccountPage({
       </div>
 
       <div className="flex-1 container mx-auto px-4">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Column - Chat */}
-          <div className="bg-[#111] rounded-xl p-4">
-            <div className="flex flex-col border-b border-gray-700 mb-4">
-              <div className="px-2 md:px-4">
-                <div className="flex flex-col items-start gap-1">
-                  <div className="text-xs font-bold text-gray-400">
-                    CHAT WITH AGENT
-                  </div>
-                  <div className="w-[175px] h-[2px] bg-gray-700 mb-1" />
-                </div>
-              </div>
+          <div className="p-6">
+            <div className="text-xs font-bold text-gray-400 mb-6">
+              chat with ensurance agent
             </div>
             <ChatTab 
               address={accountData.tba_address}
@@ -66,47 +62,15 @@ export default async function AccountPage({
           </div>
 
           {/* Right Column - Overview */}
-          <div className="bg-[#111] rounded-xl p-4">
-            <div className="flex flex-col border-b border-gray-700 mb-4">
-              <div className="px-2 md:px-4">
-                <div className="flex flex-col items-start gap-1">
-                  <div className="text-xs font-bold text-gray-400">
-                    OVERVIEW
-                  </div>
-                  <div className="w-[175px] h-[2px] bg-gray-700 mb-1" />
-                </div>
-              </div>
+          <div className="p-6">
+            <div className="text-xs font-bold text-gray-400 mb-6">
+              overview
             </div>
-
-            <div className="space-y-6 p-2">
-              {/* Description */}
-              {accountData.description && (
-                <div>
-                  <div className="text-sm text-gray-500 mb-2">About</div>
-                  <p className="text-gray-400 text-sm">
-                    {accountData.description}
-                  </p>
-                </div>
-              )}
-
-              {/* Asset Value */}
-              <div>
-                <div className="text-sm text-gray-500 mb-1">Total Asset Value</div>
-                <div className="text-2xl font-bold text-gray-300">Coming soon...</div>
-              </div>
-
-              {/* Quick Stats */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-sm text-gray-500 mb-1">Certificates</div>
-                  <div className="text-lg font-medium text-gray-300">--</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-500 mb-1">Reputation</div>
-                  <div className="text-lg font-medium text-gray-300">--</div>
-                </div>
-              </div>
-            </div>
+            <OverviewTab
+              description={accountData.description}
+              tbaAddress={accountData.tba_address}
+              isOwner={false}
+            />
           </div>
         </div>
       </div>

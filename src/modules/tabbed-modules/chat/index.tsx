@@ -10,33 +10,33 @@ interface ChatTabProps {
 
 export default function ChatTab({ address }: ChatTabProps) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="space-y-4">
       {/* Initial prompt */}
-      <div className="bg-gray-800/50 rounded-lg p-4">
-        <p className="text-gray-300">What do you want to ensure?</p>
+      <div className="text-gray-400 text-sm">
+        What do you want to ensure?
       </div>
 
       {/* Example options */}
       <div className="grid grid-cols-2 gap-2">
-        <button className="bg-gray-800/30 hover:bg-gray-800/50 rounded-lg p-3 text-sm text-gray-400 hover:text-gray-300 transition-colors text-left">
+        <button className="text-left px-3 py-2 text-sm text-gray-400 hover:text-white transition-colors">
           🌿 Nature & Biodiversity
         </button>
-        <button className="bg-gray-800/30 hover:bg-gray-800/50 rounded-lg p-3 text-sm text-gray-400 hover:text-gray-300 transition-colors text-left">
+        <button className="text-left px-3 py-2 text-sm text-gray-400 hover:text-white transition-colors">
           🌊 Ocean & Marine Life
         </button>
-        <button className="bg-gray-800/30 hover:bg-gray-800/50 rounded-lg p-3 text-sm text-gray-400 hover:text-gray-300 transition-colors text-left">
-          🌍 Climate Action
+        <button className="text-left px-3 py-2 text-sm text-gray-400 hover:text-white transition-colors">
+          🌍 Climate Stability
         </button>
-        <button className="bg-gray-800/30 hover:bg-gray-800/50 rounded-lg p-3 text-sm text-gray-400 hover:text-gray-300 transition-colors text-left">
-          🌱 Sustainable Agriculture
+        <button className="text-left px-3 py-2 text-sm text-gray-400 hover:text-white transition-colors">
+          🌱 Species & Habitat
         </button>
       </div>
 
       {/* Loading state */}
-      <div className="flex items-center gap-2 text-gray-500 mt-4">
-        <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse"></div>
-        <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse delay-75"></div>
-        <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse delay-150"></div>
+      <div className="flex items-center gap-1.5 mt-4">
+        <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-pulse"></div>
+        <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-pulse delay-75"></div>
+        <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-pulse delay-150"></div>
       </div>
     </div>
   )
