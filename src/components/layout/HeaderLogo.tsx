@@ -27,6 +27,8 @@ export function HeaderLogo() {
     pathname.includes('/pools') || 
     pathname.includes('/groups/ensurance/all')
 
+  const isCertificates = pathname.includes('/certificates/')
+
   // Determine logo source
   const logoSrc = isEnsurancePools
     ? "/groups/orbs/ensurance-orb.png"
@@ -35,11 +37,13 @@ export function HeaderLogo() {
       : "/groups/orbs/ensurance-orb.png"
 
   // Determine header text
-  const headerText = isEnsurancePools
-    ? 'ensurance pools'
-    : groupName 
-      ? `${groupName} ensurance agents`
-      : 'ensurance agents'
+  const headerText = isCertificates
+    ? 'certificates of ensurance'
+    : isEnsurancePools
+      ? 'ensurance pools'
+      : groupName 
+        ? `${groupName} ensurance agents`
+        : 'ensurance agents'
 
   // Determine URLs
   const homeUrl = '/'
