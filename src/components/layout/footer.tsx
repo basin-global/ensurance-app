@@ -2,6 +2,7 @@ import { ReferralButton } from '@/modules/rewards/RewardsLink';
 import { GroupLinks } from '@/modules/groups/GroupLinks';
 import { BasedOnchain } from '@/components/layout/BasedOnchain';
 import { BuiltInPublic } from '@/components/layout/BuiltInPublic';
+import { FooterNavigation } from '@/components/layout/FooterNavigation';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -10,10 +11,13 @@ export default function Footer() {
     <footer className="w-full border-t border-gray-800 mt-auto relative z-10">
       <div className="container mx-auto px-4 py-4">
         <div className="flex flex-col">
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-center mb-6">
             <ReferralButton />
           </div>
-          <div className="mb-8">
+          <div className="flex items-center justify-center mb-4">
+            <FooterNavigation />
+          </div>
+          <div className="mb-6">
             <GroupLinks />
           </div>
           

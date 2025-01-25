@@ -116,13 +116,13 @@ export function ReferralButton() {
       <button
         onClick={copyToClipboard}
         disabled={copying}
-        className="text-gray-400 hover:text-gray-300 transition duration-300 lowercase"
+        className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-500 to-amber-600 hover:opacity-80 transition duration-300 lowercase"
       >
-        {copying ? 'copying...' : 'rewards'}
+        {copying ? 'copying...' : 'protocol rewards'}
       </button>
       {currentReferral && currentReferral !== '0x0000000000000000000000000000000000000000' && (
         <p className="text-xs text-gray-400 mt-1">
-          Rewards: {`${currentReferral.slice(0, 6)}...${currentReferral.slice(-4)}`}
+          protocol rewards: {`${currentReferral.slice(0, 6)}...${currentReferral.slice(-4)}`}
         </p>
       )}
     </div>
