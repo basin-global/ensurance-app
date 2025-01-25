@@ -10,12 +10,12 @@ interface AccountNavigationProps {
 
 export function AccountNavigation({ accountName }: AccountNavigationProps) {
   const pathname = usePathname()
-  const isSubPage = pathname.endsWith('/hold') || pathname.endsWith('/tend') || pathname.endsWith('/identity')
+  const isSubPage = pathname.endsWith('/hold') || pathname.endsWith('/tend') || pathname.endsWith('/presence')
   
   const links = [
     { href: `/${accountName}/tend`, label: 'TEND' },
     { href: `/${accountName}/hold`, label: 'HOLD' },
-    { href: `/${accountName}/identity`, label: 'IDENTITY' }
+    { href: `/${accountName}/presence`, label: 'PRESENCE' }
   ]
 
   return (
