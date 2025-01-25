@@ -20,8 +20,11 @@ export const groups = {
     },
     
     // Get all groups
-    getAll: async () => {
-        const result = await sql`SELECT * FROM situs_ogs ORDER BY og_name`;
+    getAll: async (includeInactive = false) => {
+        const result = await sql`
+            SELECT * FROM situs_ogs 
+            WHERE is_active = true 
+            ORDER BY og_name`;
         return result.rows;
     },
     

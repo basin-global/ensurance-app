@@ -10,6 +10,7 @@ interface Group {
     tagline: string | null;
     total_supply: number;
     contract_address: string;
+    is_active: boolean;
 }
 
 interface GroupGridProps {
@@ -43,9 +44,11 @@ export default function GroupGrid({ searchQuery }: GroupGridProps) {
     }
 
     const filteredGroups = groups.filter(group => 
-        group.og_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (group.name_front?.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (group.tagline?.toLowerCase().includes(searchQuery.toLowerCase()))
+        group.is_active && (
+            group.og_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (group.name_front?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            (group.tagline?.toLowerCase().includes(searchQuery.toLowerCase()))
+        )
     )
 
     if (loading) return <div>Loading...</div>

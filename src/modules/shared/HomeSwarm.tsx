@@ -5,9 +5,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 
 const SWARM_ORBS = [
-    'ai', 'basin', 'bioregion', 'bloom', 'boulder', 'earth',
-    'ebf', 'higher', 'greenpill', 'kokonut', 'mumbai', 'ogallala',
-    'refi', 'regen', 'sicilia', 'situs', 'tgn', 'tokyo', 'fi', 'la', 'capital', 'solar', 'solarpunk', 'ents'
+    'ai', 'basin', 'bioregion', 'boulder', 'earth', 'higher', 'mumbai',
+    'refi', 'sicilia', 'situs', 'tgn', 'tokyo', 'fi', 'la', 'capital', 'solar', 'solarpunk', 'ents'
 ]
 
 interface SwarmItem {
