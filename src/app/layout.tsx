@@ -3,15 +3,16 @@ import './globals.css'
 import { PrivyProviderWrapper } from '@/providers/privy-provider'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
-import { DeclarativeSection } from '@/components/layout/DeclarativeSection'
-import { DeclarativeHero } from '@/components/layout/DeclarativeHero'
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify'
 import { Metadata } from 'next'
+import { generateShare } from '@/lib/share'
+import { headers } from 'next/headers'
 
-export const metadata: Metadata = {
-  title: 'ensurance agents',
-  description: 'Ensuring Nature & the Benefits It Provides'
+export async function generateMetadata({ params }: { params: any }): Promise<Metadata> {
+  const headersList = headers()
+  const pathname = headersList.get('x-pathname') || '/'
+  return generateShare(pathname, params)
 }
 
 export const viewport = {
