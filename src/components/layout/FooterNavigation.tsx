@@ -8,14 +8,14 @@ export function FooterNavigation() {
         <Link href="/all" className="hover:text-gray-300 transition-colors">
           agents
         </Link>
-        <Link href="/pools" className="hover:text-gray-300 transition-colors">
-          pools
-        </Link>
         <span className="cursor-help hover:text-gray-300 transition-colors" title="Coming Soon">
           syndicates
         </span>
         <Link href="/certificates/all" className="hover:text-gray-300 transition-colors">
           certificates
+        </Link>
+        <Link href="/pools" className="hover:text-gray-300 transition-colors">
+          pools
         </Link>
       </div>
     </div>
