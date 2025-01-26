@@ -54,13 +54,14 @@ export default async function AccountPage({
           <div className="p-6">
             <div className="flex items-center gap-2 mb-6">
               <div className="text-xs uppercase tracking-wider text-gray-400 font-medium">
-                Chat Assistant
+                Chat With Agent
               </div>
               <div className="w-2 h-2 rounded-full bg-green-500/50 animate-pulse" />
             </div>
             <ChatTab 
               address={accountData.tba_address}
               isOwner={false}
+              isAgent={accountData.is_agent}
             />
           </div>
 

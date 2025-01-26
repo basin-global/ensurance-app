@@ -141,7 +141,7 @@ export function HomeSwarm() {
         <div className="relative w-full h-screen flex items-center justify-center">
             {/* Center Orb */}
             <Link 
-                href="/groups"
+                href="/certificates/all"
                 className="absolute cursor-pointer transition-transform hover:scale-105"
                 style={{
                     left: `${dimensions.width / 2 - 100}px`,
