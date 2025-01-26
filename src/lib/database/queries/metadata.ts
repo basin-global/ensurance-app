@@ -71,7 +71,8 @@ export const metadata = {
                 baseImageUrl,
                 fullAccountName: account.full_account_name,
                 ogName: sanitizedOG,
-                tokenId
+                tokenId,
+                contract
             });
 
             return {

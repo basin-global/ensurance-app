@@ -1,12 +1,37 @@
-import { ImageResponse } from 'next/server';
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
+import { ImageResponse } from 'next/og';
 import { put } from '@vercel/blob';
+import React from 'react';
+import fs from 'fs/promises';
+import path from 'path';
 
 interface GenerateOptions {
     baseImageUrl: string;
     fullAccountName: string;
     ogName: string;
     tokenId: string;
+    contract?: string;
 }
+
+// Font configuration by group name
+const FONT_CONFIG: Record<string, { path: string; family: string }> = {
+    // Boulder group
+    'boulder': {
+        path: './public/fonts/OpenSans-Bold.ttf',
+        family: 'Open Sans'
+    },
+    // Higher group
+    'higher': {
+        path: './public/fonts/Helvetica-Bold-02.ttf',
+        family: 'Helvetica'
+    },
+    // Default font
+    default: {
+        path: './public/fonts/SpaceMono-Bold.ttf',
+        family: 'Space Mono'
+    }
+};
 
 export class ImageGenerator {
     static async generate({
@@ -16,10 +41,17 @@ export class ImageGenerator {
         tokenId
     }: GenerateOptions): Promise<string> {
         try {
+            // Get font config for this group or use default
+            const fontConfig = FONT_CONFIG[ogName] || FONT_CONFIG.default;
+            
+            // Load the font
+            const fontPath = path.resolve(fontConfig.path);
+            const fontData = await fs.readFile(fontPath);
+
             const imageResponse = new ImageResponse(
-                {
-                    type: 'div',
-                    props: {
+                React.createElement(
+                    'div',
+                    {
                         style: {
                             width: '100%',
                             height: '100%',
@@ -28,26 +60,35 @@ export class ImageGenerator {
                             justifyContent: 'center',
                             backgroundImage: `url(${baseImageUrl})`,
                             backgroundSize: 'cover',
-                            color: '#FFFFFF'
-                        },
-                        children: [{
-                            type: 'div',
-                            props: {
-                                style: {
-                                    fontSize: '64px',
-                                    textAlign: 'center',
-                                    textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
-                                    padding: '20px',
-                                    fontWeight: 'bold'
-                                },
-                                children: fullAccountName
+                            color: '#FFFFFF',
+                            fontFamily: fontConfig.family
+                        }
+                    },
+                    React.createElement(
+                        'div',
+                        {
+                            style: {
+                                fontSize: '64px',
+                                textAlign: 'center',
+                                textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
+                                padding: '20px',
+                                fontWeight: 'bold'
                             }
-                        }]
-                    }
-                },
+                        },
+                        fullAccountName
+                    )
+                ),
                 {
                     width: 1000,
-                    height: 1000
+                    height: 1000,
+                    fonts: [
+                        {
+                            name: fontConfig.family,
+                            data: fontData,
+                            weight: 700,
+                            style: 'normal'
+                        }
+                    ]
                 }
             );
 

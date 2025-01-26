@@ -202,7 +202,7 @@ export default function NaturalCapitalGrid({
 
                 .natural-capital-section {
                     position: relative;
-                    padding: 120px 0;
+                    padding: 60px 0 120px;
                     background: 
                         linear-gradient(180deg, 
                             rgba(0, 0, 0, 0) 0%,

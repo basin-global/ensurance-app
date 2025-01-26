@@ -12,13 +12,13 @@ export default function Footer() {
     <footer className="w-full border-t border-gray-800 mt-auto relative z-10">
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col">
-          <div className="flex items-center justify-center mb-8">
+          <div className="flex items-center justify-center mb-6">
             <ReferralButton />
           </div>
-          <div className="flex items-center justify-center mb-8">
+          <div className="flex items-center justify-center">
             <FooterNavigation />
           </div>
-          <div className="mb-8">
+          <div className="mb-6">
             <GroupLinks />
           </div>
 

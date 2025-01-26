@@ -3,8 +3,8 @@ import Link from 'next/link';
 export function FooterNavigation() {
   return (
     <div className="flex flex-col items-center">
-      <span className="font-bold mb-4 text-xl">ensurance</span>
-      <div className="flex justify-center gap-8 text-lg">
+      <span className="font-bold mb-6 text-2xl">ensurance</span>
+      <div className="flex justify-center gap-12 text-lg">
         <Link href="/all" className="hover:text-gray-300 transition-colors">
           agents
         </Link>
