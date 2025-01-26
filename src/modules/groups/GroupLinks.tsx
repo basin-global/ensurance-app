@@ -33,7 +33,7 @@ export function GroupLinks() {
 
     return (
         <div className="max-w-2xl mx-auto">
-            <h3 className="text-center mb-3">groups</h3>
+            <h3 className="text-center mb-3 text-lg">groups</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-1 text-center">
                 {groups.map((group) => (
                     <Link
