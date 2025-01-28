@@ -4,6 +4,8 @@ import { headers } from 'next/headers'
 import { isAdmin } from '@/config/admin'
 import { getAddress } from 'viem'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     const headersList = headers()
