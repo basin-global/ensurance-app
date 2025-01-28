@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useEffect } from 'react'
 import { isAdmin } from '@/config/admin'
 import { usePrivy } from '@privy-io/react-auth'
