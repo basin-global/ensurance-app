@@ -46,8 +46,8 @@ export function BasedOnchain() {
   // Special case for /pools which is equivalent to /groups/ensurance/all
   const isPoolsPage = pathname === '/pools'
   
-  // Only match accounts at root level with a dot (e.g., /name.group)
-  const accountMatch = pathname?.match(/^\/([^\/]+\.[^\/]+)$/)
+  // Match accounts at root level or in subpaths (e.g., /name.group or /name.group/hold)
+  const accountMatch = pathname?.match(/^\/([^\/]+\.[^\/]+)(?:\/.*)?$/)
   
   // Match certificate pages - capture chain and tokenId
   const certificateMatch = pathname?.match(/\/certificates\/([^\/]+)\/(\d+)/)

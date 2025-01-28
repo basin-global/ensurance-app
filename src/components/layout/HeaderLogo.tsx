@@ -43,9 +43,7 @@ export function HeaderLogo() {
       ? 'ensurance pools'
       : groupName 
         ? `${groupName} ensurance agents`
-        : pathname.includes('/account') || pathname === '/all' || pathname === '/mine' || pathname === '/create'
-          ? 'ensurance agents'
-          : 'natural capital ensurance'
+        : 'ensurance agents'
 
   // Determine URLs
   const homeUrl = '/'
