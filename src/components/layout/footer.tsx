@@ -4,6 +4,7 @@ import { BasedOnchain } from '@/components/layout/BasedOnchain';
 import { BuiltInPublic } from '@/components/layout/BuiltInPublic';
 import { FooterNavigation } from '@/components/layout/FooterNavigation';
 import { UtilityLinks } from '@/components/layout/UtilityLinks';
+import { LegalLinks } from '@/components/layout/LegalLinks';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -53,7 +54,12 @@ export default function Footer() {
               </div>
             </div>
           </div>
-          
+
+          {/* Legal Links Section */}
+          <div className="mt-8">
+            <LegalLinks />
+          </div>
+
           {/* Bottom Padding */}
           <div className="h-8" />
         </div>

@@ -78,6 +78,12 @@ export function BasedOnchain() {
   // Show certificates verification when on certificates path
   const showCertificates = isOnCertificatesPath
 
+  // Check if any verifications are active
+  const hasActiveVerifications = (isAllCertificates || (chain && tokenId)) || 
+    assetMatch || 
+    (groupMatch || isPoolsPage) || 
+    accountInfo
+
   return (
     <div>
       <div className="flex flex-col items-center text-center">
@@ -92,6 +98,12 @@ export function BasedOnchain() {
           <div className="flex justify-center">
             <FactoryLink />
           </div>
+
+          {!hasActiveVerifications && (
+            <div className="flex flex-col items-center">
+              <span className="text-gray-400">active group/agent will appear here</span>
+            </div>
+          )}
 
           {/* Certificates line */}
           {(isAllCertificates || (chain && tokenId)) && (
