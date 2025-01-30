@@ -12,7 +12,7 @@ export async function generateShare(pathname: string = '/', params: any = {}): P
   const defaults = {
     title: 'ensurance agents | ensuring natural capital',
     description: 'reducing risk, increasing resilience',
-    image: '/assets/share-default.png',
+    image: 'https://ensurance.app/assets/share-default.png',
     keywords: 'ensurance, natural capital, ecosystem services, natural assets, environmental assets',
     type: 'website' as const
   }
@@ -25,6 +25,12 @@ export async function generateShare(pathname: string = '/', params: any = {}): P
     referrer: 'origin-when-cross-origin' as const,
     robots: 'index, follow'
   }
+
+  // Helper function to ensure absolute URLs
+  const getAbsoluteImageUrl = (imageUrl: string) => {
+    if (imageUrl.startsWith('http')) return imageUrl;
+    return `https://ensurance.app${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+  };
 
   // Account pages - check if pathname has a dot (indicating name.group format)
   if (pathname.includes('.')) {
@@ -40,7 +46,7 @@ export async function generateShare(pathname: string = '/', params: any = {}): P
       const response = await fetch(`${baseUrl}/api/accounts/${accountName}`);
       const accountData = await response.json();
       
-      const accountImage = accountData.image || defaults.image;
+      const accountImage = getAbsoluteImageUrl(accountData.image || defaults.image);
 
       return {
         ...baseMetadata,
@@ -140,17 +146,33 @@ export async function generateShare(pathname: string = '/', params: any = {}): P
         const response = await fetch(`${baseUrl}/api/ensurance?chain=${chain}&tokenId=${tokenId}`);
         const data = await response.json();
         
-        const certificateImage = data.image || defaults.image;
+        // Handle both video and image certificates
+        const isVideo = data.animation_url || (data.image && data.image.endsWith('.mp4'));
+        const mediaUrl = getAbsoluteImageUrl(isVideo ? data.animation_url || data.image : data.image || defaults.image);
+        const thumbnailUrl = getAbsoluteImageUrl(data.image || defaults.image);
         
-        return {
+        const metadata: Metadata = {
           ...baseMetadata,
           title: `${data.name} - a certificate of ensurance`,
           description: data.description || 'A certificate of ensurance',
           openGraph: {
-            type: 'website' as const,
+            type: isVideo ? 'video.other' : 'website',
             title: `${data.name} - a certificate of ensurance`,
             description: data.description || 'A certificate of ensurance',
-            images: [certificateImage],
+            images: [{
+              url: thumbnailUrl,
+              width: 1200,
+              height: 630,
+              alt: `${data.name} - a certificate of ensurance`
+            }],
+            ...(isVideo && {
+              videos: [{
+                url: mediaUrl,
+                width: 1920,
+                height: 1080,
+                type: 'video/mp4'
+              }]
+            }),
             siteName: 'ensurance agents',
             locale: 'en_US'
           },
@@ -158,21 +180,28 @@ export async function generateShare(pathname: string = '/', params: any = {}): P
             card: 'summary_large_image',
             title: `${data.name} - a certificate of ensurance`,
             description: data.description || 'A certificate of ensurance',
-            images: [certificateImage],
+            images: [thumbnailUrl],
             creator: '@ensurance_app',
             site: '@ensurance_app'
           }
-        }
+        };
+
+        return metadata;
       } catch (error) {
         console.error('Error:', error);
         return {
           ...baseMetadata,
           title: 'certificate of ensurance | ensurance agents',
           openGraph: {
-            type: 'website' as const,
+            type: 'website',
             title: 'certificate of ensurance | ensurance agents',
             description: defaults.description,
-            images: [defaults.image],
+            images: [{
+              url: defaults.image,
+              width: 1200,
+              height: 630,
+              alt: 'certificate of ensurance'
+            }],
             siteName: 'ensurance agents',
             locale: 'en_US'
           },
