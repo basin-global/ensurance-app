@@ -54,10 +54,15 @@ export async function generateShare(pathname: string = '/', params: any = {}): P
         description: `${accountName} - reducing risk, increasing resilience`,
         keywords: `${defaults.keywords}, ${accountName}`,
         openGraph: {
-          type: 'website' as const,
+          type: 'website',
           title: `${accountName} - an ensurance agent`,
           description: `${accountName} - reducing risk, increasing resilience`,
-          images: [accountImage],
+          images: [{
+            url: accountImage,
+            width: 1200,
+            height: 630,
+            alt: `${accountName} - an ensurance agent`
+          }],
           siteName: 'ensurance agents',
           locale: 'en_US'
         },
@@ -65,7 +70,12 @@ export async function generateShare(pathname: string = '/', params: any = {}): P
           card: 'summary_large_image',
           title: `${accountName} - an ensurance agent`,
           description: `${accountName} - reducing risk, increasing resilience`,
-          images: [accountImage],
+          images: [{
+            url: accountImage,
+            width: 1200,
+            height: 630,
+            alt: `${accountName} - an ensurance agent`
+          }],
           creator: '@ensurance_app',
           site: '@ensurance_app'
         }
@@ -79,10 +89,15 @@ export async function generateShare(pathname: string = '/', params: any = {}): P
         description: `${accountName} - reducing risk, increasing resilience`,
         keywords: `${defaults.keywords}, ${accountName}`,
         openGraph: {
-          type: 'website' as const,
+          type: 'website',
           title: `${accountName} - an ensurance agent`,
           description: `${accountName} - reducing risk, increasing resilience`,
-          images: [defaults.image],
+          images: [{
+            url: defaults.image,
+            width: 1200,
+            height: 630,
+            alt: `${accountName} - an ensurance agent`
+          }],
           siteName: 'ensurance agents',
           locale: 'en_US'
         },
@@ -90,7 +105,12 @@ export async function generateShare(pathname: string = '/', params: any = {}): P
           card: 'summary_large_image',
           title: `${accountName} - an ensurance agent`,
           description: `${accountName} - reducing risk, increasing resilience`,
-          images: [defaults.image],
+          images: [{
+            url: defaults.image,
+            width: 1200,
+            height: 630,
+            alt: `${accountName} - an ensurance agent`
+          }],
           creator: '@ensurance_app',
           site: '@ensurance_app'
         }
@@ -146,11 +166,20 @@ export async function generateShare(pathname: string = '/', params: any = {}): P
         const response = await fetch(`${baseUrl}/api/ensurance?chain=${chain}&tokenId=${tokenId}`);
         const data = await response.json();
         
-        // Handle both video and image certificates
-        const isVideo = data.animation_url || (data.image && data.image.endsWith('.mp4'));
-        const mediaUrl = getAbsoluteImageUrl(isVideo ? data.animation_url || data.image : data.image || defaults.image);
-        const thumbnailUrl = getAbsoluteImageUrl(data.image || defaults.image);
-        
+        // Simple video detection
+        const isVideo = Boolean(data.animation_url?.endsWith('.mp4') || data.image?.endsWith('.mp4'));
+        const imageUrl = getAbsoluteImageUrl(data.image || defaults.image);
+        const videoUrl = isVideo ? getAbsoluteImageUrl(data.animation_url || data.image) : null;
+
+        // Log for debugging
+        console.log('Certificate media:', {
+          isVideo,
+          imageUrl,
+          videoUrl,
+          originalImage: data.image,
+          animationUrl: data.animation_url
+        });
+
         const metadata: Metadata = {
           ...baseMetadata,
           title: `${data.name} - a certificate of ensurance`,
@@ -160,27 +189,41 @@ export async function generateShare(pathname: string = '/', params: any = {}): P
             title: `${data.name} - a certificate of ensurance`,
             description: data.description || 'A certificate of ensurance',
             images: [{
-              url: thumbnailUrl,
+              url: imageUrl,
               width: 1200,
               height: 630,
               alt: `${data.name} - a certificate of ensurance`
             }],
-            ...(isVideo && {
-              videos: [{
-                url: mediaUrl,
+            ...(isVideo && videoUrl && {
+              video: {
+                url: videoUrl,
+                secureUrl: videoUrl,
+                type: 'video/mp4',
                 width: 1920,
-                height: 1080,
-                type: 'video/mp4'
-              }]
+                height: 1080
+              }
             }),
             siteName: 'ensurance agents',
             locale: 'en_US'
           },
           twitter: {
-            card: 'summary_large_image',
+            card: isVideo ? 'player' : 'summary_large_image',
             title: `${data.name} - a certificate of ensurance`,
             description: data.description || 'A certificate of ensurance',
-            images: [thumbnailUrl],
+            images: [{
+              url: imageUrl,
+              width: 1200,
+              height: 630,
+              alt: `${data.name} - a certificate of ensurance`
+            }],
+            ...(isVideo && videoUrl && {
+              player: {
+                url: videoUrl,
+                width: 1920,
+                height: 1080,
+                stream: videoUrl
+              }
+            }),
             creator: '@ensurance_app',
             site: '@ensurance_app'
           }
