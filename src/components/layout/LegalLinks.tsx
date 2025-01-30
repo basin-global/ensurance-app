@@ -8,7 +8,7 @@ export function LegalLinks() {
   return (
     <div>
       <div className="flex flex-col items-center text-center">
-        <div className="flex flex-col gap-1.5 font-mono text-[9px]">
+        <div className="flex flex-col gap-1.5 font-mono text-[9px] w-72">
           {/* Logo */}
           <div className="flex justify-center mb-1.5">
             <Link
@@ -26,6 +26,9 @@ export function LegalLinks() {
               />
             </Link>
           </div>
+          
+          {/* Gradient Divider */}
+          <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-800 to-transparent mb-1.5" />
           
           {/* Links line */}
           <div className="flex justify-center gap-2">

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import AccountImage from '@/modules/accounts/AccountImage'
+import AccountStats from '@/modules/accounts/AccountStats'
 import { cn } from '@/lib/utils'
 
 interface Account {
@@ -115,40 +116,11 @@ export default function EnsurancePoolGrid({
                                     {account.full_account_name}
                                 </p>
                                 
-                                {/* Stats Section */}
-                                <div className="grid grid-cols-2 gap-4 mt-4 text-left">
-                                    {/* Currency Stats */}
-                                    <div className="bg-gray-900/50 rounded-lg p-3">
-                                        <div className="text-xs text-gray-400 uppercase tracking-wider mb-2">Value</div>
-                                        <span className="text-lg bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-yellow-500 to-amber-600 tabular-nums">
-                                            ${Math.round(account.total_currency_value).toLocaleString()}
-                                        </span>
-                                    </div>
-
-                                    {/* Asset Stats */}
-                                    <div className="bg-gray-900/50 rounded-lg p-3">
-                                        <div className="text-xs text-gray-400 uppercase tracking-wider mb-2">Assets</div>
-                                        <div className="flex flex-col">
-                                            <div className="flex justify-between items-baseline">
-                                                <span className="text-sm text-gray-400">Total</span>
-                                                <span className="text-lg text-gray-200 tabular-nums">
-                                                    {account.total_assets?.toLocaleString() || '0'}
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-between items-baseline mt-1">
-                                                <span className="text-sm text-gray-400">Ensured</span>
-                                                <div className="flex flex-col items-end">
-                                                    <span className="text-lg bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-yellow-500 to-amber-600 tabular-nums">
-                                                        {account.ensured_assets?.toLocaleString() || '0'}
-                                                    </span>
-                                                    <span className="text-xs text-gray-500">
-                                                        {account.total_assets ? ((account.ensured_assets / account.total_assets) * 100).toFixed(1) : '0'}% of total
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                <AccountStats 
+                                    total_currency_value={account.total_currency_value}
+                                    total_assets={account.total_assets}
+                                    ensured_assets={account.ensured_assets}
+                                />
                             </div>
                         </div>
                     </Link>

@@ -60,7 +60,9 @@ export default function PoolsPage() {
                 {/* Category Navigation */}
                 <nav>
                     <div className="container mx-auto px-4 flex flex-col items-center">
-                        <h2 className="text-lg mb-4 text-muted-foreground">natural capital</h2>
+                        <h2 className="text-lg mb-4 text-muted-foreground flex flex-col items-center font-bold leading-tight tracking-widest">
+                            <span>NATURAL CAPITAL</span>
+                        </h2>
                         <div className="border-b border-gray-800">
                             <ul className="flex gap-8">
                                 {visibleCategories.map((category) => (
