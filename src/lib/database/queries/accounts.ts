@@ -56,8 +56,10 @@ export const accounts = {
                 const tableName = `situs_accounts_${group.og_name.replace('.', '')}`;
                 const isEnsurance = group.og_name === '.ensurance';
                 
-                // Conditionally include pool_type and display_name only for .ensurance group
-                const ensuranceColumns = isEnsurance ? 'pool_type, display_name,' : '';
+                // Conditionally include pool_type, display_name, and stats only for .ensurance group
+                const ensuranceColumns = isEnsurance 
+                    ? 'pool_type, display_name, total_currency_value, total_assets, ensured_assets,' 
+                    : '';
                 
                 const query = `
                     SELECT 
@@ -70,7 +72,18 @@ export const accounts = {
                 `;
                 
                 const result = await sql.query(query);
-                allAccounts = [...allAccounts, ...result.rows];
+                
+                // Add default values for stats only for ensurance accounts
+                const accounts = isEnsurance 
+                    ? result.rows.map(account => ({
+                        ...account,
+                        total_currency_value: account.total_currency_value || 0,
+                        total_assets: account.total_assets || 0,
+                        ensured_assets: account.ensured_assets || 0
+                    }))
+                    : result.rows;
+                
+                allAccounts = [...allAccounts, ...accounts];
             }
             
             // Sort results: agents first, then alphabetically

@@ -41,12 +41,12 @@ export default function OverviewTab({ description, tbaAddress, isOwner }: Overvi
         const currencyResponse = await fetch(`/api/simplehash/native-erc20?address=${tbaAddress}`)
         console.log('Currency response status:', currencyResponse.status)
         
+        let totalValue = 0;
         if (currencyResponse.ok) {
           const data = await currencyResponse.json()
           console.log('Currency data:', data)
           
           const chains = Object.keys(data.groupedBalances)
-          let totalValue = 0
           let currencyCount = 0
 
           // Sum up values and count unique currencies across all chains
@@ -69,13 +69,13 @@ export default function OverviewTab({ description, tbaAddress, isOwner }: Overvi
         const assetResponse = await fetch(`/api/simplehash/nft?address=${tbaAddress}`)
         console.log('NFT response status:', assetResponse.status)
         
+        let totalCount = 0;
+        let ensuredCount = 0;
+        let nonEnsuredCount = 0;
+
         if (assetResponse.ok) {
           const data = await assetResponse.json()
           console.log('NFT data:', data)
-          
-          let totalCount = 0
-          let ensuredCount = 0
-          let nonEnsuredCount = 0
           
           // Count total including quantities for ERC1155 and separate ensured/non-ensured
           data.nfts?.forEach((nft: any) => {
@@ -92,11 +92,38 @@ export default function OverviewTab({ description, tbaAddress, isOwner }: Overvi
           })
 
           setAssetSummary({
-            uniqueCount: data.nfts?.length || 0,  // Unique NFTs
-            totalCount,                           // Total including quantities
+            uniqueCount: data.nfts?.length || 0,
+            totalCount,
             ensuredCount,
             nonEnsuredCount
           })
+
+          // If both API calls were successful, update the database
+          if (currencyResponse.ok) {
+            try {
+              const accountName = window.location.pathname.split('/')[1];
+              await fetch('/api/accounts/stats', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  account_name: accountName,
+                  stats: {
+                    total_currency_value: totalValue,
+                    total_assets: totalCount,
+                    ensured_assets: ensuredCount,
+                    stats_last_updated: new Date().toISOString()
+                  }
+                })
+              });
+              console.log('Updated account stats in database with values:', {
+                total_currency_value: totalValue,
+                total_assets: totalCount,
+                ensured_assets: ensuredCount
+              });
+            } catch (error) {
+              console.error('Failed to update stats in database:', error);
+            }
+          }
         } else {
           const errorText = await assetResponse.text()
           console.error('NFT fetch error:', errorText)
