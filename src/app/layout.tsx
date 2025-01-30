@@ -3,6 +3,7 @@ import './globals.css'
 import { PrivyProviderWrapper } from '@/providers/privy-provider'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
+import WebAnalytics from '@/components/analytics/WebAnalytics'
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify'
 import { Metadata } from 'next'
@@ -29,6 +30,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${spaceGrotesk.variable} ${spaceMono.variable}`}>
+      <head>
+        <WebAnalytics />
+      </head>
       <body className="antialiased min-h-screen flex flex-col font-grotesk">
         <PrivyProviderWrapper>
           <Header />

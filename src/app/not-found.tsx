@@ -5,11 +5,11 @@ export default function NotFound() {
   const disasterPhotos = Array.from({ length: 8 }, (_, i) => `/404/disaster-${i + 1}.jpg`)
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-[min(90vh,90vw)] mx-auto">
+    <div className="flex-1 flex flex-col items-center justify-center p-4 md:p-8 lg:p-12">
+      <div className="w-full max-w-[min(80vh,80vw)] mx-auto">
         <a href="/" className="block hover:opacity-90 transition-opacity">
           {/* 3x3 Grid with Message in Center */}
-          <div className="grid grid-cols-3 gap-2 aspect-square w-full">
+          <div className="grid grid-cols-3 gap-2 md:gap-3 lg:gap-4 aspect-square w-full">
             {disasterPhotos.slice(0, 4).map((photo, index) => (
               <div key={index} className="relative aspect-square w-full overflow-hidden rounded-lg">
                 <Image

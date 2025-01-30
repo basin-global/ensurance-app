@@ -12,16 +12,16 @@ export const accounts = {
             // Query each group's table sequentially but only get search-relevant fields
             for (const group of groups.rows) {
                 const tableName = `situs_accounts_${group.og_name.replace('.', '')}`;
-                const query = `
-                    SELECT 
-                        full_account_name,
-                        token_id,
-                        is_agent,
+            const query = `
+                SELECT 
+                    full_account_name,
+                    token_id,
+                    is_agent,
                         '${group.og_name}' as og_name
                     FROM "${tableName}"
-                `;
-                
-                const result = await sql.query(query);
+            `;
+            
+            const result = await sql.query(query);
                 allAccounts = [...allAccounts, ...result.rows];
             }
             
@@ -61,18 +61,18 @@ export const accounts = {
                     ? 'pool_type, display_name, total_currency_value, total_assets, ensured_assets,' 
                     : '';
                 
-                const query = `
-                    SELECT 
-                        full_account_name,
-                        token_id,
-                        is_agent,
+                    const query = `
+                        SELECT 
+                            full_account_name,
+                            token_id,
+                            is_agent,
                         ${ensuranceColumns}
-                        '${group.og_name}' as og_name
-                    FROM "${tableName}"
-                `;
-                
-                const result = await sql.query(query);
-                
+                            '${group.og_name}' as og_name
+                        FROM "${tableName}"
+                    `;
+                    
+                    const result = await sql.query(query);
+                    
                 // Add default values for stats only for ensurance accounts
                 const accounts = isEnsurance 
                     ? result.rows.map(account => ({
@@ -82,8 +82,8 @@ export const accounts = {
                         ensured_assets: account.ensured_assets || 0
                     }))
                     : result.rows;
-                
-                allAccounts = [...allAccounts, ...accounts];
+                    
+                    allAccounts = [...allAccounts, ...accounts];
             }
             
             // Sort results: agents first, then alphabetically
@@ -114,42 +114,42 @@ export const accounts = {
         const ensuranceColumns = isEnsurance ? 'pool_type, display_name,' : '';
         
         const query = `
-            SELECT 
-                full_account_name,
-                tba_address,
-                token_id,
-                is_agent,
+                SELECT 
+                    full_account_name,
+                    tba_address,
+                    token_id,
+                    is_agent,
                 ${ensuranceColumns}
-                description,
-                '${groupName}' as og_name
-            FROM "${tableName}"
-            WHERE full_account_name = $1
-            LIMIT 1
-        `;
-        
+                    description,
+                    '${groupName}' as og_name
+                FROM "${tableName}"
+                WHERE full_account_name = $1
+                LIMIT 1
+            `;
+            
         // Add more detailed debug logging
         console.log('Running query:', query);
-        console.log('For account:', fullAccountName);
+            console.log('For account:', fullAccountName);
         const result = await sql.query(query, [fullAccountName]);
         console.log('Raw Database Result:', result.rows[0]);
         console.log('Description from DB:', result.rows[0]?.description);
-        const row = result.rows[0];
-        
+                const row = result.rows[0];
+                
         // Log the final return object
-        const returnObj = {
-            full_account_name: row.full_account_name,
-            tba_address: row.tba_address,
-            token_id: row.token_id,
-            is_agent: row.is_agent,
-            description: row.description,
-            og_name: groupName,
+                const returnObj = {
+                    full_account_name: row.full_account_name,
+                    tba_address: row.tba_address,
+                    token_id: row.token_id,
+                    is_agent: row.is_agent,
+                    description: row.description,
+                    og_name: groupName,
             ...(isEnsurance && { 
-                pool_type: row.pool_type,
-                display_name: row.display_name 
+            pool_type: row.pool_type,
+            display_name: row.display_name
             })
-        };
-        console.log('Returning object:', returnObj);
-        
-        return returnObj;
+                };
+                console.log('Returning object:', returnObj);
+                    
+                    return returnObj;
     }
 }; 

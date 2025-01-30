@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, forwardRef } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import AccountImage from '@/modules/accounts/AccountImage'
@@ -23,15 +23,22 @@ interface NaturalCapitalGridProps {
     urlPrefix?: string;
 }
 
-const CircleItem = ({ account, groupName, urlPrefix }: { 
-    account: Account; 
+interface CircleItemProps {
+    account: Account;
     groupName: string;
     urlPrefix: string;
-}) => {
+}
+
+const CircleItem = forwardRef<HTMLAnchorElement, CircleItemProps>(({ 
+    account, 
+    groupName, 
+    urlPrefix 
+}, ref) => {
     const displayName = account.display_name || account.full_account_name;
     
     return (
         <Link 
+            ref={ref}
             href={`${urlPrefix}/${account.full_account_name}`}
             className="circle-item group"
             data-type={account.pool_type || 'unknown'}
@@ -57,7 +64,7 @@ const CircleItem = ({ account, groupName, urlPrefix }: {
             </motion.div>
         </Link>
     );
-};
+});
 
 export default function NaturalCapitalGrid({ 
     groupName = 'ensurance', 

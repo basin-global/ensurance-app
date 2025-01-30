@@ -10,6 +10,15 @@ export async function POST(request: Request) {
         }
 
         const groupName = account_name.split('.')[1];
+        
+        // Only attempt to update stats for .ensurance accounts for now
+        if (groupName !== 'ensurance') {
+            return NextResponse.json({ 
+                message: 'Stats updates only supported for .ensurance accounts currently',
+                account: null
+            });
+        }
+
         const tableName = `situs_accounts_${groupName}`;
 
         // Update the stats in the database

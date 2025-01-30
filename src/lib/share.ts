@@ -1,82 +1,140 @@
-import { Metadata } from 'next'
+import { Metadata, Viewport } from 'next'
+import { headers } from 'next/headers'
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: '#000000'
+}
 
 export async function generateShare(pathname: string = '/', params: any = {}): Promise<Metadata> {
   // Default metadata
   const defaults = {
-    title: 'ensurance agents',
-    description: 'Ensuring the stocks & flows of natural capital',
-    image: '/assets/share-default.png'
+    title: 'ensurance agents | ensuring natural capital',
+    description: 'reducing risk, increasing resilience',
+    image: '/assets/share-default.png',
+    keywords: 'ensurance, natural capital, ecosystem services, natural assets, environmental assets',
+    type: 'website' as const
   }
 
   const baseMetadata = {
-    metadataBase: new URL('https://ensurance.app')
+    metadataBase: new URL('https://ensurance.app'),
+    applicationName: 'ensurance agents',
+    authors: [{ name: 'BASIN Natural Capital' }],
+    generator: 'Next.js',
+    referrer: 'origin-when-cross-origin' as const,
+    robots: 'index, follow'
   }
 
-  // Certificate pages
-  if (pathname && pathname.includes('/certificates/')) {
-    try {
-      const response = await fetch(
-        `https://ensurance.app/api/ensurance?chain=${params.chain}&tokenId=${params.tokenId}`,
-        { next: { revalidate: 3600 } }
-      )
-      const data = await response.json()
-      
-      return {
-        ...baseMetadata,
-        title: `Certificate #${params.tokenId}`,
-        description: data.description || 'View this ensurance certificate',
-        openGraph: {
-          title: `Certificate #${params.tokenId} | ensurance agents`,
-          description: data.description || 'View this ensurance certificate',
-          images: data.image_ipfs ? [`https://ipfs.io/ipfs/${data.image_ipfs}`] : [defaults.image]
-        },
-        twitter: {
-          card: 'summary_large_image',
-          title: `Certificate #${params.tokenId} | ensurance agents`,
-          description: data.description || 'View this ensurance certificate',
-          images: data.image_ipfs ? [`https://ipfs.io/ipfs/${data.image_ipfs}`] : [defaults.image]
-        }
+  // Account pages - check if pathname has a dot (indicating name.group format)
+  if (pathname.includes('.')) {
+    const accountName = pathname.slice(1) // remove leading slash
+    return {
+      ...baseMetadata,
+      title: `${accountName} - an ensurance agent`,
+      description: `${accountName} - reducing risk, increasing resilience`,
+      keywords: `${defaults.keywords}, ${accountName}`,
+      openGraph: {
+        type: 'website' as const,
+        title: `${accountName} - an ensurance agent`,
+        description: `${accountName} - reducing risk, increasing resilience`,
+        images: [defaults.image],
+        siteName: 'ensurance agents',
+        locale: 'en_US'
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: `${accountName} - an ensurance agent`,
+        description: `${accountName} - reducing risk, increasing resilience`,
+        images: [defaults.image],
+        creator: '@ensurance_app',
+        site: '@ensurance_app'
       }
-    } catch (error) {
-      console.error('Error fetching certificate data:', error)
-      // Return default metadata on error
+    }
+  }
+
+  // Group pages
+  if (pathname.startsWith('/groups/')) {
+    const parts = pathname.split('/')
+    const group = parts[2] // groups/[group]/*
+    if (group) {
       return {
         ...baseMetadata,
-        ...defaults,
+        title: `.${group} - an ensurance group`,
+        description: `${group} group - reducing risk, increasing resilience`,
+        keywords: `${defaults.keywords}, ${group}`,
         openGraph: {
-          title: defaults.title,
-          description: defaults.description,
-          images: [defaults.image]
+          type: 'website' as const,
+          title: `.${group} - an ensurance group`,
+          description: `${group} group - reducing risk, increasing resilience`,
+          images: [defaults.image],
+          siteName: 'ensurance agents',
+          locale: 'en_US'
         },
         twitter: {
           card: 'summary_large_image',
-          title: defaults.title,
-          description: defaults.description,
-          images: [defaults.image]
+          title: `.${group} - an ensurance group`,
+          description: `${group} group - reducing risk, increasing resilience`,
+          images: [defaults.image],
+          creator: '@ensurance_app',
+          site: '@ensurance_app'
         }
       }
     }
   }
 
-  // Add more page types here
-  // if (pathname.includes('/pools/')) { ... }
-  // if (pathname.includes('/accounts/')) { ... }
+  // Certificate pages
+  if (pathname.includes('/certificates/')) {
+    // Extract chain and tokenId from URL if they exist
+    const parts = pathname.split('/');
+    const chainIndex = parts.indexOf('certificates') + 1;
+    if (parts[chainIndex] && parts[chainIndex + 1]) {
+      const chain = parts[chainIndex];
+      const tokenId = parts[chainIndex + 1];
+      
+      try {
+        const headersList = headers()
+        const host = headersList.get('host') || ''
+        const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
+        const baseUrl = `${protocol}://${host}`
+
+        const response = await fetch(`${baseUrl}/api/ensurance?chain=${chain}&tokenId=${tokenId}`);
+        const data = await response.json();
+        return {
+          ...baseMetadata,
+          title: `${data.name} - a certificate of ensurance`
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    }
+    
+    // Main certificates page or error case
+    return {
+      ...baseMetadata,
+      title: 'certificates of ensurance | ensurance agents'
+    }
+  }
 
   // Default metadata for all other pages
   return {
     ...baseMetadata,
-    title: defaults.title,
-    description: defaults.description,
+    ...defaults,
     openGraph: {
+      type: 'website' as const,
       title: defaults.title,
       description: defaults.description,
-      images: [defaults.image]
+      images: [defaults.image],
+      siteName: 'ensurance agents',
+      locale: 'en_US'
     },
     twitter: {
       card: 'summary_large_image',
       title: defaults.title,
       description: defaults.description,
-      images: [defaults.image]
+      images: [defaults.image],
+      creator: '@ensurance_app',
+      site: '@ensurance_app'
     }
   }
 } 
