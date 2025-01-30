@@ -29,26 +29,65 @@ export async function generateShare(pathname: string = '/', params: any = {}): P
   // Account pages - check if pathname has a dot (indicating name.group format)
   if (pathname.includes('.')) {
     const accountName = pathname.slice(1) // remove leading slash
-    return {
-      ...baseMetadata,
-      title: `${accountName} - an ensurance agent`,
-      description: `${accountName} - reducing risk, increasing resilience`,
-      keywords: `${defaults.keywords}, ${accountName}`,
-      openGraph: {
-        type: 'website' as const,
+    
+    try {
+      const headersList = headers()
+      const host = headersList.get('host') || ''
+      const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
+      const baseUrl = `${protocol}://${host}`
+
+      // Fetch account data including image
+      const response = await fetch(`${baseUrl}/api/accounts/${accountName}`);
+      const accountData = await response.json();
+      
+      const accountImage = accountData.image || defaults.image;
+
+      return {
+        ...baseMetadata,
         title: `${accountName} - an ensurance agent`,
         description: `${accountName} - reducing risk, increasing resilience`,
-        images: [defaults.image],
-        siteName: 'ensurance agents',
-        locale: 'en_US'
-      },
-      twitter: {
-        card: 'summary_large_image',
+        keywords: `${defaults.keywords}, ${accountName}`,
+        openGraph: {
+          type: 'website' as const,
+          title: `${accountName} - an ensurance agent`,
+          description: `${accountName} - reducing risk, increasing resilience`,
+          images: [accountImage],
+          siteName: 'ensurance agents',
+          locale: 'en_US'
+        },
+        twitter: {
+          card: 'summary_large_image',
+          title: `${accountName} - an ensurance agent`,
+          description: `${accountName} - reducing risk, increasing resilience`,
+          images: [accountImage],
+          creator: '@ensurance_app',
+          site: '@ensurance_app'
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching account data:', error);
+      // Fall back to default metadata if fetch fails
+      return {
+        ...baseMetadata,
         title: `${accountName} - an ensurance agent`,
         description: `${accountName} - reducing risk, increasing resilience`,
-        images: [defaults.image],
-        creator: '@ensurance_app',
-        site: '@ensurance_app'
+        keywords: `${defaults.keywords}, ${accountName}`,
+        openGraph: {
+          type: 'website' as const,
+          title: `${accountName} - an ensurance agent`,
+          description: `${accountName} - reducing risk, increasing resilience`,
+          images: [defaults.image],
+          siteName: 'ensurance agents',
+          locale: 'en_US'
+        },
+        twitter: {
+          card: 'summary_large_image',
+          title: `${accountName} - an ensurance agent`,
+          description: `${accountName} - reducing risk, increasing resilience`,
+          images: [defaults.image],
+          creator: '@ensurance_app',
+          site: '@ensurance_app'
+        }
       }
     }
   }
@@ -100,12 +139,52 @@ export async function generateShare(pathname: string = '/', params: any = {}): P
 
         const response = await fetch(`${baseUrl}/api/ensurance?chain=${chain}&tokenId=${tokenId}`);
         const data = await response.json();
+        
+        const certificateImage = data.image || defaults.image;
+        
         return {
           ...baseMetadata,
-          title: `${data.name} - a certificate of ensurance`
+          title: `${data.name} - a certificate of ensurance`,
+          description: data.description || 'A certificate of ensurance',
+          openGraph: {
+            type: 'website' as const,
+            title: `${data.name} - a certificate of ensurance`,
+            description: data.description || 'A certificate of ensurance',
+            images: [certificateImage],
+            siteName: 'ensurance agents',
+            locale: 'en_US'
+          },
+          twitter: {
+            card: 'summary_large_image',
+            title: `${data.name} - a certificate of ensurance`,
+            description: data.description || 'A certificate of ensurance',
+            images: [certificateImage],
+            creator: '@ensurance_app',
+            site: '@ensurance_app'
+          }
         }
       } catch (error) {
         console.error('Error:', error);
+        return {
+          ...baseMetadata,
+          title: 'certificate of ensurance | ensurance agents',
+          openGraph: {
+            type: 'website' as const,
+            title: 'certificate of ensurance | ensurance agents',
+            description: defaults.description,
+            images: [defaults.image],
+            siteName: 'ensurance agents',
+            locale: 'en_US'
+          },
+          twitter: {
+            card: 'summary_large_image',
+            title: 'certificate of ensurance | ensurance agents',
+            description: defaults.description,
+            images: [defaults.image],
+            creator: '@ensurance_app',
+            site: '@ensurance_app'
+          }
+        }
       }
     }
     
