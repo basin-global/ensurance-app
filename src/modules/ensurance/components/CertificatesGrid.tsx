@@ -16,8 +16,9 @@ interface CertificatesGridProps {
   urlPrefix?: string
   walletAddress?: string
   hideSearch?: boolean
-  variant?: 'default' | 'home' | 'tend' | 'overview'
+  variant?: 'default' | 'home' | 'tend' | 'account-main'
   maxItems?: number
+  accountName?: string
 }
 
 export default function CertificatesGrid({ 
@@ -27,7 +28,8 @@ export default function CertificatesGrid({
   walletAddress,
   hideSearch = false,
   variant = 'default',
-  maxItems = 16
+  maxItems = 16,
+  accountName
 }: CertificatesGridProps) {
   const [assets, setAssets] = useState<Asset[]>([])
   const [loading, setLoading] = useState(true)
@@ -117,7 +119,7 @@ export default function CertificatesGrid({
   // Filter and limit assets based on variant
   const displayAssets = useMemo(() => {
     let result = filteredAssets;
-    if (variant === 'home' || variant === 'overview') {
+    if (variant === 'home' || variant === 'account-main') {
       result = result.slice(0, maxItems);
     }
     return result;
@@ -142,7 +144,7 @@ export default function CertificatesGrid({
     )
   }
 
-  return variant === 'overview' ? (
+  return variant === 'account-main' ? (
     <div className="space-y-6">
       {displayAssets.length > 0 ? (
         <>
@@ -155,16 +157,17 @@ export default function CertificatesGrid({
                 isEnsuranceTab={true}
                 isTokenbound={false}
                 isOwner={!!walletAddress}
-                customUrl={`${urlPrefix}/certificates/${asset.chain}/${asset.token_id}`}
+                customUrl={`/certificates/${asset.chain}/${asset.token_id}`}
                 hideCollection={true}
                 hideChain={true}
                 hideName={true}
+                variant="account-main"
               />
             ))}
           </div>
           <div className="text-center mt-8">
             <Link
-              href={`${urlPrefix}/tend`}
+              href={accountName ? `/${accountName}/tend` : '/tend'}
               className={cn(
                 buttonVariants({ 
                   variant: "outline", 
@@ -208,7 +211,7 @@ export default function CertificatesGrid({
             </div>
             <div className="text-center mt-12">
               <Link
-                href="/certificates"
+                href="/certificates/all"
                 className={cn(
                   buttonVariants({ 
                     variant: "outline", 

@@ -33,7 +33,7 @@ export function AccountNavigation({ accountName }: AccountNavigationProps) {
 
   return (
     <Tooltip.Provider delayDuration={300}>
-      <div className="flex items-center h-14">
+      <div className="flex items-center h-14 ml-[104px]">
         <div className="flex items-center">
           {/* Fixed width back arrow container */}
           <div className="w-10 flex justify-center">

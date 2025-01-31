@@ -52,26 +52,30 @@ export default function AccountHeader({
               </span>
             )}
           </div>
-          {isPool && displayName && (
-            <div className="text-sm font-mono text-gray-500">
-              {decodedAccountName}
+          <div className="flex flex-col gap-0.5">
+            {/* Account name on hover - only for pools */}
+            {isPool && displayName && (
+              <div className="text-sm font-mono text-gray-500 opacity-0 group-hover/main:opacity-70 transition-opacity duration-300 delay-300">
+                {decodedAccountName}
+              </div>
+            )}
+            {/* TBA address with copy functionality */}
+            <div 
+              className="cursor-pointer text-sm font-mono text-gray-500 opacity-0 group-hover/main:opacity-70 transition-opacity duration-300 delay-300 hover:text-gray-300"
+              onClick={() => {
+                navigator.clipboard.writeText(tbaAddress)
+                  .then(() => toast.success('Account address copied to clipboard!', {
+                    autoClose: 2000,
+                    hideProgressBar: false,
+                    closeOnClick: true,
+                    pauseOnHover: true,
+                    draggable: true,
+                  }))
+                  .catch(() => toast.error('Failed to copy address'))
+              }}
+            >
+              {tbaAddress}
             </div>
-          )}
-          <div 
-            className="cursor-pointer text-sm font-mono text-gray-500 opacity-0 group-hover/main:opacity-70 transition-opacity duration-300 delay-300 hover:text-gray-300"
-            onClick={() => {
-              navigator.clipboard.writeText(tbaAddress)
-                .then(() => toast.success('Account address copied to clipboard!', {
-                  autoClose: 2000,
-                  hideProgressBar: false,
-                  closeOnClick: true,
-                  pauseOnHover: true,
-                  draggable: true,
-                }))
-                .catch(() => toast.error('Failed to copy address'))
-            }}
-          >
-            {tbaAddress}
           </div>
         </div>
       </div>

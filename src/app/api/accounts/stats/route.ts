@@ -5,6 +5,8 @@ export async function POST(request: Request) {
     try {
         const { account_name, stats } = await request.json();
         
+        console.log('Updating stats for account:', account_name, 'with data:', stats);
+        
         if (!account_name || !stats) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
@@ -20,6 +22,7 @@ export async function POST(request: Request) {
         }
 
         const tableName = `situs_accounts_${groupName}`;
+        console.log('Using table:', tableName);
 
         // Update the stats in the database
         const query = `
@@ -33,6 +36,14 @@ export async function POST(request: Request) {
             RETURNING *
         `;
 
+        console.log('Executing query with values:', [
+            stats.total_currency_value,
+            stats.total_assets,
+            stats.ensured_assets,
+            stats.stats_last_updated,
+            account_name
+        ]);
+
         const result = await sql.query(query, [
             stats.total_currency_value,
             stats.total_assets,
@@ -41,7 +52,10 @@ export async function POST(request: Request) {
             account_name
         ]);
 
+        console.log('Query result:', result.rows[0]);
+
         if (result.rowCount === 0) {
+            console.log('No rows updated - account not found:', account_name);
             return NextResponse.json({ error: 'Account not found' }, { status: 404 });
         }
 

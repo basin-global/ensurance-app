@@ -20,10 +20,10 @@ export default function AccountPage({ params }: AccountPageProps) {
     ?.join(' ') || ''
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 auto-rows-min">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-1">
       {/* Left Column - Chat */}
-      <div className="p-6">
-        <div className="flex items-center gap-2 mb-6">
+      <div className="bg-gray-900/30 rounded-lg p-3">
+        <div className="flex items-center gap-2 mb-1">
           <div className="text-xs uppercase tracking-wider text-gray-400 font-medium">
             Chat With Agent
           </div>
@@ -37,8 +37,8 @@ export default function AccountPage({ params }: AccountPageProps) {
       </div>
 
       {/* Right Column - Overview */}
-      <div className="p-6">
-        <div className="flex items-center gap-2 mb-6">
+      <div className="bg-gray-900/30 rounded-lg p-3">
+        <div className="flex items-center gap-2 mb-1">
           <div className="text-xs uppercase tracking-wider text-gray-400 font-medium">
             Account Overview
           </div>
@@ -52,15 +52,15 @@ export default function AccountPage({ params }: AccountPageProps) {
       </div>
 
       {/* Full Width Certificates Grid */}
-      <div className="lg:col-span-2 p-6">
-        <div className="bg-gray-900/30 rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-200 mb-6">Related Certificates</h3>
+      <div className="lg:col-span-2">
+        <div className="bg-gray-900/30 rounded-lg p-3">
+          <h3 className="text-lg font-medium text-gray-200 mb-1">Related Certificates</h3>
           <CertificatesGrid 
-            variant="overview"
+            variant="account-main"
             maxItems={10}
             hideSearch={true}
-            urlPrefix={`/${params.account}`}
             searchQuery={keyword}
+            accountName={accountData.full_account_name}
           />
         </div>
       </div>

@@ -10,6 +10,7 @@ interface AccountData {
   og_name: string
   is_agent: boolean
   description?: string
+  pool_type?: string | null
 }
 
 interface AccountContextType {
