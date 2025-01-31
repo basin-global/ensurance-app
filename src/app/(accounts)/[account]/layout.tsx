@@ -28,7 +28,7 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
           groupName={accountData.og_name}
           isAgent={accountData.is_agent}
           isPool={accountData.og_name === 'ensurance' && params.account !== 'situs.ensurance'}
-          {...(accountData.og_name === 'ensurance' && params.account !== 'situs.ensurance' ? { displayName: accountData.full_account_name } : {})}
+          {...(accountData.og_name === 'ensurance' && params.account !== 'situs.ensurance' ? { displayName: accountData.display_name } : {})}
         />
         <AccountNavigation accountName={params.account} />
         <main className="mt-8">
