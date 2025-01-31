@@ -106,14 +106,22 @@ export const accounts = {
 
     // Get single account by full name (e.g., "alice.earth")
     getByFullName: async (fullAccountName: string) => {
-        const groupName = fullAccountName.split('.')[1];
+        // Validate account name format
+        const parts = fullAccountName.split('.');
+        if (parts.length !== 2) {
+            console.log('Invalid account name format:', fullAccountName);
+            return null;
+        }
+
+        const groupName = parts[1];
         const tableName = `situs_accounts_${groupName}`;
         const isEnsurance = groupName === 'ensurance';
         
         // Conditionally include pool_type and display_name only for .ensurance group
         const ensuranceColumns = isEnsurance ? 'pool_type, display_name,' : '';
         
-        const query = `
+        try {
+            const query = `
                 SELECT 
                     full_account_name,
                     tba_address,
@@ -126,30 +134,38 @@ export const accounts = {
                 WHERE full_account_name = $1
                 LIMIT 1
             `;
-            
-        // Add more detailed debug logging
-        console.log('Running query:', query);
-            console.log('For account:', fullAccountName);
-        const result = await sql.query(query, [fullAccountName]);
-        console.log('Raw Database Result:', result.rows[0]);
-        console.log('Description from DB:', result.rows[0]?.description);
-                const row = result.rows[0];
                 
-        // Log the final return object
-                const returnObj = {
-                    full_account_name: row.full_account_name,
-                    tba_address: row.tba_address,
-                    token_id: row.token_id,
-                    is_agent: row.is_agent,
-                    description: row.description,
-                    og_name: groupName,
-            ...(isEnsurance && { 
-            pool_type: row.pool_type,
-            display_name: row.display_name
-            })
-                };
-                console.log('Returning object:', returnObj);
-                    
-                    return returnObj;
+            // Add more detailed debug logging
+            console.log('Running query:', query);
+            console.log('For account:', fullAccountName);
+            const result = await sql.query(query, [fullAccountName]);
+            
+            if (!result.rows[0]) {
+                console.log('No account found for:', fullAccountName);
+                return null;
+            }
+            
+            const row = result.rows[0];
+            
+            // Log the final return object
+            const returnObj = {
+                full_account_name: row.full_account_name,
+                tba_address: row.tba_address,
+                token_id: row.token_id,
+                is_agent: row.is_agent,
+                description: row.description,
+                og_name: groupName,
+                ...(isEnsurance && { 
+                    pool_type: row.pool_type,
+                    display_name: row.display_name
+                })
+            };
+            console.log('Returning object:', returnObj);
+                        
+            return returnObj;
+        } catch (error) {
+            console.error('Error fetching account:', error);
+            return null;
+        }
     }
 }; 

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { isEnsuranceToken } from '@/modules/ensurance/config'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
 interface OverviewTabProps {
   description?: string
@@ -24,6 +25,9 @@ interface CurrencySummary {
 }
 
 export default function OverviewTab({ description, tbaAddress, isOwner }: OverviewTabProps) {
+  const pathname = usePathname()
+  const accountName = pathname.split('/')[1]
+
   const [assetSummary, setAssetSummary] = useState<AssetSummary>({ 
     uniqueCount: 0, 
     totalCount: 0,
@@ -34,22 +38,27 @@ export default function OverviewTab({ description, tbaAddress, isOwner }: Overvi
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetchSummaries = async () => {
+    let isMounted = true
+
+    async function fetchSummaries() {
+      if (!tbaAddress) return
+
       try {
-        // Fetch currency balances
-        console.log('Fetching currency data for address:', tbaAddress)
-        const currencyResponse = await fetch(`/api/simplehash/native-erc20?address=${tbaAddress}`)
-        console.log('Currency response status:', currencyResponse.status)
-        
-        let totalValue = 0;
+        // Fetch both data in parallel
+        const [currencyResponse, assetResponse] = await Promise.all([
+          fetch(`/api/simplehash/native-erc20?address=${tbaAddress}`),
+          fetch(`/api/simplehash/nft?address=${tbaAddress}`)
+        ])
+
+        if (!isMounted) return
+
+        // Process currency data
         if (currencyResponse.ok) {
           const data = await currencyResponse.json()
-          console.log('Currency data:', data)
-          
           const chains = Object.keys(data.groupedBalances)
           let currencyCount = 0
+          let totalValue = 0
 
-          // Sum up values and count unique currencies across all chains
           chains.forEach(chain => {
             data.groupedBalances[chain].forEach((token: any) => {
               const balance = Number(token.queried_wallet_balances[0]?.value_usd_string || 0)
@@ -60,33 +69,22 @@ export default function OverviewTab({ description, tbaAddress, isOwner }: Overvi
             })
           })
 
-          setCurrencySummary({
-            totalValue,
-            currencyCount,
-            chains
-          })
+          if (isMounted) {
+            setCurrencySummary({ totalValue, currencyCount, chains })
+          }
         }
 
-        // Fetch asset data
-        console.log('Fetching NFT data for address:', tbaAddress)
-        const assetResponse = await fetch(`/api/simplehash/nft?address=${tbaAddress}`)
-        console.log('NFT response status:', assetResponse.status)
-        
-        let totalCount = 0;
-        let ensuredCount = 0;
-        let nonEnsuredCount = 0;
-
+        // Process asset data
         if (assetResponse.ok) {
           const data = await assetResponse.json()
-          console.log('NFT data:', data)
-          
-          // Count total including quantities for ERC1155 and separate ensured/non-ensured
+          let totalCount = 0
+          let ensuredCount = 0
+          let nonEnsuredCount = 0
+
           data.nfts?.forEach((nft: any) => {
             const quantity = Number(nft.queried_wallet_balances?.[0]?.quantity_string || 1)
-            console.log('NFT:', nft.name, 'Quantity:', quantity)
             totalCount += quantity
 
-            // Check if it's an ensured asset
             if (isEnsuranceToken(nft.chain, nft.contract_address)) {
               ensuredCount++
             } else {
@@ -94,61 +92,49 @@ export default function OverviewTab({ description, tbaAddress, isOwner }: Overvi
             }
           })
 
-          setAssetSummary({
-            uniqueCount: data.nfts?.length || 0,
-            totalCount,
-            ensuredCount,
-            nonEnsuredCount
-          })
-
-          // If both API calls were successful, update the database
-          if (currencyResponse.ok) {
-            try {
-              const accountName = window.location.pathname.split('/')[1];
-              await fetch('/api/accounts/stats', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  account_name: accountName,
-                  stats: {
-                    total_currency_value: totalValue,
-                    total_assets: totalCount,
-                    ensured_assets: ensuredCount,
-                    stats_last_updated: new Date().toISOString()
-                  }
-                })
-              });
-              console.log('Updated account stats in database with values:', {
-                total_currency_value: totalValue,
-                total_assets: totalCount,
-                ensured_assets: ensuredCount
-              });
-            } catch (error) {
-              console.error('Failed to update stats in database:', error);
-            }
+          if (isMounted) {
+            setAssetSummary({
+              uniqueCount: data.nfts?.length || 0,
+              totalCount,
+              ensuredCount,
+              nonEnsuredCount
+            })
           }
-        } else {
-          const errorText = await assetResponse.text()
-          console.error('NFT fetch error:', errorText)
+        }
+
+        // Update database stats
+        try {
+          await fetch('/api/accounts/stats', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              account_name: accountName,
+              stats: {
+                total_currency_value: currencySummary.totalValue,
+                total_assets: assetSummary.totalCount,
+                ensured_assets: assetSummary.ensuredCount,
+                stats_last_updated: new Date().toISOString()
+              }
+            })
+          })
+        } catch (error) {
+          console.error('Failed to update stats in database:', error)
         }
       } catch (error) {
         console.error('Error fetching summaries:', error)
       } finally {
-        setLoading(false)
+        if (isMounted) {
+          setLoading(false)
+        }
       }
     }
 
-    if (tbaAddress) {
-      console.log('Starting data fetch for address:', tbaAddress)
-      fetchSummaries()
-    } else {
-      console.log('No tbaAddress provided')
-      setLoading(false)
-    }
-  }, [tbaAddress])
+    fetchSummaries()
 
-  // Get the account name from the URL
-  const accountName = typeof window !== 'undefined' ? window.location.pathname.split('/')[1] : ''
+    return () => {
+      isMounted = false
+    }
+  }, [tbaAddress, accountName])
 
   if (loading) {
     return (
@@ -255,7 +241,7 @@ export default function OverviewTab({ description, tbaAddress, isOwner }: Overvi
         </Link>
 
         {/* Reputation */}
-        <Link href={`/${accountName}/presence?module=reputation`} className="block">
+        <Link href={`/${accountName}/tend`} className="block">
           <div className="bg-gray-900/30 rounded-lg p-3">
             <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Reputation</div>
             <div className="text-xs text-gray-600 italic">

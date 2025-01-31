@@ -24,8 +24,8 @@ interface TabbedModulesProps {
   isOwner: boolean
   initialModule?: string | null
   initialChain?: string | null
-  tabs: TabData[]  // Just a simple array of tabs
-  label?: string   // Optional label text (e.g. "PORTFOLIO", "IDENTITY")
+  tabs: TabData[]
+  label?: string
 }
 
 export default function TabbedModules({ 
@@ -33,44 +33,63 @@ export default function TabbedModules({
   isOwner = false,
   initialModule,
   initialChain,
-  tabs = [],  // Default to empty array
+  tabs = [],
   label
 }: TabbedModulesProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   
-  const currentModule = searchParams.get('module') || initialModule || tabs[0]?.value
-  const currentChain = searchParams.get('chain') || initialChain || 'base'
-  
-  const [activeTab, setActiveTab] = useState(currentModule)
-  const [selectedChain, setSelectedChain] = useState(currentChain)
+  // Validate tabs array
+  if (!tabs || tabs.length === 0) {
+    return (
+      <div className="bg-[#111] rounded-xl p-4">
+        <div className="text-gray-400">No tabs available</div>
+      </div>
+    )
+  }
 
-  // Listen for URL changes
+  // Initialize state from URL or defaults
+  const defaultTab = initialModule || tabs[0]?.value
+  const [activeTab, setActiveTab] = useState(searchParams.get('module') || defaultTab)
+  const [selectedChain, setSelectedChain] = useState(searchParams.get('chain') || initialChain || 'base')
+
+  // Ensure activeTab is valid
   useEffect(() => {
-    const module = searchParams.get('module')
-    const chain = searchParams.get('chain')
-    
-    if (module) setActiveTab(module)
-    if (chain) setSelectedChain(chain)
-  }, [searchParams])
+    const isValidTab = tabs.some(tab => tab.value === activeTab)
+    if (!isValidTab && tabs.length > 0) {
+      setActiveTab(tabs[0].value)
+    }
+  }, [activeTab, tabs])
 
   const updateUrl = (tab: string, chain: string) => {
-    const url = new URL(window.location.href)
-    url.searchParams.set('module', tab)
+    const params = new URLSearchParams(Array.from(searchParams.entries()))
+    
+    // Only update if values are different
+    if (params.get('module') !== tab) {
+      params.set('module', tab)
+    }
     
     const activeTab = tabs.find(t => t.value === tab)
     if (activeTab?.showChainDropdown && chain !== 'all') {
-      url.searchParams.set('chain', chain)
+      if (params.get('chain') !== chain) {
+        params.set('chain', chain)
+      }
     } else {
-      url.searchParams.delete('chain')
+      params.delete('chain')
     }
 
-    router.replace(url.toString())
+    // Use shallow routing to prevent full page reload
+    router.push(`?${params.toString()}`, { scroll: false })
   }
 
-  const setActiveTabAndUpdateUrl = (tab: string) => {
+  const handleTabChange = (tab: string) => {
     setActiveTab(tab)
     updateUrl(tab, selectedChain)
+  }
+
+  const handleChainChange = (chain: string) => {
+    setSelectedChain(chain)
+    updateUrl(activeTab, chain)
   }
 
   const getTabStyle = (tabValue: string) => {
@@ -89,6 +108,14 @@ export default function TabbedModules({
   }
 
   const activeTabData = tabs.find(tab => tab.value === activeTab)
+
+  if (!address) {
+    return (
+      <div className="bg-[#111] rounded-xl p-4">
+        <div className="text-gray-400">Loading...</div>
+      </div>
+    )
+  }
 
   return (
     <div className="bg-[#111] rounded-xl p-4">
@@ -114,7 +141,7 @@ export default function TabbedModules({
                   <Tooltip.Trigger asChild>
                     <button
                       className={`px-1.5 md:px-4 py-1.5 md:py-2 rounded-t-lg transition-all duration-200 whitespace-nowrap text-xs md:text-base ${getTabStyle(tab.value)}`}
-                      onClick={() => setActiveTabAndUpdateUrl(tab.value)}
+                      onClick={() => handleTabChange(tab.value)}
                     >
                       {tab.label}
                     </button>
@@ -128,10 +155,7 @@ export default function TabbedModules({
             <div className="flex-shrink-0">
               <ChainDropdown
                 selectedChain={selectedChain}
-                onChange={(chain) => {
-                  setSelectedChain(chain)
-                  updateUrl(activeTab, chain)
-                }}
+                onChange={handleChainChange}
                 className="px-1.5 md:px-4 py-1.5 md:py-2 rounded-t-lg transition-all duration-200 text-gray-300 hover:bg-black/20 text-xs md:text-base font-sans bg-transparent border-0"
               />
             </div>
@@ -141,13 +165,15 @@ export default function TabbedModules({
 
       {/* Content */}
       <div className="p-2 md:p-4 w-full">
-        {activeTabData && (
+        {activeTabData && address ? (
           <activeTabData.component
             key={`${activeTabData.value}-${selectedChain}`}
             address={address}
             selectedChain={selectedChain}
             isOwner={isOwner}
           />
+        ) : (
+          <div className="text-gray-400">Loading...</div>
         )}
       </div>
     </div>
