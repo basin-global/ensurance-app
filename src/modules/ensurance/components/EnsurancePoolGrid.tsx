@@ -76,7 +76,27 @@ export default function EnsurancePoolGrid({
         return account.pool_type === 'stock' ? 'stocks' : 'flows';
     }
 
-    if (loading) return <div>Loading pools...</div>
+    if (loading) {
+        return (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                {[...Array(6)].map((_, index) => (
+                    <div key={index} className="bg-background-light dark:bg-background-dark rounded-lg overflow-hidden p-6 animate-pulse">
+                        <div className="aspect-square relative w-64 h-64 mx-auto rounded-full bg-gray-800/30" />
+                        <div className="mt-4 text-center space-y-3">
+                            <div className="h-6 bg-gray-800/30 rounded w-3/4 mx-auto" />
+                            <div className="h-4 bg-gray-800/30 rounded w-1/2 mx-auto" />
+                            <div className="space-y-2 mt-4">
+                                <div className="h-4 bg-gray-800/30 rounded w-2/3 mx-auto" />
+                                <div className="h-4 bg-gray-800/30 rounded w-2/3 mx-auto" />
+                                <div className="h-4 bg-gray-800/30 rounded w-2/3 mx-auto" />
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        )
+    }
+
     if (error) return <div className="text-red-500">{error}</div>
 
     return (

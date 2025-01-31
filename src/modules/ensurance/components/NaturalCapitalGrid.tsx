@@ -80,8 +80,9 @@ export default function NaturalCapitalGrid({
     const words = [
         { text: "natural capital" },
         { text: "biodiversity" },
+        { text: "ecosystems" },
         { text: "nature" },
-        { text: "ecosystems" }
+        { text: "ecosystem services" }
     ]
 
     useEffect(() => {
@@ -147,6 +148,7 @@ export default function NaturalCapitalGrid({
                             "transition-colors duration-300 relative uppercase",
                             category === 'stocks' ? "text-white" : "text-white/40 hover:text-white/60"
                         )}
+                        disabled={loading}
                     >
                         Stocks
                         {category === 'stocks' && (
@@ -162,6 +164,7 @@ export default function NaturalCapitalGrid({
                             "transition-colors duration-300 relative uppercase",
                             category === 'flows' ? "text-white" : "text-white/40 hover:text-white/60"
                         )}
+                        disabled={loading}
                     >
                         Flows
                         {category === 'flows' && (
@@ -174,32 +177,36 @@ export default function NaturalCapitalGrid({
                 </div>
             </div>
 
-            {loading && (
-                <div className="text-white text-center py-12">Loading natural capital data...</div>
-            )}
-            
-            {error && (
-                <div className="text-red-500 text-center py-12">{error}</div>
-            )}
-            
-            {!loading && !error && filteredAccounts.length === 0 && (
-                <div className="text-white text-center py-12">No accounts found for the selected filter</div>
-            )}
-            
-            {!loading && !error && filteredAccounts.length > 0 && (
-                <div className="circle-grid">
-                    <AnimatePresence mode="popLayout">
-                        {filteredAccounts.map((account) => (
-                            <CircleItem 
-                                key={account.token_id}
-                                account={account}
-                                groupName={groupName}
-                                urlPrefix={urlPrefix}
-                            />
+            <div className="max-w-[1200px] mx-auto px-[30px]">
+                {loading ? (
+                    <div className="circle-grid">
+                        {[...Array(8)].map((_, index) => (
+                            <div key={index} className="circle-item">
+                                <div className="circle-content animate-pulse bg-gray-800/50">
+                                    <div className="absolute inset-0 rounded-full bg-gray-700/30" />
+                                </div>
+                            </div>
                         ))}
-                    </AnimatePresence>
-                </div>
-            )}
+                    </div>
+                ) : error ? (
+                    <div className="text-red-500 text-center py-12">{error}</div>
+                ) : filteredAccounts.length === 0 ? (
+                    <div className="text-white text-center py-12">No accounts found for the selected filter</div>
+                ) : (
+                    <div className="circle-grid">
+                        <AnimatePresence mode="popLayout">
+                            {filteredAccounts.map((account) => (
+                                <CircleItem 
+                                    key={account.token_id}
+                                    account={account}
+                                    groupName={groupName}
+                                    urlPrefix={urlPrefix}
+                                />
+                            ))}
+                        </AnimatePresence>
+                    </div>
+                )}
+            </div>
 
             <style jsx global>{`
                 :root {

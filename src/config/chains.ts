@@ -131,7 +131,6 @@ export const getChainBySimplehashName = (name: string) => supportedChains.find(c
 
 export const getActiveChains = () => {
   const activeChains = supportedChains.filter(chain => chain.isActive);
-  console.log('Active chains:', activeChains.map(chain => chain.name));
   return activeChains;
 }
 
@@ -141,7 +140,6 @@ export const getOrderedActiveChains = () => {
   const activeChains = getActiveChains();
   return chainOrder.filter(chain => activeChains.some(ac => ac.simplehashName === chain));
 }
-console.log('Active chain names:', getActiveChainNames());
 
 export const getChainIcon = (chain: string): string => {
   const chainConfig = getChainBySimplehashName(chain);

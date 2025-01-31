@@ -48,6 +48,7 @@ export function HeaderLogo() {
   // Determine URLs
   const homeUrl = '/'
   const poolsUrl = '/pools'
+  const certificatesUrl = '/certificates/all'
   const groupUrl = isEnsurancePools
     ? poolsUrl
     : groupName && `/groups/${groupName.replace(/^\./, '')}`
@@ -62,7 +63,11 @@ export function HeaderLogo() {
           height={28}
         />
       </Link>
-      {(groupName || isEnsurancePools) ? (
+      {isCertificates ? (
+        <Link href={certificatesUrl} className="hover:opacity-80 transition-opacity">
+          {headerText}
+        </Link>
+      ) : (groupName || isEnsurancePools) ? (
         <Link href={groupUrl} className="hover:opacity-80 transition-opacity">
           {headerText}
         </Link>

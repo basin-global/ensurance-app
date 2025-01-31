@@ -4,6 +4,7 @@ import AccountHeader from '@/modules/accounts/AccountHeader'
 import CertificatesGrid from '@/modules/ensurance/components/CertificatesGrid'
 import { sql } from '@vercel/postgres'
 import { AccountNavigation } from '@/components/layout/AccountNavigation'
+import { accounts } from '@/lib/database/queries/accounts'
 
 export default async function AccountTendPage({
   params,
@@ -11,22 +12,19 @@ export default async function AccountTendPage({
   params: { account: string }
 }) {
   const accountName = params.account
-  const headersList = headers()
-  const host = headersList.get('host') || ''
   
-  const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
-  const baseUrl = `${protocol}://${host}`
-  
-  // Fetch account data
-  const response = await fetch(`${baseUrl}/api/accounts/${accountName}`, {
-    next: { revalidate: 3600 }
-  })
-  
-  if (!response.ok) {
+  // Fetch account data directly using the database query
+  let accountData;
+  try {
+    accountData = await accounts.getByFullName(accountName);
+    if (!accountData) {
+      notFound()
+    }
+  } catch (error) {
+    console.error('Error fetching account data:', error)
     notFound()
   }
-  
-  const accountData = await response.json()
+
   const [name, group] = accountName.split('.')
 
   // Only use account_name for filtering - keeping it simple and focused
@@ -57,6 +55,7 @@ export default async function AccountTendPage({
           <CertificatesGrid
             searchQuery={filterKeywords}
             hideSearch={true}
+            variant="tend"
           />
         </div>
       </div>
