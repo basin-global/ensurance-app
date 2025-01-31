@@ -16,7 +16,7 @@ interface CertificatesGridProps {
   urlPrefix?: string
   walletAddress?: string
   hideSearch?: boolean
-  variant?: 'default' | 'home' | 'tend'
+  variant?: 'default' | 'home' | 'tend' | 'overview'
   maxItems?: number
 }
 
@@ -117,7 +117,7 @@ export default function CertificatesGrid({
   // Filter and limit assets based on variant
   const displayAssets = useMemo(() => {
     let result = filteredAssets;
-    if (variant === 'home') {
+    if (variant === 'home' || variant === 'overview') {
       result = result.slice(0, maxItems);
     }
     return result;
@@ -142,7 +142,50 @@ export default function CertificatesGrid({
     )
   }
 
-  return variant === 'home' ? (
+  return variant === 'overview' ? (
+    <div className="space-y-6">
+      {displayAssets.length > 0 ? (
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {displayAssets.slice(0, maxItems).map((asset) => (
+              <AssetCard 
+                key={asset.nft_id}
+                asset={asset}
+                address={walletAddress || ""}
+                isEnsuranceTab={true}
+                isTokenbound={false}
+                isOwner={!!walletAddress}
+                customUrl={`${urlPrefix}/certificates/${asset.chain}/${asset.token_id}`}
+                hideCollection={true}
+                hideChain={true}
+                hideName={true}
+              />
+            ))}
+          </div>
+          <div className="text-center mt-8">
+            <Link
+              href={`${urlPrefix}/tend`}
+              className={cn(
+                buttonVariants({ 
+                  variant: "outline", 
+                  size: "lg" 
+                }),
+                "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
+              )}
+            >
+              View All Certificates
+            </Link>
+          </div>
+        </>
+      ) : (
+        <div className="text-center py-8">
+          <p className="text-lg text-gray-600 dark:text-gray-400">
+            No certificates found{searchQuery ? ' matching your search' : ''}.
+          </p>
+        </div>
+      )}
+    </div>
+  ) : variant === 'home' ? (
     <div className="relative pt-8 pb-24">
       <h2 className="text-3xl font-bold text-center mb-12">Latest Certificates</h2>
       <div className="max-w-[1200px] mx-auto px-[30px]">

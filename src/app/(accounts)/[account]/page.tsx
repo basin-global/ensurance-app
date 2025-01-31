@@ -3,6 +3,7 @@
 import ChatTab from '@/modules/tabbed-modules/chat'
 import OverviewTab from '@/modules/tabbed-modules/overview'
 import { useAccount } from '@/modules/accounts/context'
+import CertificatesGrid from '@/modules/ensurance/components/CertificatesGrid'
 
 interface AccountPageProps {
   params: {
@@ -12,9 +13,14 @@ interface AccountPageProps {
 
 export default function AccountPage({ params }: AccountPageProps) {
   const { accountData, isOwner } = useAccount()
+  const keyword = params.account
+    ?.split('.')[0]
+    ?.split('-')
+    ?.filter(Boolean)
+    ?.join(' ') || ''
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 auto-rows-min">
       {/* Left Column - Chat */}
       <div className="p-6">
         <div className="flex items-center gap-2 mb-6">
@@ -43,6 +49,20 @@ export default function AccountPage({ params }: AccountPageProps) {
           tbaAddress={accountData.tba_address}
           isOwner={isOwner}
         />
+      </div>
+
+      {/* Full Width Certificates Grid */}
+      <div className="lg:col-span-2 p-6">
+        <div className="bg-gray-900/30 rounded-lg p-6">
+          <h3 className="text-lg font-medium text-gray-200 mb-6">Related Certificates</h3>
+          <CertificatesGrid 
+            variant="overview"
+            maxItems={10}
+            hideSearch={true}
+            urlPrefix={`/${params.account}`}
+            searchQuery={keyword}
+          />
+        </div>
       </div>
     </div>
   )

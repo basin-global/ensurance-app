@@ -23,6 +23,7 @@ interface AssetCardProps {
   customUrl?: string;
   hideCollection?: boolean;
   hideChain?: boolean;
+  hideName?: boolean;
 }
 
 const FALLBACK_IMAGE = '/assets/no-image-found.png';
@@ -36,7 +37,8 @@ export default function AssetCard({
   isFeatured = false,
   customUrl,
   hideCollection = false,
-  hideChain = false
+  hideChain = false,
+  hideName = false
 }: AssetCardProps) {
   const [isEnsureModalOpen, setIsEnsureModalOpen] = useState(false);
   const [selectedOperation, setSelectedOperation] = useState<EnsureOperation | null>(null);
@@ -143,9 +145,11 @@ export default function AssetCard({
             </div>
 
             <div className="p-4 flex-1">
-              <h3 className={`font-bold text-lg ${hideCollection ? 'line-clamp-2' : 'line-clamp-1'} text-gray-100`}>
-                {asset.name || 'Untitled'}
-              </h3>
+              {!hideName && (
+                <h3 className={`font-bold text-lg ${hideCollection ? 'line-clamp-2' : 'line-clamp-1'} text-gray-100`}>
+                  {asset.name || 'Untitled'}
+                </h3>
+              )}
               {!hideCollection && (
                 <p className="text-sm text-gray-400 line-clamp-1">{asset.collection?.name}</p>
               )}
