@@ -7,21 +7,47 @@ import { usePathname } from 'next/navigation'
 // Navigation items for the sidebar
 const navItems = [
   {
-    title: 'Getting Started',
+    title: 'TLDR',
     links: [
-      { href: '/docs', label: 'Introduction' },
-      { href: '/docs/installation', label: 'Installation' },
-      { href: '/docs/configuration', label: 'Configuration' },
+      { href: '/docs/tldr', label: 'TLDR' },
     ]
   },
   {
-    title: 'Core Concepts',
+    title: 'FUNDAMENTALS',
     links: [
-      { href: '/docs/agents', label: 'Agents' },
-      { href: '/docs/groups', label: 'Groups' },
-      { href: '/docs/certificates', label: 'Certificates' },
+      { href: '/docs/fundamentals', label: 'FUNDAMENTALS' },
     ]
   },
+  {
+    title: 'NATURAL CAPITAL',
+    links: [
+      { href: '/docs/natural-capital', label: 'NATURAL CAPITAL' },
+    ]
+  },
+  {
+    title: 'ENSURANCE',
+    links: [
+      { href: '/docs/ensurance', label: 'ENSURANCE' },
+    ]
+  },
+  {
+    title: 'PROTOCOL',
+    links: [
+      { href: '/docs/protocol', label: 'PROTOCOL' },
+    ]
+  },
+  {
+    title: 'TECHNICAL',
+    links: [
+      { href: '/docs/technical', label: 'TECHNICAL' },
+    ]
+  },
+  {
+    title: 'FAQ',
+    links: [
+      { href: '/docs/faq', label: 'FAQ' },
+    ]
+  }
 ]
 
 function DocsNavigation() {
@@ -30,29 +56,28 @@ function DocsNavigation() {
   return (
     <nav className="w-64 pr-8 hidden md:block">
       <div className="sticky top-24">
-        {navItems.map((section, idx) => (
-          <div key={idx} className="mb-8">
-            <h5 className="mb-3 text-sm font-semibold text-[rgba(var(--foreground-rgb),0.7)] uppercase tracking-wide font-mono">
-              {section.title}
-            </h5>
-            <ul className="space-y-2">
+        <h5 className="text-xs font-semibold text-[rgba(var(--foreground-rgb),0.5)] uppercase tracking-wide mb-6 font-mono">
+          Documentation
+        </h5>
+        <ul className="space-y-4">
+          {navItems.map((section, idx) => (
+            <li key={idx}>
               {section.links.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className={`block py-1 font-grotesk ${
-                      pathname === link.href
-                        ? 'text-[rgb(var(--foreground-rgb))]'
-                        : 'text-[rgba(var(--foreground-rgb),0.7)] hover:text-[rgb(var(--foreground-rgb))]'
-                    }`}
-                  >
-                    {link.label}
-                  </Link>
-                </li>
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`block py-1 text-sm font-grotesk ${
+                    pathname === link.href
+                      ? 'text-[rgb(var(--foreground-rgb))]'
+                      : 'text-[rgba(var(--foreground-rgb),0.7)] hover:text-[rgb(var(--foreground-rgb))]'
+                  }`}
+                >
+                  {link.label}
+                </Link>
               ))}
-            </ul>
-          </div>
-        ))}
+            </li>
+          ))}
+        </ul>
       </div>
     </nav>
   )
@@ -60,6 +85,8 @@ function DocsNavigation() {
 
 function TableOfContents() {
   const [headings, setHeadings] = useState<{ id: string; text: string; level: number }[]>([])
+  const [opacity, setOpacity] = useState(1)
+  const pathname = usePathname()
 
   useEffect(() => {
     // Get all headings from the main content
@@ -70,12 +97,33 @@ function TableOfContents() {
       level: Number(element.tagName[1])
     }))
     setHeadings(headingsList)
-  }, [])
+
+    // Handle scroll
+    const handleScroll = () => {
+      const pageNav = document.querySelector('.page-navigation')
+      if (!pageNav) return
+
+      const windowHeight = window.innerHeight
+      const pageNavTop = pageNav.getBoundingClientRect().top
+      
+      // Start fade when page navigation comes into view
+      // Scale from 1 to 0.4 instead of 1 to 0
+      const fadeDistance = windowHeight / 2
+      const rawOpacity = Math.min(Math.max((pageNavTop - (windowHeight / 2)) / fadeDistance, 0), 1)
+      const newOpacity = 0.4 + (rawOpacity * 0.6) // Scale from 0.4 to 1.0
+      setOpacity(newOpacity)
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    handleScroll() // Initial check
+
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [pathname])
 
   return (
     <nav className="w-64 pl-8 hidden lg:block">
-      <div className="sticky top-24">
-        <h5 className="text-xs font-semibold text-[rgba(var(--foreground-rgb),0.5)] uppercase tracking-wide mb-3 font-mono">
+      <div className="sticky top-24" style={{ opacity, transition: 'opacity 150ms ease-out' }}>
+        <h5 className="text-xs font-semibold text-[rgba(var(--foreground-rgb),0.5)] uppercase tracking-wide mb-6 font-mono">
           On this page
         </h5>
         <ul className="space-y-1.5">
@@ -83,7 +131,7 @@ function TableOfContents() {
             <li key={heading.id}>
               <a
                 href={`#${heading.id}`}
-                className={`block py-0.5 text-sm text-[rgba(var(--foreground-rgb),0.5)] hover:text-[rgba(var(--foreground-rgb),0.8)] font-grotesk transition-colors ${
+                className={`block py-1 text-sm text-[rgba(var(--foreground-rgb),0.5)] hover:text-[rgba(var(--foreground-rgb),0.8)] font-grotesk transition-colors ${
                   heading.level === 3 ? 'pl-3 text-xs' : ''
                 }`}
               >
@@ -97,6 +145,46 @@ function TableOfContents() {
   )
 }
 
+function PageNavigation() {
+  const pathname = usePathname()
+  
+  const allPages = navItems.reduce((acc, section) => {
+    return [...acc, ...section.links]
+  }, [] as { href: string; label: string }[])
+  
+  const currentIndex = allPages.findIndex(page => page.href === pathname)
+  const prevPage = currentIndex > 0 ? allPages[currentIndex - 1] : null
+  const nextPage = currentIndex < allPages.length - 1 ? allPages[currentIndex + 1] : null
+  
+  return (
+    <div className="mt-16 flex justify-center gap-8 border-t border-[rgba(var(--foreground-rgb),0.1)] pt-8 page-navigation">
+      {prevPage ? (
+        <Link 
+          href={prevPage.href} 
+          className="group flex flex-col items-center p-4 rounded-lg bg-[rgba(var(--foreground-rgb),0.03)] hover:bg-[rgba(var(--foreground-rgb),0.05)] transition-all duration-200 min-w-[200px]"
+        >
+          <span className="text-sm text-[rgba(var(--foreground-rgb),0.5)]">Previous</span>
+          <span className="text-center text-[rgba(var(--foreground-rgb),0.8)] group-hover:text-[rgb(var(--foreground-rgb))]">
+            {prevPage.label}
+          </span>
+        </Link>
+      ) : <div className="min-w-[200px]" />}
+      
+      {nextPage ? (
+        <Link 
+          href={nextPage.href} 
+          className="group flex flex-col items-center p-4 rounded-lg bg-[rgba(var(--foreground-rgb),0.03)] hover:bg-[rgba(var(--foreground-rgb),0.05)] transition-all duration-200 min-w-[200px]"
+        >
+          <span className="text-sm text-[rgba(var(--foreground-rgb),0.5)]">Next</span>
+          <span className="text-center text-[rgba(var(--foreground-rgb),0.8)] group-hover:text-[rgb(var(--foreground-rgb))]">
+            {nextPage.label}
+          </span>
+        </Link>
+      ) : <div className="min-w-[200px]" />}
+    </div>
+  )
+}
+
 export default function DocsLayout({
   children,
 }: {
@@ -106,10 +194,11 @@ export default function DocsLayout({
     <div className="container mx-auto px-4 py-16">
       <div className="flex">
         <DocsNavigation />
-        <main className="flex-1 min-w-0 max-w-3xl mx-auto">
+        <main className="flex-1 min-w-0 max-w-3xl mx-auto -mt-8">
           <div className="prose prose-invert max-w-none">
             {children}
           </div>
+          <PageNavigation />
         </main>
         <TableOfContents />
       </div>
