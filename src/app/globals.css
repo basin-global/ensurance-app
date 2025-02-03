@@ -128,4 +128,298 @@ body {
   transform: translateX(-50%);
   z-index: 1000000 !important;
   width: 100%;
-} 
+}
+
+/* Documentation Typography Improvements */
+.prose {
+  font-size: 1.125rem !important;
+  line-height: 1.75 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.prose p {
+  margin-top: 1.25em !important;
+  margin-bottom: 1.25em !important;
+  opacity: 0.9 !important;
+}
+
+.prose h1 {
+  font-size: 2.5rem !important;
+  line-height: 1.2 !important;
+  margin-bottom: 2rem !important;
+}
+
+.prose h2 {
+  font-size: 1.875rem !important;
+  line-height: 1.3 !important;
+  margin-top: 2.5rem !important;
+  margin-bottom: 1.25rem !important;
+}
+
+.prose h3 {
+  font-size: 1.5rem !important;
+  line-height: 1.4 !important;
+  margin-top: 2rem !important;
+  margin-bottom: 1rem !important;
+}
+
+.prose h4 {
+  font-size: 1.25rem !important;
+  line-height: 1.4 !important;
+  margin-top: 1.5rem !important;
+  margin-bottom: 0.75rem !important;
+  opacity: 0.9 !important;
+}
+
+/* Documentation Link Styles */
+.prose a {
+  color: rgb(var(--foreground-rgb)) !important;
+  text-decoration: none !important;
+  transition: all 0.15s ease-in-out !important;
+  opacity: 0.9 !important;
+  border-bottom: 1px solid rgba(var(--foreground-rgb), 0.3) !important;
+  padding-bottom: 1px !important;
+}
+
+.prose a:hover {
+  opacity: 1 !important;
+  border-bottom-color: rgba(var(--foreground-rgb), 0.8) !important;
+}
+
+/* Section cards should not have underlines */
+.section-link {
+  border-bottom: none !important;
+  padding-bottom: 0 !important;
+}
+
+.section-link:hover {
+  border-bottom: none !important;
+}
+
+/* External links get a subtle icon */
+.prose a[href^="http"]::after {
+  content: "↗" !important;
+  display: inline-block !important;
+  margin-left: 0.2em !important;
+  font-family: 'Space Mono', monospace !important;
+  font-size: 0.9em !important;
+  opacity: 0.6 !important;
+  transition: opacity 0.15s ease-in-out !important;
+}
+
+.prose a[href^="http"]:hover::after {
+  opacity: 0.9 !important;
+}
+
+/* Keep headings links clean */
+.prose h1 a,
+.prose h2 a,
+.prose h3 a,
+.prose h4 a {
+  border-bottom: none !important;
+  padding-bottom: 0 !important;
+}
+
+.prose h1 a:hover,
+.prose h2 a:hover,
+.prose h3 a:hover,
+.prose h4 a:hover {
+  border-bottom: none !important;
+}
+
+/* Section link styles */
+.prose .section-link {
+  display: block !important;
+  margin-bottom: 0.5rem !important;
+  font-weight: 500 !important;
+  opacity: 0.8 !important;
+  transition: opacity 0.15s ease-in-out !important;
+}
+
+.prose .section-link:hover {
+  opacity: 1 !important;
+}
+
+.prose .section-description {
+  font-size: 0.9375rem !important;
+  opacity: 0.7 !important;
+  margin-top: 0.25rem !important;
+  margin-bottom: 1rem !important;
+}
+
+.prose ul,
+.prose ol {
+  margin-top: 1.25em !important;
+  margin-bottom: 1.25em !important;
+  padding-left: 1.625em !important;
+}
+
+.prose li {
+  margin-top: 0.5em !important;
+  margin-bottom: 0.5em !important;
+  opacity: 0.9 !important;
+}
+
+.prose code {
+  font-size: 0.875em !important;
+  padding: 0.2em 0.4em !important;
+  background-color: rgba(var(--foreground-rgb), 0.1) !important;
+  border-radius: 0.25rem !important;
+}
+
+/* Not Prose Section Styling */
+.not-prose {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.not-prose .content-box {
+  background-color: rgba(var(--foreground-rgb), 0.03);
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+}
+
+/* Grid Styling */
+.not-prose .grid {
+  margin-top: 0 !important;
+}
+
+.not-prose .grid h3 {
+  margin-top: 0 !important;
+  font-size: 1.125rem !important;
+  font-weight: 600 !important;
+  margin-bottom: 1rem !important;
+  opacity: 0.9 !important;
+}
+
+.not-prose .grid ul {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.not-prose .grid li {
+  margin: 0.5rem 0 !important;
+  opacity: 0.9 !important;
+}
+
+/* Rest of not-prose styles */
+.not-prose h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  margin-top: 0;
+  opacity: 0.9;
+}
+
+/* Adjust spacing between prose and not-prose */
+.prose + .not-prose {
+  margin-top: 1.5rem;
+}
+
+.not-prose + .prose {
+  margin-top: 1.5rem;
+}
+
+/* Remove double margins when not-prose elements are stacked */
+.not-prose + .not-prose {
+  margin-top: 0;
+}
+
+/* Rest of not-prose styles */
+.not-prose .label-group {
+  margin-bottom: 1.25rem;
+}
+
+.not-prose .label-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.not-prose .label {
+  font-weight: 500;
+  opacity: 0.7;
+}
+
+.not-prose .value {
+  opacity: 0.9;
+}
+
+.not-prose ul.list-disc {
+  list-style-type: disc;
+  margin-top: 0.5rem;
+  margin-left: 1rem;
+  opacity: 0.9;
+}
+
+.not-prose li {
+  margin: 0.25rem 0;
+}
+
+.not-prose .border-t {
+  border-top-width: 1px;
+  border-color: rgba(var(--foreground-rgb), 0.1);
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+}
+
+.not-prose .font-mono {
+  opacity: 0.9;
+}
+
+/* Documentation Section Grid */
+.section-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.section {
+  position: relative;
+  background-color: rgba(var(--foreground-rgb), 0.03);
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  transition: all 0.15s ease-in-out;
+}
+
+.section:hover {
+  background-color: rgba(var(--foreground-rgb), 0.05);
+  transform: translateY(-1px);
+}
+
+.section a.card-link {
+  position: absolute;
+  inset: 0;
+  border-radius: 0.5rem;
+  border-bottom: none !important;
+  z-index: 1;
+}
+
+.section a.card-link:hover {
+  border-bottom: none !important;
+}
+
+.section .section-content {
+  position: relative;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.section .section-title {
+  font-size: 1.25rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: rgb(var(--foreground-rgb));
+  opacity: 0.9;
+}
+
+.section .section-description {
+  font-size: 0.9375rem;
+  opacity: 0.7;
+  margin: 0;
+}

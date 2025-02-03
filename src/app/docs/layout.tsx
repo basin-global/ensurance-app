@@ -54,7 +54,7 @@ function DocsNavigation() {
   const pathname = usePathname()
 
   return (
-    <nav className="w-64 pr-8 hidden md:block">
+    <nav className="w-52 pr-6 hidden md:block">
       <div className="sticky top-24">
         <h5 className="text-xs font-semibold text-[rgba(var(--foreground-rgb),0.5)] uppercase tracking-wide mb-6 font-mono">
           Documentation
@@ -136,7 +136,7 @@ function TableOfContents() {
   }, [pathname])
 
   return (
-    <nav className="w-64 pl-8 hidden lg:block">
+    <nav className="w-52 pl-4 hidden lg:block">
       <div className="sticky top-24" style={{ opacity: headings.length ? opacity : 0, transition: 'opacity 150ms ease-out' }}>
         {headings.length > 0 && (
           <>
@@ -214,7 +214,7 @@ export default function DocsLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="container mx-auto px-4 py-16">
+    <div className="container mx-auto pl-4 pr-2 py-16">
       <div className="flex">
         <DocsNavigation />
         <main className="flex-1 min-w-0 max-w-3xl mx-auto -mt-8">

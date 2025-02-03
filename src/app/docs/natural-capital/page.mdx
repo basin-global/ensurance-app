@@ -1,6 +1,6 @@
 # Natural Capital
 
-Natural capital consists of stocks of living and non-living natural phenomena that generate the flows of benefits all life depends on.
+Natural capital is the stocks of living and non-living natural phenomena that generate flows of benefits essential to all life.
 
 ## Stocks & Flows
 The benefits nature provides—often referred to as environmental assets—are composed of stocks and flows:
@@ -9,8 +9,10 @@ The benefits nature provides—often referred to as environmental assets—are c
 
 Together, when defined by extent, characteristics, and condition, they form a Natural Asset (real asset).
 
+Ensurance safeguards 14 stocks and 19 flows of natural capital, ensuring ecosystem function:
+
 <div className="not-prose">
-  <div className="grid grid-cols-2 gap-8 my-8">
+  <div className="grid grid-cols-2 gap-8 natural-capital-grid">
     <div className="bg-[rgba(var(--foreground-rgb),0.03)] p-6 rounded-lg">
       <h3 className="text-lg font-semibold mb-4">STOCKS (Ecosystem Assets)</h3>
       <ul className="space-y-2">
@@ -68,8 +70,6 @@ Today, the economy prices only a fraction of natural capital, primarily in the f
 
 The rest is either undervalued, mispriced, or not priced at all. Real assets, such as land and water rights, capture some of this value, but most ecosystem services remain outside market mechanisms.
 
-### The Cost of Overlooking Natural Capital
-
 Because natural capital is not properly priced, the true cost of its degradation and scarcity is rarely accounted for. Only recently have markets begun pricing in ecological risk.
 
 Environmental and economic accounting methods allow us to better quantify this value. However, as we refine our measurements, the value of nature appears infinite—a phenomenon known as the Richardson Effect. This paradox makes full accounting impractical, if not impossible.
@@ -85,16 +85,23 @@ To address this challenge, we use a more direct and practical approach:
 - Extent & Characteristics describe the land cover (e.g., wetlands, forest) in hectares or acres.
 - Condition is the actual ecosystem health at a given time.
 
+#### Example
+
 <div className="not-prose">
-  <div className="bg-[rgba(var(--foreground-rgb),0.03)] p-6 rounded-lg my-8">
+  <div className="content-box">
     <div className="grid grid-cols-2 gap-8">
       <div>
-        <div className="mb-4">
-          <span className="font-semibold">Extent:</span> 100 acres
+        <div className="label-group">
+          <div className="label-row">
+            <span className="label">Extent</span>
+            <span className="value">100 acres</span>
+          </div>
         </div>
-        <div>
-          <span className="font-semibold">Characteristics:</span>
-          <ul className="list-disc list-inside mt-1 ml-2">
+        <div className="label-group">
+          <div className="label-row">
+            <span className="label">Characteristics</span>
+          </div>
+          <ul className="list-disc">
             <li>Wetlands</li>
             <li>Riparian zone</li>
             <li>Temperate forest</li>
@@ -102,23 +109,31 @@ To address this challenge, we use a more direct and practical approach:
         </div>
       </div>
       <div>
-        <span className="font-semibold">Condition Scores:</span>
-        <ul className="list-disc list-inside mt-1 ml-2">
-          <li>Wetlands: 7/10</li>
-          <li>Riparian: 9/10</li>
-          <li>Forest: 8/10</li>
-        </ul>
+        <div className="label-group">
+          <div className="label-row">
+            <span className="label">Condition Scores</span>
+          </div>
+          <ul className="list-disc">
+            <li>Wetlands: 7/10</li>
+            <li>Riparian: 9/10</li>
+            <li>Forest: 8/10</li>
+          </ul>
+        </div>
       </div>
     </div>
-    <div className="border-t border-[rgba(var(--foreground-rgb),0.1)] mt-6 pt-4">
+    <div className="border-t">
       <div className="grid grid-cols-2 gap-4">
-        <div>
-          <span className="font-semibold">Annual Flows (ESV):</span>
-          <span className="font-mono text-sm ml-2">$1,200,000</span>
+        <div className="label-group">
+          <div className="label-row">
+            <span className="label">Annual Flows (ESV)</span>
+            <span className="value font-mono">$1,200,000</span>
+          </div>
         </div>
-        <div>
-          <span className="font-semibold">Stocks Value:</span>
-          <span className="font-mono text-sm ml-2">$600,000</span>
+        <div className="label-group">
+          <div className="label-row">
+            <span className="label">Stocks Value</span>
+            <span className="value font-mono">$600,000</span>
+          </div>
         </div>
       </div>
     </div>
@@ -130,8 +145,8 @@ To address this challenge, we use a more direct and practical approach:
 The relationship between flows and stocks can be expressed as the Natural Capitalization Rate:
 
 <div className="not-prose">
-  <div className="bg-[rgba(var(--foreground-rgb),0.03)] p-6 rounded-lg my-8">
-    <div className="font-mono text-sm">
+  <div className="content-box">
+    <div className="font-mono">
       <div className="mb-2">Natural Cap Rate = Flows (ESV) / Stocks (Real Asset Value)</div>
       <div>$1,200,000 / $600,000 = 200%</div>
     </div>
@@ -143,4 +158,4 @@ Higher Natural Cap Rates indicate ecosystems that are cost-effective to conserve
 ## Learn More
 Natural Capital Ensurance utilizes BASIN's RealValue Framework to value and underwrite natural assets for the protocol, enabling Ensurance Policies and Premiums that place ecosystems in Entrust.
 
-Learn more and explore examples, including premise, rationale, supporting materials, metrics, and indicators, at: [https://docs.basin.global/realvalue/the-realvalue-of-natural-capital](https://docs.basin.global/realvalue/the-realvalue-of-natural-capital) 
+Learn more and explore examples, including premise, rationale, supporting materials, metrics, and indicators, at: [docs.basin.global](https://docs.basin.global/realvalue/the-realvalue-of-natural-capital) 
