@@ -1,14 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@vercel/postgres';
-import { groups } from '@/lib/database/queries/groups';
 import { accounts } from '@/lib/database/queries/accounts';
 import { ensurance } from '@/lib/database/queries/ensurance';
+import { groups } from '@/lib/database/queries/groups';
+import { searchDocs } from '@/lib/docs-search';
+import { NextRequest, NextResponse } from 'next/server';
 
-// Cache successful responses for 1 minute
 export const revalidate = 60;
 
 // Simple in-memory cache
-const CACHE_DURATION = 60 * 1000; // 1 minute
 let cache = {
     groups: { data: null, timestamp: 0 },
     accounts: { data: null, timestamp: 0 },
@@ -17,7 +15,7 @@ let cache = {
 
 function isCacheValid(type: keyof typeof cache) {
     const cacheEntry = cache[type];
-    return cacheEntry.data && (Date.now() - cacheEntry.timestamp) < CACHE_DURATION;
+    return cacheEntry.data && (Date.now() - cacheEntry.timestamp) < 60000;
 }
 
 export const dynamic = 'force-dynamic';
@@ -45,7 +43,6 @@ export async function GET(request: NextRequest) {
             }
         } catch (error) {
             console.error('[Search API] Failed to load groups:', error);
-            // Use empty array or cached data if available
             groupsData = groupsData || [];
         }
 
@@ -90,7 +87,7 @@ export async function GET(request: NextRequest) {
                     path: `/${account.full_account_name}`,
                     type: 'account',
                     is_agent: account.is_agent,
-                    is_pool: account.og_name === '.ensurance' && account.full_account_name !== 'situs.ensurance' // All .ensurance accounts are pools except situs.ensurance
+                    is_pool: account.og_name === '.ensurance' && account.full_account_name !== 'situs.ensurance'
                 })),
             certificatesData
                 .filter(cert => 
@@ -104,12 +101,16 @@ export async function GET(request: NextRequest) {
                 }))
         ]);
 
-        // Combine and sort results
+        // Combine all results
         const results = [
             ...matchingGroups,
             ...matchingAccounts,
             ...matchingCertificates
         ];
+
+        // Add docs results to the combined results
+        const docsResults = searchDocs(query);
+        results.push(...docsResults);
 
         return NextResponse.json(results);
     } catch (error) {

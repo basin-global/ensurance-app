@@ -85,33 +85,48 @@ function DocsNavigation() {
 
 function TableOfContents() {
   const [headings, setHeadings] = useState<{ id: string; text: string; level: number }[]>([])
+  const [activeId, setActiveId] = useState<string>('')
   const [opacity, setOpacity] = useState(1)
   const pathname = usePathname()
 
   useEffect(() => {
     // Get all headings from the main content
     const elements = document.querySelectorAll('main h2, main h3')
-    const headingsList = Array.from(elements).map((element) => ({
-      id: element.id,
-      text: element.textContent || '',
-      level: Number(element.tagName[1])
-    }))
+    const headingsList = Array.from(elements).map((element) => {
+      // Generate ID if not present (fallback)
+      if (!element.id) {
+        element.id = element.textContent?.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-') || ''
+      }
+      return {
+        id: element.id,
+        text: element.textContent || '',
+        level: Number(element.tagName[1])
+      }
+    })
     setHeadings(headingsList)
 
-    // Handle scroll
+    // Handle scroll and active section
     const handleScroll = () => {
       const pageNav = document.querySelector('.page-navigation')
       if (!pageNav) return
 
+      // Handle opacity
       const windowHeight = window.innerHeight
       const pageNavTop = pageNav.getBoundingClientRect().top
-      
-      // Start fade when page navigation comes into view
-      // Scale from 1 to 0.4 instead of 1 to 0
       const fadeDistance = windowHeight / 2
       const rawOpacity = Math.min(Math.max((pageNavTop - (windowHeight / 2)) / fadeDistance, 0), 1)
-      const newOpacity = 0.4 + (rawOpacity * 0.6) // Scale from 0.4 to 1.0
+      const newOpacity = 0.4 + (rawOpacity * 0.6)
       setOpacity(newOpacity)
+
+      // Find active section
+      const headingElements = Array.from(document.querySelectorAll('main h2, main h3'))
+      for (const element of headingElements) {
+        const { top } = element.getBoundingClientRect()
+        if (top >= 0 && top <= 150) {
+          setActiveId(element.id)
+          break
+        }
+      }
     }
 
     window.addEventListener('scroll', handleScroll)
@@ -122,24 +137,32 @@ function TableOfContents() {
 
   return (
     <nav className="w-64 pl-8 hidden lg:block">
-      <div className="sticky top-24" style={{ opacity, transition: 'opacity 150ms ease-out' }}>
-        <h5 className="text-xs font-semibold text-[rgba(var(--foreground-rgb),0.5)] uppercase tracking-wide mb-6 font-mono">
-          On this page
-        </h5>
-        <ul className="space-y-1.5">
-          {headings.map((heading) => (
-            <li key={heading.id}>
-              <a
-                href={`#${heading.id}`}
-                className={`block py-1 text-sm text-[rgba(var(--foreground-rgb),0.5)] hover:text-[rgba(var(--foreground-rgb),0.8)] font-grotesk transition-colors ${
-                  heading.level === 3 ? 'pl-3 text-xs' : ''
-                }`}
-              >
-                {heading.text}
-              </a>
-            </li>
-          ))}
-        </ul>
+      <div className="sticky top-24" style={{ opacity: headings.length ? opacity : 0, transition: 'opacity 150ms ease-out' }}>
+        {headings.length > 0 && (
+          <>
+            <h5 className="text-xs font-semibold text-[rgba(var(--foreground-rgb),0.5)] uppercase tracking-wide mb-6 font-mono">
+              On this page
+            </h5>
+            <ul className="space-y-1.5">
+              {headings.map((heading) => (
+                <li key={heading.id}>
+                  <Link
+                    href={`${pathname}#${heading.id}`}
+                    className={`block py-1 text-sm hover:text-[rgba(var(--foreground-rgb),0.8)] font-grotesk transition-colors ${
+                      heading.level === 3 ? 'pl-3 text-xs' : ''
+                    } ${
+                      activeId === heading.id 
+                        ? 'text-[rgb(var(--foreground-rgb))]' 
+                        : 'text-[rgba(var(--foreground-rgb),0.5)]'
+                    }`}
+                  >
+                    {heading.text}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
       </div>
     </nav>
   )

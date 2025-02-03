@@ -15,6 +15,7 @@ interface SearchResult {
   chain?: string
   is_agent?: boolean
   is_pool?: boolean
+  doc_section?: string
 }
 
 export function HeaderSearch() {
@@ -158,7 +159,8 @@ export function HeaderSearch() {
       const typeOrder = {
         group: 1,
         account: a.is_pool ? 2 : (a.is_agent ? 3 : 4),
-        certificate: 5
+        certificate: 5,
+        doc: 6
       }
       return (typeOrder[a.type] || 99) - (typeOrder[b.type] || 99)
     })
@@ -239,6 +241,18 @@ export function HeaderSearch() {
                       <span className="text-xs px-2 py-1 rounded bg-gradient-to-r from-amber-300/20 to-amber-600/20 text-amber-500">
                         CERTIFICATE
                       </span>
+                    )}
+                    {result.type === 'doc' && (
+                      <div className="flex items-center gap-1">
+                        {result.doc_section && (
+                          <span className="text-xs px-2 py-1 rounded bg-[rgba(var(--foreground-rgb),0.1)] text-[rgba(var(--foreground-rgb),0.7)]">
+                            {result.doc_section}
+                          </span>
+                        )}
+                        <span className="text-xs px-2 py-1 rounded bg-indigo-500/20 text-indigo-400">
+                          DOC
+                        </span>
+                      </div>
                     )}
                   </div>
                 </Link>

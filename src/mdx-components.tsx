@@ -4,28 +4,48 @@ import Image from 'next/image'
 
 // Custom components for MDX
 export function useMDXComponents(components: MDXComponents): MDXComponents {
+  // Helper function for consistent ID generation
+  const generateId = (text: string) => {
+    if (typeof text !== 'string') return ''
+    return text.toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+  }
+
   return {
     // Override default components
-    h1: ({ children }) => (
-      <h1 className="text-4xl font-bold mt-8 mb-4 font-grotesk text-[rgb(var(--foreground-rgb))]">
-        {children}
-      </h1>
-    ),
-    h2: ({ children }) => (
-      <h2 className="text-3xl font-bold mt-8 mb-4 font-grotesk text-[rgb(var(--foreground-rgb))]">
-        {children}
-      </h2>
-    ),
-    h3: ({ children }) => (
-      <h3 className="text-2xl font-bold mt-6 mb-3 font-grotesk text-[rgb(var(--foreground-rgb))]">
-        {children}
-      </h3>
-    ),
-    h4: ({ children }) => (
-      <h4 className="text-xl font-bold mt-4 mb-2 font-grotesk text-[rgb(var(--foreground-rgb))]">
-        {children}
-      </h4>
-    ),
+    h1: ({ children }) => {
+      const id = generateId(children as string)
+      return (
+        <h1 id={id} className="text-4xl font-bold mt-8 mb-4 font-grotesk text-[rgb(var(--foreground-rgb))]">
+          {children}
+        </h1>
+      )
+    },
+    h2: ({ children }) => {
+      const id = generateId(children as string)
+      return (
+        <h2 id={id} className="text-3xl font-bold mt-8 mb-4 font-grotesk text-[rgb(var(--foreground-rgb))]">
+          {children}
+        </h2>
+      )
+    },
+    h3: ({ children }) => {
+      const id = generateId(children as string)
+      return (
+        <h3 id={id} className="text-2xl font-bold mt-6 mb-3 font-grotesk text-[rgb(var(--foreground-rgb))]">
+          {children}
+        </h3>
+      )
+    },
+    h4: ({ children }) => {
+      const id = generateId(children as string)
+      return (
+        <h4 id={id} className="text-xl font-bold mt-4 mb-2 font-grotesk text-[rgb(var(--foreground-rgb))]">
+          {children}
+        </h4>
+      )
+    },
     p: ({ children }) => (
       <p className="my-4 leading-7 font-grotesk text-[rgba(var(--foreground-rgb),0.9)]">
         {children}
