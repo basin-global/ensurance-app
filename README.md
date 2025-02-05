@@ -13,6 +13,15 @@ The application integrates with:
 - Ethereum and L2 networks (Base, Zora, Arbitrum, Optimism)
 - BASIN SITUS Protocol
 
+### Flexible Implementation
+
+This application is designed to be:
+- A comprehensive client that anyone can connect to using their own elizaOS instance (with Ensurance plugin and SITUS Accounts)
+- A forkable and customizable foundation where users can:
+  - Enable specific groups or a subset of groups
+  - Customize the interface for particular use cases
+  - Build specialized versions for specific natural capital applications
+
 ## Features
 
 - **Certificates of Ensurance**: Issue and manage certificates that fund natural assets and ecosystem services
