@@ -1,0 +1,58 @@
+# Contributing to Ensurance App
+
+We love your input! We want to make contributing to Ensurance App as easy and transparent as possible, whether it's:
+
+- Reporting a bug
+- Discussing the current state of the code
+- Submitting a fix
+- Proposing new features
+- Becoming a maintainer
+
+## Development Process
+
+We use GitHub to host code, to track issues and feature requests, as well as accept pull requests.
+
+1. Fork the repo and create your branch from `main`
+2. If you've added code that should be tested, add tests
+3. If you've changed APIs, update the documentation
+4. Ensure the test suite passes
+5. Make sure your code lints
+6. Issue that pull request!
+
+## Pull Request Process
+
+1. Update the README.md with details of changes to the interface, if applicable
+2. Update any relevant documentation
+3. The PR will be merged once you have the sign-off of at least one maintainer
+
+## Licensing of Contributions
+
+This project incorporates multiple licenses:
+
+- BASIN Natural Capital Frameworks and Ensurance components are under CC BY-NC-SA 4.0
+- SITUS components are under GNU GPL v3.0
+- ElizaOS components are under MIT License
+
+When you submit code changes, your submissions must comply with the appropriate license based on the component you're modifying. Please clearly indicate in your pull request which component(s) you're modifying to ensure proper license compliance.
+
+See the [LICENSE](LICENSE) file for complete details of each license. Contact the maintainers if you have any licensing concerns.
+
+## Report Bugs Using GitHub's [Issue Tracker](https://github.com/your-org/ensurance-app/issues)
+
+We use GitHub issues to track public bugs. Report a bug by [opening a new issue](https://github.com/your-org/ensurance-app/issues/new); it's that easy!
+
+## Write Bug Reports With Detail, Background, and Sample Code
+
+**Great Bug Reports** tend to have:
+
+- A quick summary and/or background
+- Steps to reproduce
+  - Be specific!
+  - Give sample code if you can
+- What you expected would happen
+- What actually happens
+- Notes (possibly including why you think this might be happening, or stuff you tried that didn't work)
+
+## License
+
+By contributing, you agree that your contributions will be licensed under its MIT License. 
