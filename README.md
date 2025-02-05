@@ -1,4 +1,4 @@
-# Ensurance App
+# ensurance.app
 
 The official frontend application for Natural Capital Ensurance, a protocol that reduces systemic risk and ensures resilience through the protection of natural capital.
 
@@ -44,7 +44,7 @@ This application is designed to be:
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/your-org/ensurance-app.git
+git clone https://github.com/basin-global/ensurance-app.git
 cd ensurance-app
 ```
 

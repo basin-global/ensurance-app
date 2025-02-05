@@ -1,6 +1,6 @@
-# Contributing to Ensurance App
+# Contributing to ensurance.app
 
-We love your input! We want to make contributing to Ensurance App as easy and transparent as possible, whether it's:
+We love your input! We want to make contributing to ensurance.app as easy and transparent as possible, whether it's:
 
 - Reporting a bug
 - Discussing the current state of the code
