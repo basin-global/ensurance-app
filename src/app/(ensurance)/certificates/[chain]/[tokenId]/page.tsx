@@ -1,16 +1,17 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { isSpamContract } from '@/config/spamContracts';
-import { Asset, EnsureOperation } from '@/types';
+import { Asset } from '@/types';
 import { AssetDetailView } from '@/modules/assets/details/AssetDetailView';
 import { CertificateActions } from '@/modules/ensurance/details/CertificateActions';
 import { usePrivy } from '@privy-io/react-auth';
-import { EnsureModal } from '@/modules/ensure/ensure-modal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { getEnsuranceContractForChain } from '@/modules/ensurance/config';
+import { EnsuranceCollector, type TokenDetails } from '@/modules/zora/clients/collector';
+import { formatEther } from 'viem';
 
 interface CertificatePageProps {
   params: {
@@ -40,11 +41,10 @@ export default function CertificatePage({ params }: CertificatePageProps) {
   
   const [assetDetails, setAssetDetails] = useState<Asset | null>(null);
   const [ensuranceData, setEnsuranceData] = useState<EnsuranceData | null>(null);
+  const [tokenDetails, setTokenDetails] = useState<TokenDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [showEnsureModal, setShowEnsureModal] = useState(false);
-  const [selectedOperation, setSelectedOperation] = useState<EnsureOperation | null>(null);
   
   const contractAddress = getEnsuranceContractForChain(params.chain);
   const isSpam = isSpamContract(params.chain, contractAddress);
@@ -59,16 +59,17 @@ export default function CertificatePage({ params }: CertificatePageProps) {
 
       setLoading(true);
       try {
-        const response = await fetch(`/api/ensurance?chain=${params.chain}&tokenId=${params.tokenId}`);
-        if (!response.ok) throw new Error('Failed to fetch certificate details');
-        const data = await response.json();
-        
-        console.log('Certificate API Response:', {
-          mime_type: data.mime_type,
-          animation_url: data.animation_url,
-          animation_url_ipfs: data.animation_url_ipfs,
-          full: data
-        });
+        // Fetch both certificate and token details
+        const [certificateResponse, tokenInfo] = await Promise.all([
+          fetch(`/api/ensurance?chain=${params.chain}&tokenId=${params.tokenId}`),
+          new EnsuranceCollector().getTokenDetails(
+            params.chain as any, 
+            BigInt(params.tokenId)
+          )
+        ]);
+
+        if (!certificateResponse.ok) throw new Error('Failed to fetch certificate details');
+        const data = await certificateResponse.json();
         
         // Transform Ensurance data to match Asset type structure
         const transformedData = {
@@ -84,10 +85,9 @@ export default function CertificatePage({ params }: CertificatePageProps) {
           contract_address: 'ensurance'
         };
         
-        console.log('Transformed Certificate Data:', transformedData);
-        
         setAssetDetails(transformedData);
         setEnsuranceData(data);
+        setTokenDetails(tokenInfo);
       } catch (err) {
         console.error('Error fetching certificate:', err);
         setError('Failed to fetch certificate details. Please try again later.');
@@ -98,15 +98,6 @@ export default function CertificatePage({ params }: CertificatePageProps) {
 
     fetchCertificateDetails();
   }, [params.chain, params.tokenId, contractAddress]);
-
-  const handleOperation = useCallback((operation: EnsureOperation) => {
-    if (!authenticated) {
-      setShowLoginModal(true);
-      return;
-    }
-    setSelectedOperation(operation);
-    setShowEnsureModal(true);
-  }, [authenticated]);
 
   if (loading) {
     return <div className="flex justify-center items-center h-screen">Loading certificate details...</div>;
@@ -126,11 +117,94 @@ export default function CertificatePage({ params }: CertificatePageProps) {
         asset={assetDetails}
         isSpam={isSpam}
       >
+        {tokenDetails && (
+          <div className="mb-6 space-y-6">
+            {/* Token Info */}
+            <div className="p-4 bg-gray-900 rounded-lg">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-gray-400">Total Ensured</p>
+                  <p className="font-mono">{tokenDetails.totalMinted.toString()}</p>
+                </div>
+                <div>
+                  <p className="text-gray-400">Price</p>
+                  <div className="font-mono">
+                    {tokenDetails.secondaryToken ? (
+                      <div className="flex items-center space-x-1">
+                        <span>{Number(formatEther(tokenDetails.mintPrice)).toFixed(1)}</span>
+                        <span className="text-gray-400">${tokenDetails.secondaryToken.symbol}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center space-x-1">
+                        <span>{Number(formatEther(tokenDetails.mintPrice)).toFixed(4)}</span>
+                        <span className="text-gray-400">ETH</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-gray-400">Status</p>
+                  <p className={`font-mono ${tokenDetails.primaryMintActive ? 'text-green-500' : 'text-red-500'}`}>
+                    {tokenDetails.primaryMintActive ? 'Active' : 'Inactive'}
+                  </p>
+                </div>
+                {tokenDetails.primaryMintEnd && (
+                  <div>
+                    <p className="text-gray-400">Ends At</p>
+                    <p className="font-mono">
+                      {new Date(Number(tokenDetails.primaryMintEnd) * 1000).toLocaleString()}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Secondary Market Info */}
+            {tokenDetails.secondaryActive && (
+              <div className="p-4 bg-gray-900 rounded-lg">
+                <h3 className="text-lg font-semibold mb-4">Secondary Market</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  {tokenDetails.secondaryToken && (
+                    <>
+                      <div>
+                        <p className="text-gray-400">Trading Token</p>
+                        <p className="font-mono">{tokenDetails.secondaryToken.symbol}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400">Token Name</p>
+                        <p className="font-mono">{tokenDetails.secondaryToken.name}</p>
+                      </div>
+                    </>
+                  )}
+                  {tokenDetails.secondaryCountdown && (
+                    <>
+                      <div>
+                        <p className="text-gray-400">Countdown Time</p>
+                        <p className="font-mono">{tokenDetails.secondaryCountdown.timeInSeconds.toString()} seconds</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400">Required Mints</p>
+                        <p className="font-mono">{tokenDetails.secondaryCountdown.minimumMints.toString()}</p>
+                      </div>
+                    </>
+                  )}
+                  {tokenDetails.secondaryPool && (
+                    <div className="col-span-2">
+                      <p className="text-gray-400">Trading Pool</p>
+                      <p className="font-mono break-all">{tokenDetails.secondaryPool}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <CertificateActions
           asset={assetDetails}
           ensuranceData={ensuranceData}
-          onEnsureClick={handleOperation}
           chain={params.chain}
+          tokenDetails={tokenDetails}
         />
       </AssetDetailView>
 
@@ -158,19 +232,6 @@ export default function CertificatePage({ params }: CertificatePageProps) {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Ensure Modal */}
-      {showEnsureModal && assetDetails && (
-        <EnsureModal
-          isOpen={showEnsureModal}
-          onClose={() => setShowEnsureModal(false)}
-          operation={selectedOperation || 'ensure'}
-          asset={assetDetails}
-          address={user?.wallet?.address || ''}
-          isTokenbound={false}
-          onAction={async () => ({ hash: '' })}
-        />
-      )}
     </>
   );
 } 
