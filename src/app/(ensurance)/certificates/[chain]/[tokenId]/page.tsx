@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { isSpamContract } from '@/config/spamContracts';
 import { Asset } from '@/types';
 import { AssetDetailView } from '@/modules/assets/details/AssetDetailView';
 import { CertificateActions } from '@/modules/ensurance/details/CertificateActions';
@@ -47,7 +46,6 @@ export default function CertificatePage({ params }: CertificatePageProps) {
   const [showLoginModal, setShowLoginModal] = useState(false);
   
   const contractAddress = getEnsuranceContractForChain(params.chain);
-  const isSpam = isSpamContract(params.chain, contractAddress);
 
   useEffect(() => {
     const fetchCertificateDetails = async () => {
@@ -82,7 +80,7 @@ export default function CertificatePage({ params }: CertificatePageProps) {
           mime_type: data.mime_type,
           collection: { name: 'Ensurance' },
           nft_id: `${params.chain}-${params.tokenId}`,
-          contract_address: 'ensurance'
+          contract_address: contractAddress
         };
         
         setAssetDetails(transformedData);
@@ -115,7 +113,6 @@ export default function CertificatePage({ params }: CertificatePageProps) {
     <>
       <AssetDetailView
         asset={assetDetails}
-        isSpam={isSpam}
       >
         {tokenDetails && (
           <div className="mb-6 space-y-6">
@@ -124,7 +121,9 @@ export default function CertificatePage({ params }: CertificatePageProps) {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-gray-400">Total Ensured</p>
-                  <p className="font-mono">{tokenDetails.totalMinted.toString()}</p>
+                  <p className="font-mono">
+                    {Number(tokenDetails.totalMinted).toLocaleString()}
+                  </p>
                 </div>
                 <div>
                   <p className="text-gray-400">Price</p>
@@ -150,9 +149,12 @@ export default function CertificatePage({ params }: CertificatePageProps) {
                 </div>
                 {tokenDetails.primaryMintEnd && (
                   <div>
-                    <p className="text-gray-400">Ends At</p>
+                    <p className="text-gray-400">Ends</p>
                     <p className="font-mono">
-                      {new Date(Number(tokenDetails.primaryMintEnd) * 1000).toLocaleString()}
+                      {new Date(Number(tokenDetails.primaryMintEnd) * 1000).toLocaleString('en-US', { 
+                        month: 'short',
+                        year: 'numeric'
+                      })}
                     </p>
                   </div>
                 )}

@@ -208,10 +208,10 @@ export function CertificateActions({
           <p className="font-mono">
             {tokenDetails?.mintPrice ? (
               <span>
-                {(Number(formatEther(tokenDetails.mintPrice)) * quantity).toFixed(tokenDetails.secondaryToken ? 1 : 4)} 
-                {tokenDetails.secondaryToken ? 
-                  `$${tokenDetails.secondaryToken.symbol}` : 
-                  'ETH'
+                {(Number(formatEther(tokenDetails.mintPrice)) * quantity).toFixed(tokenDetails.paymentToken ? 2 : 4)} 
+                {tokenDetails.paymentToken ? 
+                  ` ${tokenDetails.paymentToken.symbol}` : 
+                  ' ETH'
                 }
               </span>
             ) : '...'}
