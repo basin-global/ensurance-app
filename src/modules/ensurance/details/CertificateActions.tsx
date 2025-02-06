@@ -208,11 +208,13 @@ export function CertificateActions({
           <p className="font-mono">
             {tokenDetails?.mintPrice ? (
               <span>
-                {(Number(formatEther(tokenDetails.mintPrice)) * quantity).toFixed(tokenDetails.paymentToken ? 2 : 4)} 
-                {tokenDetails.paymentToken ? 
-                  ` ${tokenDetails.paymentToken.symbol}` : 
-                  ' ETH'
-                }
+                {tokenDetails.paymentToken ? (
+                  // Format ERC20 total price using token decimals
+                  `${((Number(tokenDetails.mintPrice) * quantity) / Math.pow(10, tokenDetails.paymentToken.decimals)).toFixed(2)} ${tokenDetails.paymentToken.symbol}`
+                ) : (
+                  // Format ETH total price
+                  `${(Number(formatEther(tokenDetails.mintPrice)) * quantity).toFixed(4)} ETH`
+                )}
               </span>
             ) : '...'}
           </p>

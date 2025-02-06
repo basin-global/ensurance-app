@@ -128,10 +128,10 @@ export default function CertificatePage({ params }: CertificatePageProps) {
                 <div>
                   <p className="text-gray-400">Price</p>
                   <div className="font-mono">
-                    {tokenDetails.secondaryToken ? (
+                    {tokenDetails.paymentToken ? (
                       <div className="flex items-center space-x-1">
-                        <span>{Number(formatEther(tokenDetails.mintPrice)).toFixed(1)}</span>
-                        <span className="text-gray-400">${tokenDetails.secondaryToken.symbol}</span>
+                        <span>{(Number(tokenDetails.mintPrice) / Math.pow(10, tokenDetails.paymentToken.decimals)).toFixed(2)}</span>
+                        <span className="text-gray-400">{tokenDetails.paymentToken.symbol}</span>
                       </div>
                     ) : (
                       <div className="flex items-center space-x-1">
@@ -147,14 +147,27 @@ export default function CertificatePage({ params }: CertificatePageProps) {
                     {tokenDetails.primaryMintActive ? 'Active' : 'Inactive'}
                   </p>
                 </div>
-                {tokenDetails.primaryMintEnd && (
+                {tokenDetails.saleStart && Number(tokenDetails.saleStart) > Date.now() / 1000 && (
+                  <div>
+                    <p className="text-gray-400">Starts</p>
+                    <p className="font-mono">
+                      {new Date(Number(tokenDetails.saleStart) * 1000).toLocaleString()}
+                    </p>
+                  </div>
+                )}
+                {tokenDetails.saleEnd && Number(tokenDetails.saleEnd) > 0 && (
                   <div>
                     <p className="text-gray-400">Ends</p>
                     <p className="font-mono">
-                      {new Date(Number(tokenDetails.primaryMintEnd) * 1000).toLocaleString('en-US', { 
-                        month: 'short',
-                        year: 'numeric'
-                      })}
+                      {new Date(Number(tokenDetails.saleEnd) * 1000).toLocaleString()}
+                    </p>
+                  </div>
+                )}
+                {tokenDetails.minimumMarketEth && (
+                  <div>
+                    <p className="text-gray-400">Min Market ETH</p>
+                    <p className="font-mono">
+                      {Number(formatEther(tokenDetails.minimumMarketEth)).toFixed(6)} ETH
                     </p>
                   </div>
                 )}
