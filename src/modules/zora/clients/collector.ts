@@ -1,4 +1,4 @@
-import { createCollectorClient } from "@zoralabs/protocol-sdk";
+import { createCollectorClient, type MintableReturn, type SalesConfigAndTokenInfo } from "@zoralabs/protocol-sdk";
 import { type PublicClient, createPublicClient, http, Chain } from 'viem';
 import { base, zora, arbitrum, optimism } from 'viem/chains';
 import { type EnsuranceChain } from '../config/chains';
@@ -12,6 +12,26 @@ const chainConfig: Record<EnsuranceChain, Chain> = {
   arbitrum,
   optimism
 } as const;
+
+// Add this type guard at the top of the file
+function isSalesConfigToken(token: any): token is { 
+  salesConfig: { 
+    mintFeePerQuantity?: string;
+    saleType?: string;
+    pricePerToken?: string;
+    currency?: string;
+    saleStart?: string;
+    saleEnd?: string;
+  };
+  totalMinted: string;
+  maxSupply?: string;
+} {
+  return token && 
+    typeof token === 'object' && 
+    'salesConfig' in token &&
+    typeof token.salesConfig === 'object' &&
+    'totalMinted' in token;
+}
 
 export interface MintCertificateParams {
   chain: EnsuranceChain;
@@ -33,6 +53,10 @@ export interface TokenDetails {
     symbol: string;
     decimals: number;
   };
+  
+  // Sale type info
+  saleType?: 'fixedPrice' | 'erc20' | 'allowlist' | 'timed';
+  saleStatus: 'active' | 'ended' | 'not_started';
   
   // Timed sale info
   saleStart?: bigint;
@@ -72,11 +96,26 @@ export class EnsuranceCollector {
     });
 
     // Get primary market info
-    const { token, primaryMintActive, primaryMintEnd, secondaryMarketActive } = await collector.getToken({
+    const response = await collector.getToken({
       tokenContract: contractAddress,
       mintType: "1155",
       tokenId
     });
+
+    const { token, primaryMintActive, primaryMintEnd, secondaryMarketActive } = response;
+
+    // Type guard to check if we have a valid token response
+    if (!isSalesConfigToken(token)) {
+      return {
+        totalMinted: BigInt(token.totalMinted || '0'),
+        maxSupply: token.maxSupply ? BigInt(token.maxSupply) : null,
+        mintPrice: BigInt(0),
+        primaryMintActive: false,
+        secondaryActive: false,
+        saleType: undefined,
+        saleStatus: 'ended'  // If we can't get valid sale config, treat it as ended
+      };
+    }
 
     // Helper for BigInt serialization
     const convertBigIntsForLog = (obj: any): any => {
@@ -89,125 +128,6 @@ export class EnsuranceCollector {
     };
 
     console.log('Raw token response from Zora:', JSON.stringify(convertBigIntsForLog(token), null, 2));
-    console.log('Sales config check:', 'salesConfig' in token);
-
-    // Extract price and payment info based on sale type
-    let mintPrice = BigInt(0);
-    let paymentToken = undefined;
-
-    if ('salesConfig' in token) {
-      const { salesConfig } = token;
-      console.log('Sale type:', salesConfig.saleType);
-      console.log('Sales config data:', JSON.stringify(convertBigIntsForLog(salesConfig), null, 2));
-
-      switch(salesConfig.saleType) {
-        case 'erc20':
-          // ERC20 token sale
-          if (salesConfig.pricePerToken && salesConfig.currency) {
-            mintPrice = BigInt(salesConfig.pricePerToken);
-            try {
-              console.log('Fetching ERC20 token details for:', salesConfig.currency, 'on chain:', chain);
-              
-              // Use the chain-specific public client
-              const chainPublicClient = this.getPublicClient(chain);
-              
-              // First try to get the name
-              const name = await chainPublicClient.readContract({
-                address: salesConfig.currency as `0x${string}`,
-                abi: [{ inputs: [], name: 'name', outputs: [{ type: 'string' }], type: 'function' }],
-                functionName: 'name'
-              }) as string;
-              
-              console.log('Got token name:', name);
-
-              // Then get the symbol
-              const symbol = await chainPublicClient.readContract({
-                address: salesConfig.currency as `0x${string}`,
-                abi: [{ inputs: [], name: 'symbol', outputs: [{ type: 'string' }], type: 'function' }],
-                functionName: 'symbol'
-              }) as string;
-              
-              console.log('Got token symbol:', symbol);
-
-              // Get decimals for proper price formatting
-              const decimals = await chainPublicClient.readContract({
-                address: salesConfig.currency as `0x${string}`,
-                abi: [{ inputs: [], name: 'decimals', outputs: [{ type: 'uint8' }], type: 'function' }],
-                functionName: 'decimals'
-              }) as number;
-              
-              console.log('Got token decimals:', decimals);
-
-              paymentToken = {
-                address: salesConfig.currency as `0x${string}`,
-                name,
-                symbol,
-                decimals
-              };
-              
-              console.log('Set payment token:', paymentToken);
-            } catch (error) {
-              console.error('Error fetching ERC20 token details:', error);
-              // Set basic info even if we can't get name/symbol
-              paymentToken = {
-                address: salesConfig.currency as `0x${string}`,
-                name: 'ERC20',
-                symbol: 'ERC20',
-                decimals: 6  // Default to 6 for USDC-like tokens
-              };
-            }
-          } else {
-            console.log('Missing pricePerToken or currency in ERC20 sale config');
-          }
-          break;
-
-        case 'fixedPrice':
-          // ETH fixed price sale
-          if (salesConfig.pricePerToken) {
-            mintPrice = BigInt(salesConfig.pricePerToken);
-          }
-          break;
-
-        case 'allowlist':
-          // Allow list sale - price might be in ETH or ERC20
-          if (salesConfig.pricePerToken) {
-            mintPrice = BigInt(salesConfig.pricePerToken);
-            if (salesConfig.currency) {
-              // Handle ERC20 allowlist sale
-              paymentToken = {
-                address: salesConfig.currency as `0x${string}`,
-                ...(await publicClient.readContract({
-                  address: salesConfig.currency as `0x${string}`,
-                  abi: [
-                    { inputs: [], name: 'name', outputs: [{ type: 'string' }], type: 'function' },
-                    { inputs: [], name: 'symbol', outputs: [{ type: 'string' }], type: 'function' }
-                  ],
-                  functionName: 'name'
-                }).then(async (name: string) => ({
-                  name,
-                  symbol: await publicClient.readContract({
-                    address: salesConfig.currency as `0x${string}`,
-                    abi: [{ inputs: [], name: 'symbol', outputs: [{ type: 'string' }], type: 'function' }],
-                    functionName: 'symbol'
-                  }) as string
-                })))
-              };
-            }
-          }
-          break;
-
-        case 'timed':
-          // Timed sale - use mintFee or mintFeePerQuantity
-          if (salesConfig.mintFee || salesConfig.mintFeePerQuantity) {
-            mintPrice = BigInt(salesConfig.mintFeePerQuantity || salesConfig.mintFee || 0);
-            console.log('Setting timed sale mint price:', mintPrice.toString());
-          }
-          break;
-
-        default:
-          console.log('Unknown sale type:', salesConfig.saleType);
-      }
-    }
 
     // Get secondary market info if active
     const secondaryInfo = secondaryMarketActive ? 
@@ -215,6 +135,81 @@ export class EnsuranceCollector {
         contract: contractAddress,
         tokenId
       }) : undefined;
+
+    console.log('Secondary market info:', JSON.stringify(convertBigIntsForLog(secondaryInfo), null, 2));
+
+    // Extract price and payment info based on token info
+    let mintPrice = BigInt(0);
+    let paymentToken = undefined;
+    let saleType: TokenDetails['saleType'] = undefined;
+
+    // Determine sale type from token info
+    const config = token.salesConfig;
+    if (config) {
+      // First check if it's an ERC20 sale
+      if (config.currency && config.currency !== '0x0000000000000000000000000000000000000000') {
+        saleType = 'erc20';
+        mintPrice = BigInt(config.pricePerToken || '0');
+        try {
+          // Get ERC20 token details
+          const name = await publicClient.readContract({
+            address: config.currency as `0x${string}`,
+            abi: [{ inputs: [], name: 'name', outputs: [{ type: 'string' }], type: 'function' }],
+            functionName: 'name'
+          }) as string;
+
+          const symbol = await publicClient.readContract({
+            address: config.currency as `0x${string}`,
+            abi: [{ inputs: [], name: 'symbol', outputs: [{ type: 'string' }], type: 'function' }],
+            functionName: 'symbol'
+          }) as string;
+
+          const decimals = await publicClient.readContract({
+            address: config.currency as `0x${string}`,
+            abi: [{ inputs: [], name: 'decimals', outputs: [{ type: 'uint8' }], type: 'function' }],
+            functionName: 'decimals'
+          }) as number;
+
+          paymentToken = {
+            address: config.currency as `0x${string}`,
+            name,
+            symbol,
+            decimals
+          };
+        } catch (error) {
+          console.error('Error fetching ERC20 token details:', error);
+        }
+      } 
+      // Then check if it's a fixed price ETH sale
+      else if (config.saleType === 'fixedPrice' || (config.pricePerToken && BigInt(config.pricePerToken) > 0)) {
+        saleType = 'fixedPrice';
+        mintPrice = BigInt(config.pricePerToken || '0');
+      }
+      // If neither, and has mintFeePerQuantity of ✧111, it's a timed sale
+      else if (config.mintFeePerQuantity === '111000000000000') {
+        saleType = 'timed';
+        mintPrice = BigInt(config.mintFeePerQuantity);
+      }
+    }
+
+    // Determine sale status based on dates and primary mint status
+    let saleStatus: TokenDetails['saleStatus'];
+    if (config?.saleStart && config?.saleEnd) {
+      const now = BigInt(Math.floor(Date.now() / 1000));
+      const start = BigInt(config.saleStart);
+      const end = BigInt(config.saleEnd);
+      
+      if (now < start) {
+        saleStatus = 'not_started';
+      } else if (now > end || !primaryMintActive) {
+        saleStatus = 'ended';
+      } else {
+        saleStatus = 'active';
+      }
+    } else {
+      // No dates specified, just use primaryMintActive
+      saleStatus = primaryMintActive ? 'active' : 'ended';
+    }
 
     return {
       // Primary market info
@@ -225,10 +220,13 @@ export class EnsuranceCollector {
       primaryMintEnd,
       paymentToken,
 
+      // Sale type info
+      saleType,
+      saleStatus,
+
       // Timed sale info
-      saleStart: token.salesConfig?.saleStart ? BigInt(token.salesConfig.saleStart) : undefined,
-      saleEnd: token.salesConfig?.saleEnd ? BigInt(token.salesConfig.saleEnd) : undefined,
-      minimumMarketEth: token.salesConfig?.minimumMarketEth ? BigInt(token.salesConfig.minimumMarketEth) : undefined,
+      saleStart: config?.saleStart ? BigInt(config.saleStart) : undefined,
+      saleEnd: config?.saleEnd ? BigInt(config.saleEnd) : undefined,
 
       // Secondary market info
       secondaryActive: secondaryMarketActive,

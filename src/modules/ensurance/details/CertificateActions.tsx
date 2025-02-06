@@ -177,57 +177,123 @@ export function CertificateActions({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Quantity Selector */}
-      <div className="flex items-center justify-between p-4 bg-gray-900 rounded-lg">
-        <p className="text-gray-400">Quantity</p>
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => handleQuantityChange(-1)}
-            disabled={quantity <= 1}
-          >
-            <Minus className="h-4 w-4" />
-          </Button>
-          <span className="font-mono w-12 text-center">{quantity}</span>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => handleQuantityChange(1)}
-            disabled={tokenDetails?.maxSupply ? quantity >= tokenDetails.maxSupply : false}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
+      {/* Quantity Selector - Only show if sale is active */}
+      {tokenDetails?.saleStatus === 'active' && (
+        <div className="flex items-center justify-between p-4 bg-gray-900 rounded-lg">
+          <p className="text-gray-400">Quantity</p>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => handleQuantityChange(-1)}
+              disabled={quantity <= 1}
+            >
+              <Minus className="h-4 w-4" />
+            </Button>
+            <span className="font-mono w-12 text-center">{quantity}</span>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => handleQuantityChange(1)}
+              disabled={tokenDetails?.maxSupply ? quantity >= tokenDetails.maxSupply : false}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Total Price */}
-      <div className="p-4 bg-gray-900 rounded-lg">
-        <div className="flex justify-between items-center">
-          <p className="text-gray-400">TOTAL</p>
-          <p className="font-mono">
-            {tokenDetails?.mintPrice ? (
-              <span>
-                {tokenDetails.paymentToken ? (
-                  // Format ERC20 total price using token decimals
-                  `${((Number(tokenDetails.mintPrice) * quantity) / Math.pow(10, tokenDetails.paymentToken.decimals)).toFixed(2)} ${tokenDetails.paymentToken.symbol}`
-                ) : (
-                  // Format ETH total price
-                  `${(Number(formatEther(tokenDetails.mintPrice)) * quantity).toFixed(4)} ETH`
-                )}
-              </span>
-            ) : '...'}
-          </p>
+      {/* Sale Type Info */}
+      {tokenDetails?.saleType && (
+        <div className="p-4 bg-gray-900 rounded-lg">
+          <div className="flex justify-between items-center mb-2">
+            <p className="text-gray-400">Sale Type</p>
+            <p className="font-mono capitalize">{tokenDetails.saleType}</p>
+          </div>
+
+          {/* Sale Status */}
+          <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-800">
+            <p className="text-gray-400">Status</p>
+            <p className={`font-mono capitalize ${
+              tokenDetails.saleStatus === 'active' ? 'text-green-500' :
+              tokenDetails.saleStatus === 'ended' ? 'text-red-500' :
+              'text-yellow-500' // not_started
+            }`}>
+              {tokenDetails.saleStatus.replace('_', ' ')}
+            </p>
+          </div>
+
+          {/* Total Minted - Only show if sale is active */}
+          {tokenDetails.saleStatus === 'active' && (
+            <div className="mt-2 pt-2 border-t border-gray-800">
+              <div className="flex justify-between items-center">
+                <p className="text-gray-400">Total Minted</p>
+                <p className="font-mono">
+                  {tokenDetails.totalMinted.toString()}
+                  {tokenDetails.maxSupply && ` / ${tokenDetails.maxSupply.toString()}`}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Timed Sale Specific Info */}
+          {tokenDetails.saleType === 'timed' && tokenDetails.secondaryActive && (
+            <div className="mt-2 pt-2 border-t border-gray-800">
+              <p className="text-sm text-gray-400 mb-1">Secondary Market Active</p>
+              {tokenDetails.secondaryToken && (
+                <p className="text-sm">Trading Token: {tokenDetails.secondaryToken.symbol}</p>
+              )}
+            </div>
+          )}
         </div>
-      </div>
+      )}
+
+      {/* Total Price - Only show if sale is active */}
+      {tokenDetails?.saleStatus === 'active' && (
+        <div className="p-4 bg-gray-900 rounded-lg">
+          <div className="flex justify-between items-center">
+            <p className="text-gray-400">TOTAL</p>
+            <p className="font-mono">
+              {tokenDetails?.mintPrice ? (
+                <span>
+                  {tokenDetails.paymentToken ? (
+                    `${((Number(tokenDetails.mintPrice) * quantity) / Math.pow(10, tokenDetails.paymentToken.decimals)).toFixed(2)} ${tokenDetails.paymentToken.symbol}`
+                  ) : (
+                    `${(Number(formatEther(tokenDetails.mintPrice)) * quantity).toFixed(4)} ETH`
+                  )}
+                </span>
+              ) : '...'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Sale Timing Info */}
+      {tokenDetails?.saleStart && Number(tokenDetails.saleStart) > Date.now() / 1000 && (
+        <div className="p-4 bg-gray-900 rounded-lg">
+          <p className="text-gray-400">Sale Starts</p>
+          <p className="font-mono">{new Date(Number(tokenDetails.saleStart) * 1000).toLocaleString()}</p>
+        </div>
+      )}
+
+      {tokenDetails?.saleEnd && Number(tokenDetails.saleEnd) > 0 && (
+        <div className="p-4 bg-gray-900 rounded-lg">
+          <p className="text-gray-400">Sale Ends</p>
+          <p className="font-mono">{new Date(Number(tokenDetails.saleEnd) * 1000).toLocaleString()}</p>
+        </div>
+      )}
 
       <Button 
         onClick={handleEnsure}
-        disabled={isEnsuring}
+        disabled={isEnsuring || tokenDetails?.saleStatus !== 'active'}
         className="w-full px-6 py-3 bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600"
       >
         <Plus className="h-6 w-6 mr-2" />
-        {isEnsuring ? 'ENSURING...' : 'ENSURE'}
+        {isEnsuring ? 'ENSURING...' : 
+         !tokenDetails ? 'LOADING...' :
+         tokenDetails.saleStatus === 'active' ? 'ENSURE' :
+         tokenDetails.saleStatus === 'ended' ? 'SALE ENDED' :
+         'SALE NOT STARTED'}
       </Button>
 
       {ensuranceData?.creator_reward_recipient_split && (

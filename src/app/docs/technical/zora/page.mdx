@@ -1,0 +1,722 @@
+# Zora Protocol Integration
+
+> **Documentation Note**: This guide reflects our implementation of the Zora Protocol as of February 2024. For the most current information, please refer to the [official Zora documentation](https://docs.zora.co/).
+
+## Overview
+
+Our implementation uses three specific sale strategies from Zora's 1155 contracts:
+
+1. **Zero ETH (Timed Sale Strategy)**
+   - Enables Zora's secondary market functionality
+   - Includes countdown period and minimum ETH requirements
+   - Used for community-driven price discovery
+   - Contract: `0x777777722D078c97c6ad07d9f36801e653E356Ae`
+
+2. **Fixed ETH Price**
+   - Direct ETH payment
+   - No secondary market functionality
+   - Simple fixed price in ETH
+
+3. **ERC20 Price (e.g., USDC)**
+   - Fixed price in ERC20 tokens
+   - No secondary market functionality
+   - Requires token approval before minting
+
+   Allowlist may be added later. Premint is not supported.
+
+## Sale Strategy Details
+
+### 1. Timed Sale (Zero ETH)
+
+#### Fee Structure
+Total fee: 0.000111 ETH (✧111)
+- Creator: 0.0000555 ETH (✧55)
+- Create Referral: 0.0000111 ETH (✧11)
+- Mint Referral: 0.0000222 ETH (✧22)
+- Zora: 0.0000111 ETH (✧11)
+- Market: 0.0000111 ETH (✧11)
+
+#### Secondary Market
+- Creates ERC20z token and Uniswap V3 pool (1% fee)
+- Secondary price starts at 0.000111 ETH
+- Requirements for market launch:
+  1. Primary sale must end
+  2. Minimum ETH threshold reached
+  3. Market countdown completed
+  4. Minimum mints met
+
+### 2. ERC20 Fixed Price
+
+#### Configuration
+```solidity
+struct SalesConfig {
+    uint64 saleStart;           // Start timestamp
+    uint64 saleEnd;            // End timestamp
+    uint64 maxTokensPerAddress; // 0 for unlimited
+    uint256 pricePerToken;     // Price in ERC20 decimals
+    address currency;          // ERC20 token address
+}
+```
+
+#### Fee Structure
+5% total fee split:
+- Creator: 95% of sale price
+- Platform fees (5% total):
+  - Create Referral: 28.57%
+  - Mint Referral: 28.57%
+  - First Minter: 14.23%
+  - Zora: 28.63%
+
+## Implementation Notes
+
+### Token Creation
+```solidity
+function createToken(
+    string calldata tokenURI,
+    ICreatorRoyaltiesControl.RoyaltyConfiguration memory royaltyConfiguration
+) external returns (uint256)
+```
+
+### Metadata Structure
+```json
+{
+  "name": "Token Name",
+  "description": "Token Description",
+  "image": "ipfs://{cid}",
+  "animation_url": "ipfs://{cid}",
+  "content": {
+    "mime": "Content MIME Type",
+    "uri": "ipfs://{cid}"
+  },
+  "attributes": [
+    {
+      "trait_type": "Trait Type",
+      "value": "Trait Value"
+    }
+  ]
+}
+```
+
+### Important Notes
+- All URIs should use `ipfs://{cid}` format
+- Supported media formats:
+  - Images: PNG, JPG, GIF
+  - 3D: gltf, glb
+  - Video: webm, mp4, m4v
+  - Audio: mp3, wav
+  - Web: HTML
+
+## Contract Permissions
+
+### Role System
+All 1155 contracts implement this permission system:
+
+```solidity
+uint256 PERMISSION_BIT_ADMIN = 2**1;  // Update sales, metadata, withdraw
+uint256 PERMISSION_BIT_MINTER = 2**2; // Mint and airdrop tokens
+uint256 CONTRACT_BASE_ID = 0;         // Contract-level permissions
+```
+
+### Key Operations
+```solidity
+function isAdminOrRole(
+    address user,
+    uint256 tokenId,
+    uint256 role
+) external view returns (bool)
+
+function addPermission(
+    uint256 tokenId,  // 0 for contract level
+    address user,
+    uint256 permissionBits
+) external onlyAdmin
+```
+
+## Comments System
+
+Contract Address: `0x7777777C2B3132e03a65721a41745C07170a5877` (all chains)
+
+### Overview
+- Only token owners/holders can comment
+- Owners pay 1 Spark to comment
+- Creators can comment for free
+- Anyone can "Spark" (like) comments
+
+### Spark Value Distribution
+| Recipient | Percentage | Notes |
+|-----------|------------|-------|
+| Protocol Fee | 30% | Split between referrer and Zora |
+| Referrer | 20% | If specified, otherwise to Zora |
+| Zora | 10% | Base protocol fee |
+| Creator/Commenter | 70% | For primary comments/replies |
+
+### Comment Types
+1. **Primary Comments**
+   - On the token itself
+   - Spark value goes to creator
+   - Requires token ownership
+
+2. **Reply Comments**
+   - Responses to existing comments
+   - Spark value goes to original commenter
+   - Must own token to reply
+
+3. **Sparking (Liking)**
+   - Anyone can Spark a comment
+   - Rewards go to original commenter
+   - No ownership requirement
+
+### Implementation
+```typescript
+interface CommentIdentifier {
+    address commenter;
+    address contractAddress;
+    uint256 tokenId;
+    bytes32 nonce;
+}
+
+function comment(
+    address commenter,
+    address contractAddress,
+    uint256 tokenId,
+    string calldata text,
+    CommentIdentifier calldata replyTo,
+    address referrer
+) external payable returns (CommentIdentifier memory)
+```
+
+### Integration Notes
+1. **Spark Value**
+   - 1 Spark = 0.000001 ETH
+   - Required for non-creator comments
+   - Used for "liking" comments
+
+2. **Referral System**
+   - Platforms can earn 20% of Spark value
+   - Must specify referrer address in calls
+   - Applies to comments and Sparks
+
+3. **Legacy Support**
+   - Backfilled historical comments
+   - Maintains interaction history
+   - Preserves comment IDs
+
+## Cointags System
+
+Contract Address: `0x7777777BbD0b88aD5F3b5f4c89C6B60D74b9774F` (Base and Zora Network)
+
+### Overview
+Cointags enable creators to:
+- Connect posts with onchain communities
+- Automatically burn community tokens from mint rewards
+- Create token-gated engagement mechanisms
+
+### Sale Strategy Compatibility
+- ✅ **Timed Sale (Zero ETH)**: Fully compatible, uses creator's ✧55 rewards
+- ✅ **Fixed ETH Price**: Fully compatible, uses 95% creator earnings
+- ❌ **ERC20 Price**: Not recommended, requires complex ERC20→ETH conversion
+
+### Reward Recipients
+
+The contract uses a hierarchical system for determining where rewards (earnings) go:
+
+1. **Creator Reward Recipient** (`getCreatorRewardRecipient`)
+   - First checks token-specific royalty recipient
+   - If not set, falls back to contract's `fundsRecipient`
+   - If neither set, defaults to contract itself
+   
+2. **Setting Recipients**
+   ```solidity
+   // Set funds recipient for contract or specific token
+   function setFundsRecipient(
+       uint256 tokenId,  // use 0 for contract-level
+       address recipient
+   ) external onlyAdmin  // requires PERMISSION_BIT_ADMIN
+
+   // Read current recipient
+   function getCreatorRewardRecipient(
+       uint256 tokenId
+   ) external view returns (address)
+   ```
+
+3. **Default Behavior**
+   - If no recipient set: Contract becomes recipient
+   - Funds can be withdrawn using `withdrawFor` function
+   - Requires `PERMISSION_BIT_FUNDS_MANAGER` permission
+
+### Protocol Rewards
+
+#### Rewards Contract
+- Address: `0x7777777F279eba3d3Ad8F4E708545291A6fDBA8B` (all chains)
+- Handles reward distribution and escrow
+- Supports both free and paid mints
+
+#### Withdrawing Rewards
+```solidity
+// Basic withdrawal
+function withdraw(
+    address to, 
+    uint256 amount
+) external;
+
+// Withdraw on behalf of another address
+function withdrawFor(
+    address to, 
+    uint256 amount
+) external;
+
+// Withdraw with signature
+function withdrawWithSig(
+    address from,
+    address to,
+    uint256 amount,
+    uint256 deadline,
+    uint8 v,
+    bytes32 r,
+    bytes32 s
+) external;
+```
+
+#### Key Terms
+- **Mint Referral**: Platform that referred a specific mint
+- **Create Referral**: Platform that referred the creator to deploy
+- **First Minter**: First collector (defaults to creator for ERC20)
+
+#### Integration Notes
+1. **For Creators**
+   - Select "Free + Rewards" for protocol rewards
+   - Specify reward recipient address
+   - Rewards accumulate in escrow contract
+
+2. **For Developers**
+   - Set `createReferral` during token creation
+   - Include `mintReferral` in mint transactions
+   - Use appropriate withdrawal method
+
+### Adding Cointags
+When implementing Cointags, you need to:
+
+1. **During Token Creation**
+   ```typescript
+   const { parameters } = await create1155({
+     token: {
+       tokenMetadataURI: "ipfs://token-metadata.json",
+       fundsRecipient: cointagAddress  // Sets contract-level recipient
+     }
+   });
+   ```
+
+2. **After Creation**
+   ```solidity
+   // Option 1: Set for specific token
+   await setFundsRecipient(tokenId, cointagAddress);
+   
+   // Option 2: Set for entire contract
+   await setFundsRecipient(0, cointagAddress);
+   ```
+
+3. **Verification**
+   ```solidity
+   // Verify recipient is set correctly
+   const recipient = await getCreatorRewardRecipient(tokenId);
+   ```
+
+### How It Works
+1. **Setup Process**
+   - Creator deploys Cointag via factory
+   - Sets 1155 post's reward recipient to Cointag address
+   - Configures burn percentage and target token
+
+2. **Reward Flow**
+   - Mints generate ETH rewards for creator
+   - Rewards split between:
+     - Token buying and burning (configured %)
+     - Direct creator earnings (remaining %)
+
+3. **Technical Requirements**
+   - Must use Uniswap V3 pools
+   - Pool must include WETH pair
+   - Deterministic deployment ensures consistent addresses
+
+### Contract Architecture
+```solidity
+// Factory deploys individual Cointag contracts
+CointagFactoryImpl {
+    // Deterministic deployment using CREATE3
+    function deployCointag(
+        address creator,
+        address pool,
+        uint256 burnBps
+    ) external returns (address)
+}
+
+// Individual Cointag contract
+CointagImpl {
+    // Distribute accumulated rewards
+    function pull() external {
+        // 1. Withdraw ETH from protocol rewards
+        // 2. Wrap portion as WETH
+        // 3. Swap for target ERC20
+        // 4. Burn tokens
+        // 5. Return remaining ETH to creator
+    }
+}
+```
+
+### Implementation Notes
+1. **Automatic Processing**
+   - Bot automatically pulls outstanding rewards
+   - Handles token swaps and burns
+   - Distributes creator earnings
+
+2. **Error Handling**
+   - Failed buy/burn sends all ETH to creator
+   - Graceful fallback mechanisms
+   - Preserves creator earnings
+
+3. **Upgradeability**
+   - Uses UUPS proxy pattern
+   - Owner-only upgrade rights
+   - UpgradeGate security checks
+
+### Integration Considerations
+1. **Setup Requirements**
+   - Valid Uniswap V3 pool
+   - WETH pairing available
+   - Proper reward recipient configuration
+
+2. **Monitoring**
+   - Track outstanding rewards
+   - Monitor burn transactions
+   - Verify creator withdrawals
+
+3. **Security**
+   - Upgrades controlled by multisig
+   - Deterministic addresses across chains
+   - Protected reward distribution
+
+## Collector Client Operations
+
+### 1. Getting Token Information (`getToken`)
+```typescript
+const { token, prepareMint, primaryMintActive, primaryMintEnd, secondaryMarketActive } = await getToken({
+  tokenContract: "0x...",  // contract address
+  mintType: "1155",        // "1155" | "721" | "premint"
+  tokenId: 1n,             // for 1155s
+  preferredSaleType?: "fixedPrice" | "erc20" | "allowlist" | "premint" | "timed"
+});
+```
+
+#### Response Structure
+- `token`: Contains contract details, sales config, token info
+- `primaryMintActive`: Boolean indicating if primary mint is active
+- `primaryMintEnd`: Optional timestamp for mint end
+- `secondaryMarketActive`: Boolean for secondary market status
+- `prepareMint`: Function to prepare mint transaction (if primary mint active)
+
+### 2. Getting Contract Tokens (`getTokensOfContract`)
+```typescript
+const { tokens, contract } = await getTokensOfContract({
+  tokenContract: "0x...",
+  preferredSaleType?: "fixedPrice" | "erc20" | "allowlist" | "premint" | "timed"
+});
+```
+Returns array of all tokens in a contract with their mint status.
+
+### 3. Minting Process
+```typescript
+// 1. Prepare mint parameters
+const { parameters, costs, erc20Approval } = prepareMint({
+  minterAccount: "0x...",
+  quantityToMint: 3n,
+  mintComment?: string,
+  mintReferral?: string,
+  mintRecipient?: string
+});
+
+// 2. Handle ERC20 approval if needed
+if (erc20Approval) {
+  // Execute approval transaction first
+}
+
+// 3. Execute mint transaction
+// parameters ready for wallet client
+```
+
+## Creator Client Operations
+
+### 1. Creating New 1155 Contract & Token
+
+```typescript
+const { parameters, contractAddress } = await create1155({
+  contract: {
+    name: "ContractName",
+    uri: "ipfs://contract-metadata.json",
+  },
+  token: {
+    tokenMetadataURI: "ipfs://token-metadata.json",
+    salesConfig: {
+      // Secondary Market Configuration
+      erc20Name?: "Token Name",      // Optional: defaults to contract name
+      erc20Symbol?: "TKN",           // Optional: derived from name if not provided
+      saleStart: 0n,                 // 0 = immediate start
+      marketCountdown: 86400n,       // 24 hours in seconds
+      minimumMintsForCountdown: 1111n
+    }
+  },
+  account: creatorAddress,
+  publicClient
+});
+```
+
+### 2. ERC20 Token Sales Configuration
+
+```typescript
+const { parameters } = await create1155({
+  contract: {
+    name: "ContractName",
+    uri: "ipfs://contract-metadata.json",
+  },
+  token: {
+    tokenMetadataURI: "ipfs://token-metadata.json",
+    salesConfig: {
+      type: "erc20Mint",
+      currency: "0x...",  // ERC20 token address
+      pricePerToken: 1000000000000000000n,  // Price in ERC20 decimals
+      saleStart: 0n,
+      saleEnd: 1895873160n
+    }
+  },
+  account: creatorAddress,
+  publicClient
+});
+```
+
+### 3. Split Payment Configuration
+
+```typescript
+// 1. Configure Split Recipients
+const splitsConfig = {
+  recipients: [
+    {
+      address: "0x...",
+      percentAllocation: 70,
+    },
+    {
+      address: "0x...",
+      percentAllocation: 30,
+    }
+  ],
+  distributorFeePercent: 0
+};
+
+// 2. Create Split Contract (if doesn't exist)
+const predicted = await splitsClient.predictImmutableSplitAddress(splitsConfig);
+if (!predicted.splitExists) {
+  const { data, address } = await splitsClient.callData.createSplit(splitsConfig);
+  // Execute split creation transaction
+}
+
+// 3. Create 1155 with Split Recipient
+const { parameters } = await create1155({
+  contract: contractConfig,
+  token: {
+    tokenMetadataURI: "ipfs://token-metadata.json",
+    fundsRecipient: predicted.splitAddress
+  },
+  account: creatorAddress,
+  publicClient
+});
+```
+
+### Key Creation Considerations
+
+1. **Secondary Market Setup**
+   - Zero ETH price enables secondary market
+   - Configurable countdown and minimum mints
+   - Automatic ERC20 token creation for trading
+
+2. **ERC20 Sales**
+   - Requires specific `salesConfig.type = "erc20Mint"`
+   - Must specify currency address and price
+   - No secondary market available for ERC20 sales
+
+3. **Split Payments**
+   - Must be set during creation
+   - Not supported with premints
+   - Requires two transactions (split creation + token creation)
+   - Uses 0xSplits protocol under the hood
+
+4. **Price Configuration Impact**
+   - Non-zero ETH price disables secondary market
+   - ERC20 pricing disables secondary market
+   - Zero ETH price enables full Zora market features
+
+## Pricing Models
+
+### 1. ERC20 Fixed Price Sale
+- Token is priced in an ERC20 token (e.g., USDC)
+- Identified by `salesConfig.saleType === "erc20"`
+- Requires token approval before minting
+- Example from API:
+```json
+"salesConfig": {
+  "saleType": "erc20",
+  "pricePerToken": "1000000",
+  "currency": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",  // USDC contract
+  "saleEnd": "1895873160",
+  "saleStart": "1722554784"
+}
+```
+
+### 2. ETH Fixed Price Sale
+- Token is priced in ETH (non-zero amount)
+- No secondary market functionality
+- Direct mint without approvals
+
+### 3. Zero ETH with Secondary Market
+- Token is priced at 0 ETH
+- Enables Zora's secondary market functionality
+- Features:
+  - Market countdown
+  - Minimum mints requirement
+  - Secondary trading pool
+
+## Implementation Notes
+
+### API Response Structure
+- Primary sale info comes from `salesConfig` object
+- Secondary market info available only for zero-ETH tokens
+- Need to handle both ERC20 and ETH pricing models in UI
+
+### Key Considerations
+1. Check `salesConfig.saleType` to determine pricing model
+2. For ERC20, need to handle token approval before minting
+3. Secondary market features only available for zero-ETH tokens
+4. Always check `primaryMintActive` before attempting mint
+5. Handle both preparation and execution of transactions separately
+
+## Secondary Market Operations
+
+### Prerequisites
+1. Token must use ZoraTimedSaleStrategy
+2. Primary mint period must be ended
+3. Secondary market must be launched
+4. Token must have been created with zero ETH price
+
+### 1. Getting Secondary Market Info
+```typescript
+const secondaryInfo = await collectorClient.getSecondaryInfo({
+  contract: "0x...",
+  tokenId: 4n
+});
+
+// Available Secondary Info
+interface SecondaryInfo {
+  secondaryActivated: boolean;     // If market is live
+  pool: `0x${string}`;            // Uniswap pool address
+  erc20z: `0x${string}`;          // Trading token address
+  name: string;                    // ERC20z token name
+  symbol: string;                  // ERC20z token symbol
+  saleStart: bigint;              // Mint start time
+  saleEnd?: bigint;               // Set after countdown starts
+  marketCountdown?: bigint;        // Time until market launch
+  minimumMintsForCountdown?: bigint; // Required mints for countdown
+  mintCount: bigint;              // Total mints so far
+}
+```
+
+### 2. Buying on Secondary Market
+```typescript
+const { parameters, price, error } = await buy1155OnSecondary({
+  contract: "0x...",
+  tokenId: 1n,
+  quantity: 3n,
+  account: buyerAddress,
+  slippage: 0.005,  // Optional: 0.5% default
+  recipient?: "0x...", // Optional: defaults to account
+  comment?: "Buying tokens", // Optional
+  publicClient
+});
+
+if (error) {
+  console.error("Market error:", error);
+  return;
+}
+
+// Price info available
+console.log("Per token (wei):", price.wei.perToken);
+console.log("Total (wei):", price.wei.total);
+
+// Execute buy transaction
+await writeContract(parameters);
+```
+
+### 3. Selling on Secondary Market
+```typescript
+const { parameters, price, error } = await sell1155OnSecondary({
+  contract: "0x...",
+  tokenId: 1n,
+  quantity: 3n,
+  account: sellerAddress,
+  slippage: 0.005,  // Optional: 0.5% default
+  recipient?: "0x...", // Optional: ETH recipient
+  publicClient
+});
+
+if (error) {
+  console.error("Market error:", error);
+  return;
+}
+
+// Price info available in wei/sparks/USDC
+const usdcPrice = await price.usdc.total;
+console.log("Sale value (USDC):", usdcPrice);
+
+// Execute sell transaction
+await writeContract(parameters);
+```
+
+### Secondary Market Flow
+
+#### Creator Perspective
+1. Create token with zero ETH price
+2. Configure market parameters:
+   - `marketCountdown`: Time window after minimum mints
+   - `minimumMintsForCountdown`: Mints needed to start countdown
+   - `erc20Name/Symbol`: Optional custom token naming
+
+#### Collector Perspective
+1. Check if secondary market is active:
+   ```typescript
+   const { secondaryMarketActive } = await getToken({...});
+   const secondaryInfo = secondaryMarketActive ? 
+     await getSecondaryInfo({...}) : null;
+   ```
+2. For buying:
+   - Ensure sufficient ETH balance
+   - Account for slippage
+   - Handle transaction failure cases
+3. For selling:
+   - Verify token ownership
+   - Set appropriate slippage
+   - Consider gas costs
+
+### Price Quoting
+All market operations return a `QuotePrice` object:
+```typescript
+interface QuotePrice {
+  wei: {
+    perToken: bigint;
+    total: bigint;
+  };
+  sparks: {
+    perToken: bigint;
+    total: bigint;
+  };
+  usdc: {
+    perToken: Promise<number>;
+    total: Promise<number>;
+  };
+}
+```
