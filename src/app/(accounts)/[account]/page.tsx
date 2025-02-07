@@ -3,7 +3,7 @@
 import ChatTab from '@/modules/tabbed-modules/chat'
 import OverviewTab from '@/modules/tabbed-modules/overview'
 import { useAccount } from '@/modules/accounts/context'
-import CertificatesGrid from '@/modules/ensurance/components/CertificatesGrid'
+import CertificatesGrid from '@/modules/certificates/components/CertificatesGrid'
 
 interface AccountPageProps {
   params: {

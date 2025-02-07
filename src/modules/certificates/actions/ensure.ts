@@ -1,7 +1,7 @@
 'use server'
 
-import { EnsuranceCollector } from '@/modules/zora/clients/collector';
-import { type EnsuranceChain } from '@/modules/zora/config/chains';
+import { EnsuranceCollector } from '@/modules/certificates/collect/client';
+import { type EnsuranceChain } from '@/modules/certificates/collect/client';
 import { revalidatePath } from 'next/cache';
 
 export interface EnsureActionParams {

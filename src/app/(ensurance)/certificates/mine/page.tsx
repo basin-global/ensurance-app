@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
 import { AssetSearch } from '@/modules/assets/AssetSearch'
-import CertificatesGrid from '@/modules/ensurance/components/CertificatesGrid'
+import CertificatesGrid from '@/modules/certificates/components/CertificatesGrid'
 
 export default function CertificatesMinePage() {
   const [searchQuery, setSearchQuery] = useState('')

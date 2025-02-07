@@ -4,13 +4,16 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Asset } from '@/types';
 import { AssetDetailView } from '@/modules/assets/details/AssetDetailView';
-import { CertificateActions } from '@/modules/ensurance/details/CertificateActions';
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { getEnsuranceContractForChain } from '@/modules/ensurance/config';
-import { EnsuranceCollector, type TokenDetails } from '@/modules/zora/clients/collector';
+import { getEnsuranceContractForChain } from '@/modules/certificates/config';
+import { EnsuranceCollector, type TokenDetails } from '@/modules/certificates/collect/client';
 import { formatEther } from 'viem';
+import { SplitsBar } from '@/modules/splits/components/SplitsBar';
+import { SaleActions } from '@/modules/certificates/collect';
+import { ensure } from '@/modules/certificates/actions/ensure';
+import { toast } from 'react-toastify';
 
 interface CertificatePageProps {
   params: {
@@ -37,6 +40,7 @@ type EnsuranceData = {
 export default function CertificatePage({ params }: CertificatePageProps) {
   const pathname = usePathname();
   const { user, authenticated, login } = usePrivy();
+  const { wallets } = useWallets();
   
   const [assetDetails, setAssetDetails] = useState<Asset | null>(null);
   const [ensuranceData, setEnsuranceData] = useState<EnsuranceData | null>(null);
@@ -96,6 +100,96 @@ export default function CertificatePage({ params }: CertificatePageProps) {
 
     fetchCertificateDetails();
   }, [params.chain, params.tokenId, contractAddress]);
+
+  const handleEnsure = async (quantity: number) => {
+    if (!authenticated) {
+      login();
+      return;
+    }
+
+    const wallet = wallets[0];
+    if (!wallet?.address) {
+      toast.error('Please connect your wallet');
+      return;
+    }
+
+    try {
+      const result = await ensure({
+        chain: params.chain as any,
+        tokenId: assetDetails.token_id,
+        recipient: wallet.address as `0x${string}`,
+        quantity
+      });
+
+      if (!result.success) {
+        throw new Error('Failed to prepare transaction');
+      }
+
+      const provider = await wallet.getEthereumProvider();
+
+      // Switch to the correct chain first
+      try {
+        await provider.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: `0x${result.chainId.toString(16)}` }]
+        });
+      } catch (switchError: any) {
+        if (switchError.code === 4902) {
+          toast.error('Please add this network to your wallet first');
+          return;
+        }
+        throw switchError;
+      }
+
+      // Handle ERC20 token payment if required
+      if (result.erc20Approval) {
+        const approvalParams = convertBigInts(result.erc20Approval);
+        
+        // First approve the token spend
+        const approvalTx = await provider.request({
+          method: 'eth_sendTransaction',
+          params: [{
+            ...approvalParams,
+            from: wallet.address
+          }]
+        });
+
+        // Wait a bit for the approval to be processed
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+
+      // Send the mint transaction
+      const finalTxParams = {
+        ...result.parameters,
+        from: wallet.address
+      };
+
+      await provider.request({
+        method: 'eth_sendTransaction',
+        params: [finalTxParams]
+      });
+
+      toast.success('Successfully ensured certificate!');
+    } catch (error: any) {
+      console.error('Error ensuring:', error);
+      if (error.code === 4001) {
+        toast.error('Transaction was cancelled');
+      } else {
+        toast.error(error instanceof Error ? error.message : 'Failed to ensure certificate');
+      }
+    }
+  };
+
+  // Helper function for BigInt conversion
+  const convertBigInts = (obj: any): any => {
+    if (typeof obj !== 'object' || obj === null) return obj;
+    if (typeof obj === 'bigint') return `0x${obj.toString(16)}`;
+    
+    return Object.entries(obj).reduce((acc, [key, value]) => {
+      acc[key] = convertBigInts(value);
+      return acc;
+    }, {} as any);
+  };
 
   if (loading) {
     return <div className="flex justify-center items-center h-screen">Loading certificate details...</div>;
@@ -212,15 +306,29 @@ export default function CertificatePage({ params }: CertificatePageProps) {
                 </div>
               </div>
             )}
+
+            {/* Sale Actions */}
+            <SaleActions
+              asset={assetDetails}
+              tokenDetails={tokenDetails}
+              onEnsure={handleEnsure}
+            />
+
+            {/* Splits Bar */}
+            {ensuranceData?.creator_reward_recipient_split && (
+              <a 
+                href={`/flow/${params.chain}/${ensuranceData.creator_reward_recipient}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block p-4 bg-background dark:bg-background-dark rounded-xl hover:bg-gray-900 transition-colors duration-200"
+              >
+                <SplitsBar 
+                  recipients={ensuranceData.creator_reward_recipient_split.recipients} 
+                />
+              </a>
+            )}
           </div>
         )}
-
-        <CertificateActions
-          asset={assetDetails}
-          ensuranceData={ensuranceData}
-          chain={params.chain}
-          tokenDetails={tokenDetails}
-        />
       </AssetDetailView>
 
       {/* Login Modal */}

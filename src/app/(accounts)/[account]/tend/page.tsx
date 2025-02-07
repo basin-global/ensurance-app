@@ -1,7 +1,7 @@
 'use client'
 
 import { useAccount } from '@/modules/accounts/context'
-import CertificatesGrid from '@/modules/ensurance/components/CertificatesGrid'
+import CertificatesGrid from '@/modules/certificates/components/CertificatesGrid'
 
 export default function TendPage() {
   const { accountData } = useAccount()

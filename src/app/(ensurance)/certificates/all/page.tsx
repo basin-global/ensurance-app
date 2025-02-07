@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { AssetSearch } from '@/modules/assets/AssetSearch'
-import CertificatesGrid from '@/modules/ensurance/components/CertificatesGrid'
+import CertificatesGrid from '@/modules/certificates/components/CertificatesGrid'
 
 export default function CertificatesPage() {
   const [searchQuery, setSearchQuery] = useState('')

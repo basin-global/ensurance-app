@@ -1,8 +1,8 @@
 import { HomeSwarm } from '@/modules/shared/HomeSwarm'
 import { DeclarativeHero } from '@/components/layout/DeclarativeHero'
 import { DeclarativeSection } from '@/components/layout/DeclarativeSection'
-import NaturalCapitalGrid from '@/modules/ensurance/components/NaturalCapitalGrid'
-import CertificatesGrid from '@/modules/ensurance/components/CertificatesGrid'
+import NaturalCapitalGrid from '@/modules/pools/NaturalCapitalGrid'
+import CertificatesGrid from '@/modules/certificates/components/CertificatesGrid'
 
 export default function HomePage() {
   return (
