@@ -4,8 +4,6 @@ import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { Send, ArrowLeftRight, DollarSign } from 'lucide-react'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent } from '@/components/ui/dropdown-menu'
-import { EnsureMenuItems } from '@/modules/ensure/ensure-menu'
-import { EnsureModal } from '@/modules/ensure/ensure-modal'
 import { getChainIcon, chainOrder } from '@/config/chains'
 import { EnsureOperation } from '@/types'
 import { 
@@ -28,9 +26,6 @@ export default function CurrencyTab({ address, selectedChain, isOwner = false }:
   const [groupedBalances, setGroupedBalances] = useState<GroupedBalances>({})
   const [ethPrice, setEthPrice] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
-  const [modalOpen, setModalOpen] = useState(false)
-  const [selectedOperation, setSelectedOperation] = useState<EnsureOperation | null>(null)
-  const [selectedToken, setSelectedToken] = useState<TokenBalance | null>(null)
 
   const fetchBalances = useCallback(async () => {
     setLoading(true)
@@ -65,12 +60,6 @@ export default function CurrencyTab({ address, selectedChain, isOwner = false }:
   const sortedChains = Object.keys(filteredBalances).sort((a, b) => 
     chainOrder.indexOf(a) - chainOrder.indexOf(b)
   )
-
-  const handleOperation = (operation: EnsureOperation, token?: TokenBalance) => {
-    setSelectedOperation(operation)
-    setSelectedToken(token || null)
-    setModalOpen(true)
-  }
 
   if (loading) {
     return <div>Loading...</div>
@@ -142,24 +131,10 @@ export default function CurrencyTab({ address, selectedChain, isOwner = false }:
                         }
                       </td>
                       <td className="px-4 py-2 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors">
-                            <span className="sr-only">Actions</span>
-                            <Send className="w-4 h-4" />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48 bg-gray-900 border border-gray-800">
-                            <EnsureMenuItems
-                              isTokenbound={false}
-                              onOperationSelect={(operation) => handleOperation(operation as EnsureOperation, token)}
-                              asset={{
-                                chain: selectedChain,
-                                contract_address: token.fungible_id || '',
-                                isNative: !token.fungible_id
-                              }}
-                              isCurrency={true}
-                            />
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <button className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors">
+                          <span className="sr-only">Actions</span>
+                          <Send className="w-4 h-4" />
+                        </button>
                       </td>
                     </tr>
                   )
@@ -203,24 +178,10 @@ export default function CurrencyTab({ address, selectedChain, isOwner = false }:
                         {token.prices && token.prices.length > 0 ? token.prices[0].marketplace_name : 'N/A'}
                       </td>
                       <td className="px-4 py-2 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors">
-                            <span className="sr-only">Actions</span>
-                            <Send className="w-4 h-4" />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48 bg-gray-900 border border-gray-800">
-                            <EnsureMenuItems
-                              isTokenbound={false}
-                              onOperationSelect={(operation) => handleOperation(operation as EnsureOperation, token)}
-                              asset={{
-                                chain: selectedChain,
-                                contract_address: token.fungible_id || '',
-                                isNative: !token.fungible_id
-                              }}
-                              isCurrency={true}
-                            />
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <button className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors">
+                          <span className="sr-only">Actions</span>
+                          <Send className="w-4 h-4" />
+                        </button>
                       </td>
                     </tr>
                   )
@@ -230,19 +191,6 @@ export default function CurrencyTab({ address, selectedChain, isOwner = false }:
           ) : null}
         </div>
       ))}
-
-      {/* Ensure Modal */}
-      {modalOpen && selectedToken && (
-        <EnsureModal
-          isOpen={modalOpen}
-          onClose={() => setModalOpen(false)}
-          operation={selectedOperation || 'ensure'}
-          asset={transformTokenToAsset(selectedToken, selectedChain)}
-          address={address}
-          isTokenbound={false}
-          onAction={async () => ({ hash: '' })}
-        />
-      )}
     </div>
   )
 } 

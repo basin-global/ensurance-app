@@ -11,7 +11,6 @@ import { TokenboundClient } from "@tokenbound/sdk";
 import { getTokenBoundClientConfig } from '@/config/tokenbound';
 import { createTokenboundActions } from '@/lib/tokenbound';
 import { fetchNFTsByContract } from '@/lib/simplehash';
-import { getFeaturedTokensForOG } from '@/modules/ensurance/featured-config';
 import { BaseModuleProps } from '@/types/index';
 
 // Export the existing Asset interface
@@ -248,7 +247,7 @@ export default function AssetsModule({
       return (
         asset.name?.toLowerCase().includes(searchLower) ||
         asset.collection?.name?.toLowerCase().includes(searchLower) ||
-        asset.token_id?.toString().includes(searchLower)
+        asset.token_id?.toLowerCase().includes(searchLower)
       );
     });
   }, [displayedAssets, searchQuery]);
@@ -287,12 +286,7 @@ export default function AssetsModule({
         {filteredAssets.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 auto-rows-fr">
             {filteredAssets.map((asset) => {
-              const isFeatured = isEnsuranceTab && currentGroup
-                ? getFeaturedTokensForOG(currentGroup).some(token => {
-                    return token.chain.toLowerCase() === asset.chain.toLowerCase() && 
-                           Number(token.tokenId) === Number(asset.token_id);
-                  })
-                : false;
+              const isFeatured = false; // Featured functionality removed
 
               return (
                 <AssetCard 

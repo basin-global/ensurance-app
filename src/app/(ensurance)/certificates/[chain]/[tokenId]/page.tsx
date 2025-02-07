@@ -73,6 +73,13 @@ export default function CertificatePage({ params }: CertificatePageProps) {
         if (!certificateResponse.ok) throw new Error('Failed to fetch certificate details');
         const data = await certificateResponse.json();
         
+        console.log('Zora SDK Response:', {
+          chain: params.chain,
+          tokenId: params.tokenId,
+          tokenInfo,
+          certificateData: data
+        });
+        
         // Transform Ensurance data to match Asset type structure
         const transformedData = {
           ...data,

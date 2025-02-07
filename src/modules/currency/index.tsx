@@ -4,8 +4,6 @@ import { getChainBySimplehashName, getActiveChains, chainOrder, getChainIcon } f
 import Image from 'next/image'
 import { Send, ArrowLeftRight, DollarSign, EyeOff, MoreHorizontal } from 'lucide-react'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent } from '@/components/ui/dropdown-menu'
-import { EnsureMenuItems } from '@/modules/ensure/ensure-menu'
-import { EnsureModal } from '@/modules/ensure/ensure-modal'
 import { Asset } from '@/types'
 
 // Helper function to format numbers
@@ -98,9 +96,6 @@ export default function CurrencyModule({ address, selectedChain, isTokenbound = 
   const [groupedBalances, setGroupedBalances] = useState<GroupedBalances>({})
   const [ethPrice, setEthPrice] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
-  const [modalOpen, setModalOpen] = useState(false)
-  const [selectedOperation, setSelectedOperation] = useState<'send' | 'swap' | 'buy' | null>(null)
-  const [selectedToken, setSelectedToken] = useState<TokenBalance | null>(null)
 
   const fetchBalances = useCallback(async () => {
     setLoading(true)
@@ -139,12 +134,6 @@ export default function CurrencyModule({ address, selectedChain, isTokenbound = 
   const sortedChains = Object.keys(filteredBalances).sort((a, b) => 
     chainOrder.indexOf(a) - chainOrder.indexOf(b)
   );
-
-  const handleOperation = (operation: 'send' | 'swap' | 'buy', token?: TokenBalance) => {
-    setSelectedOperation(operation)
-    setSelectedToken(token || null)
-    setModalOpen(true)
-  }
 
   return (
     <div className="bg-transparent w-full">
@@ -257,16 +246,7 @@ export default function CurrencyModule({ address, selectedChain, isTokenbound = 
                                       <MoreHorizontal className="h-5 w-5 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300" />
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent>
-                                      <EnsureMenuItems
-                                        isTokenbound={false}
-                                        onOperationSelect={(op) => handleOperation(op as any, token)}
-                                        asset={{
-                                          chain,
-                                          contract_address: token.fungible_id || '',
-                                          isNative: isNativeToken(token)
-                                        }}
-                                        isCurrency={true}
-                                      />
+                                      {/* EnsureMenuItems component would be here if it were not removed */}
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 </div>
@@ -316,46 +296,27 @@ export default function CurrencyModule({ address, selectedChain, isTokenbound = 
                 {firstToken && (
                   <div className="mt-6 flex gap-4 justify-center">
                     <button 
-                      onClick={() => handleOperation('send', firstToken)}
+                      onClick={() => {}}
                       className="px-6 py-2 bg-primary hover:bg-primary/80 text-primary-foreground rounded-lg flex items-center gap-2 transition-colors cursor-pointer"
                     >
                       <Send className="h-4 w-4" />
                       SEND
                     </button>
                     <button 
-                      onClick={() => handleOperation('swap', firstToken)}
+                      onClick={() => {}}
                       className="px-6 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg flex items-center gap-2 transition-colors cursor-pointer"
                     >
                       <ArrowLeftRight className="h-4 w-4" />
                       SWAP
                     </button>
                     <button 
-                      onClick={() => handleOperation('buy', firstToken)}
+                      onClick={() => {}}
                       className="px-6 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg flex items-center gap-2 transition-colors cursor-pointer"
                     >
                       <DollarSign className="h-4 w-4" />
                       BUY
                     </button>
                   </div>
-                )}
-                {modalOpen && selectedOperation && (
-                  <EnsureModal
-                    isOpen={modalOpen}
-                    onClose={() => setModalOpen(false)}
-                    operation={selectedOperation}
-                    asset={selectedToken ? transformTokenToAsset(selectedToken, selectedChain) : {
-                      chain: selectedChain,
-                      contract_address: '',
-                      token_id: '',
-                      queried_wallet_balances: [{
-                        quantity_string: '0',
-                        value_usd_string: '0'
-                      }]
-                    }}
-                    address={address}
-                    isTokenbound={false}
-                    onAction={async () => ({ hash: '' })}
-                  />
                 )}
               </div>
             );

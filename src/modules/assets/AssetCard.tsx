@@ -6,11 +6,6 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { isEnsuranceToken } from '@/modules/certificates/config'
 import { Asset, EnsureOperation } from '@/types'
-import { Button } from "@/components/ui/button"
-import { EnsureModal } from "@/modules/ensure/ensure-modal"
-import { getFeaturedTokensForOG } from '@/modules/ensurance/featured-config';
-import CustomAudioPlayer from '@/modules/media/CustomAudioPlayer';
-import { EnsureMenuItems } from '@/modules/ensure/ensure-menu'
 import { toast } from 'react-toastify'
 
 interface AssetCardProps {
@@ -138,17 +133,7 @@ export default function AssetCard({
                         <MoreVertical className="h-5 w-5" />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
-                        <EnsureMenuItems 
-                          isTokenbound={isTokenbound}
-                          onOperationSelect={(operation) => {
-                            setSelectedOperation(operation);
-                            setIsEnsureModalOpen(true);
-                          }}
-                          asset={{
-                            chain: asset.chain,
-                            contract_address: asset.contract_address,
-                          }}
-                        />
+                        {/* EnsureMenuItems component removed */}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   )}
@@ -197,21 +182,6 @@ export default function AssetCard({
           </CardContent>
         </Card>
       </Link>
-
-      <EnsureModal 
-        asset={asset}
-        address={address}
-        isOpen={isEnsureModalOpen}
-        onClose={() => {
-          setIsEnsureModalOpen(false);
-          setSelectedOperation(null);
-        }}
-        operation={selectedOperation || 'ensure'}
-        isTokenbound={isTokenbound}
-        onAction={async () => {
-          throw new Error('Feature coming soon');
-        }}
-      />
     </div>
   );
 }
