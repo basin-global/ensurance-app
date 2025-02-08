@@ -3,8 +3,8 @@ import { TimedSaleActions } from './TimedSale';
 import { type SaleActionsProps } from './types';
 
 export function SaleActions({ asset, tokenDetails, onEnsure }: SaleActionsProps) {
-  // Determine if this is a timed sale by checking the mintFeePerQuantity
-  const isTimedSale = tokenDetails.mintPrice.toString() === '111000000000000';
+  // Use Zora's saleType directly
+  const isTimedSale = tokenDetails.saleType === 'timed';
 
   if (isTimedSale) {
     return (

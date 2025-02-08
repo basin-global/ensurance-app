@@ -73,13 +73,6 @@ export default function CertificatePage({ params }: CertificatePageProps) {
         if (!certificateResponse.ok) throw new Error('Failed to fetch certificate details');
         const data = await certificateResponse.json();
         
-        console.log('Zora SDK Response:', {
-          chain: params.chain,
-          tokenId: params.tokenId,
-          tokenInfo,
-          certificateData: data
-        });
-        
         // Transform Ensurance data to match Asset type structure
         const transformedData = {
           ...data,
@@ -261,14 +254,6 @@ export default function CertificatePage({ params }: CertificatePageProps) {
                     <p className="text-gray-400">Ends</p>
                     <p className="font-mono">
                       {new Date(Number(tokenDetails.saleEnd) * 1000).toLocaleString()}
-                    </p>
-                  </div>
-                )}
-                {tokenDetails.minimumMarketEth && (
-                  <div>
-                    <p className="text-gray-400">Min Market ETH</p>
-                    <p className="font-mono">
-                      {Number(formatEther(tokenDetails.minimumMarketEth)).toFixed(6)} ETH
                     </p>
                   </div>
                 )}

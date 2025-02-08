@@ -11,9 +11,10 @@ import { type SaleActionsProps } from './types';
 interface TimedSaleProps {
   asset: Asset;
   tokenDetails: TokenDetails;
+  onEnsure: (quantity: number) => Promise<void>;
 }
 
-export function TimedSaleActions({ asset, tokenDetails }: TimedSaleProps) {
+export function TimedSaleActions({ asset, tokenDetails, onEnsure }: TimedSaleProps) {
   const [quantity, setQuantity] = useState(1);
   const [timeRemaining, setTimeRemaining] = useState<string | null>(null);
 
@@ -107,6 +108,7 @@ export function TimedSaleActions({ asset, tokenDetails }: TimedSaleProps) {
         tokenId={asset.token_id}
         quantity={quantity}
         tokenDetails={tokenDetails}
+        onEnsure={onEnsure}
       />
     </div>
   );

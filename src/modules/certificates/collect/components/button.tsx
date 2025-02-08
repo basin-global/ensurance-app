@@ -9,6 +9,7 @@ interface EnsureButtonProps {
   quantity: number;
   tokenDetails: TokenDetails;
   className?: string;
+  onEnsure: (quantity: number) => Promise<void>;
 }
 
 export function EnsureButton({ 
@@ -16,16 +17,13 @@ export function EnsureButton({
   tokenId, 
   quantity,
   tokenDetails,
-  className 
+  className,
+  onEnsure
 }: EnsureButtonProps) {
   const { isEnsuring, ensureCertificate } = useEnsure();
 
   const handleClick = async () => {
-    await ensureCertificate({
-      chain,
-      tokenId,
-      quantity
-    });
+    await onEnsure(quantity);
   };
 
   return (

@@ -1,76 +1,16 @@
-import { getToken, mint, getSecondaryInfo, type MintableReturn, type SalesConfigAndTokenInfo } from "@zoralabs/protocol-sdk";
+import { getToken, mint, getSecondaryInfo, type MintableReturn } from "@zoralabs/protocol-sdk";
 import { type PublicClient, createPublicClient, http, type Chain } from 'viem';
 import { base, zora, arbitrum, optimism } from 'viem/chains';
 import { ensuranceContracts } from '@/modules/certificates/config';
 
-// Simple type for supported chains
+// Chain configuration
 export type EnsuranceChain = 'base' | 'zora' | 'arbitrum' | 'optimism';
-
-// Chain configuration with explicit typing
 const chainConfig: Record<EnsuranceChain, Chain> = {
   base,
   zora,
   arbitrum,
   optimism
 } as const;
-
-// Types matching Zora's sale strategies
-type FixedPriceSaleStrategy = {
-  pricePerToken: string;
-  saleStart?: string;
-  saleEnd?: string;
-  maxTokensPerAddress?: string;
-};
-
-type ERC20SaleStrategy = {
-  pricePerToken: string;
-  currency: string;
-  saleStart?: string;
-  saleEnd?: string;
-  maxTokensPerAddress?: string;
-};
-
-type TimedSaleStrategy = {
-  mintFeePerQuantity: string;
-  saleStart?: string;
-  saleEnd?: string;
-};
-
-type AllowListSaleStrategy = {
-  merkleRoot: string;
-  pricePerToken?: string;
-  currency?: string;
-  startTime?: string;
-  endTime?: string;
-  perWalletLimit?: string;
-};
-
-// Helper type for our supported token configurations
-type SupportedToken = {
-  totalMinted: string;
-  maxSupply?: string;
-} & (
-  | {
-      salesConfig: FixedPriceSaleStrategy | ERC20SaleStrategy | TimedSaleStrategy;
-    }
-  | {
-      allowlistConfig: AllowListSaleStrategy;
-    }
-);
-
-// Type guard for our supported token configurations
-function isSupportedToken(token: any): token is SupportedToken {
-  return token && 
-    typeof token === 'object' && 
-    'totalMinted' in token &&
-    typeof token.totalMinted === 'string' &&
-    (
-      // Check for sales config (fixed price ETH/ERC20 or timed)
-      ('salesConfig' in token && typeof token.salesConfig === 'object') ||
-      // Check for allowlist config (for future use)
-      ('allowlistConfig' in token && typeof token.allowlistConfig === 'object')
-    );
-}
 
 export interface MintCertificateParams {
   chain: EnsuranceChain;
@@ -94,14 +34,13 @@ export interface TokenDetails {
     decimals: number;
   };
   
-  // Sale type info - fixed price can be ETH or ERC20
-  saleType?: 'fixedPrice' | 'allowlist' | 'timed';
+  // Sale type info from Zora
+  saleType?: 'fixedPrice' | 'erc20' | 'allowlist' | 'timed';
   saleStatus: 'active' | 'ended' | 'not_started';
   
-  // Timed sale info
+  // Sale timing
   saleStart?: bigint;
   saleEnd?: bigint;
-  minimumMarketEth?: bigint;
   
   // Secondary market info
   secondaryActive: boolean;
@@ -119,18 +58,17 @@ export interface TokenDetails {
 
 export class EnsuranceCollector {
   private getPublicClient(chain: EnsuranceChain) {
-    const client = createPublicClient({
+    return createPublicClient({
       chain: chainConfig[chain],
       transport: http()
-    });
-    return client as PublicClient;
+    }) as PublicClient;
   }
 
   async getTokenDetails(chain: EnsuranceChain, tokenId: bigint): Promise<TokenDetails> {
     const contractAddress = ensuranceContracts[chain] as `0x${string}`;
     const publicClient = this.getPublicClient(chain);
 
-    // Get primary market info
+    // Get token info from Zora SDK
     const response = await getToken({
       tokenContract: contractAddress,
       tokenId,
@@ -139,204 +77,132 @@ export class EnsuranceCollector {
       mintType: "1155"
     });
 
-    const { token, primaryMintActive, primaryMintEnd, secondaryMarketActive } = response;
-
-    // Type guard to check if we have a valid token response
-    if (!isSupportedToken(token)) {
-      return {
-        totalMinted: BigInt(0),
-        maxSupply: null,
-        mintPrice: BigInt(0),
-        primaryMintActive: false,
-        secondaryActive: false,
-        saleType: undefined,
-        saleStatus: 'ended'  // If we can't get valid sale config, treat it as ended
-      };
-    }
-
     // Helper for BigInt serialization
-    const convertBigIntsForLog = (obj: any): any => {
+    const convertForLog = (obj: any): any => {
       if (typeof obj === 'bigint') return obj.toString();
       if (typeof obj !== 'object' || obj === null) return obj;
-      if (Array.isArray(obj)) return obj.map(convertBigIntsForLog);
+      if (Array.isArray(obj)) return obj.map(convertForLog);
       return Object.fromEntries(
-        Object.entries(obj).map(([key, value]) => [key, convertBigIntsForLog(value)])
+        Object.entries(obj).map(([key, value]) => [key, convertForLog(value)])
       );
     };
 
-    console.log('Raw token response from Zora:', JSON.stringify(convertBigIntsForLog(token), null, 2));
+    // Log raw response for debugging
+    console.log('Raw Zora SDK Response:', JSON.stringify(convertForLog({
+      token: response.token,
+      primaryMintActive: response.primaryMintActive,
+      primaryMintEnd: response.primaryMintEnd,
+      secondaryMarketActive: response.secondaryMarketActive,
+      prepareMint: !!response.prepareMint
+    }), null, 2));
 
-    // Get secondary market info if active
-    const secondaryInfo = secondaryMarketActive ? 
-      await getSecondaryInfo({
-        contract: contractAddress,
-        tokenId,
-        publicClient
-      }) : undefined;
-
-    console.log('Secondary market info:', JSON.stringify(convertBigIntsForLog(secondaryInfo), null, 2));
-
-    // Extract price and payment info based on token info
+    // Get cost information using prepareMint
     let mintPrice = BigInt(0);
     let paymentToken = undefined;
-    let saleType: TokenDetails['saleType'] = undefined;
 
-    // Determine sale type from token info
-    if ('salesConfig' in token) {
-      const config = token.salesConfig;
-      
-      // Check if it's a timed sale first (has mintFeePerQuantity of ✧111)
-      if ('mintFeePerQuantity' in config && config.mintFeePerQuantity === '111000000000000') {
-        saleType = 'timed';
-        mintPrice = BigInt(config.mintFeePerQuantity);
-      }
-      // Then check if it's a fixed price sale (ETH or ERC20)
-      else if ('pricePerToken' in config) {
-        saleType = 'fixedPrice';
-        mintPrice = BigInt(config.pricePerToken);
+    if (response.prepareMint) {
+      const { costs } = response.prepareMint({
+        minterAccount: '0x0000000000000000000000000000000000000000' as `0x${string}`,
+        quantityToMint: BigInt(1)
+      });
+
+      console.log('Mint costs:', JSON.stringify(convertForLog(costs), null, 2));
+
+      // If there's a currency token, it will be in costs.totalPurchaseCostCurrency
+      if (costs.totalPurchaseCostCurrency) {
+        mintPrice = costs.totalPurchaseCostCurrency;
         
-        // If there's a currency field, it's an ERC20 payment
-        if ('currency' in config && config.currency !== '0x0000000000000000000000000000000000000000') {
+        // Get ERC20 token details if needed
+        if ('salesConfig' in response.token && 
+            'currency' in response.token.salesConfig && 
+            response.token.salesConfig.currency && 
+            response.token.salesConfig.currency !== '0x0000000000000000000000000000000000000000') {
           try {
-            // Get ERC20 token details
-            const name = await publicClient.readContract({
-              address: config.currency as `0x${string}`,
-              abi: [{ inputs: [], name: 'name', outputs: [{ type: 'string' }], type: 'function' }],
-              functionName: 'name'
-            }) as string;
-
-            const symbol = await publicClient.readContract({
-              address: config.currency as `0x${string}`,
-              abi: [{ inputs: [], name: 'symbol', outputs: [{ type: 'string' }], type: 'function' }],
-              functionName: 'symbol'
-            }) as string;
-
-            const decimals = await publicClient.readContract({
-              address: config.currency as `0x${string}`,
-              abi: [{ inputs: [], name: 'decimals', outputs: [{ type: 'uint8' }], type: 'function' }],
-              functionName: 'decimals'
-            }) as number;
+            const [name, symbol, decimals] = await Promise.all([
+              publicClient.readContract({
+                address: response.token.salesConfig.currency as `0x${string}`,
+                abi: [{ inputs: [], name: 'name', outputs: [{ type: 'string' }], type: 'function' }],
+                functionName: 'name'
+              }),
+              publicClient.readContract({
+                address: response.token.salesConfig.currency as `0x${string}`,
+                abi: [{ inputs: [], name: 'symbol', outputs: [{ type: 'string' }], type: 'function' }],
+                functionName: 'symbol'
+              }),
+              publicClient.readContract({
+                address: response.token.salesConfig.currency as `0x${string}`,
+                abi: [{ inputs: [], name: 'decimals', outputs: [{ type: 'uint8' }], type: 'function' }],
+                functionName: 'decimals'
+              })
+            ]);
 
             paymentToken = {
-              address: config.currency as `0x${string}`,
-              name,
-              symbol,
-              decimals
+              address: response.token.salesConfig.currency as `0x${string}`,
+              name: name as string,
+              symbol: symbol as string,
+              decimals: decimals as number
             };
           } catch (error) {
             console.error('Error fetching ERC20 token details:', error);
           }
         }
+      } else {
+        // ETH price
+        mintPrice = costs.totalCostEth;
       }
-    } 
-    // Check for allowlist configuration
-    else if ('allowlistConfig' in token) {
-      const config = token.allowlistConfig;
-      saleType = 'allowlist';
-      mintPrice = config.pricePerToken ? BigInt(config.pricePerToken) : BigInt(0);
-      
-      if (config.currency && config.currency !== '0x0000000000000000000000000000000000000000') {
-        try {
-          // Get ERC20 token details for allowlist
-          const name = await publicClient.readContract({
-            address: config.currency as `0x${string}`,
-            abi: [{ inputs: [], name: 'name', outputs: [{ type: 'string' }], type: 'function' }],
-            functionName: 'name'
-          }) as string;
+    }
 
-          const symbol = await publicClient.readContract({
-            address: config.currency as `0x${string}`,
-            abi: [{ inputs: [], name: 'symbol', outputs: [{ type: 'string' }], type: 'function' }],
-            functionName: 'symbol'
-          }) as string;
-
-          const decimals = await publicClient.readContract({
-            address: config.currency as `0x${string}`,
-            abi: [{ inputs: [], name: 'decimals', outputs: [{ type: 'uint8' }], type: 'function' }],
-            functionName: 'decimals'
-          }) as number;
-
-          paymentToken = {
-            address: config.currency as `0x${string}`,
-            name,
-            symbol,
-            decimals
-          };
-        } catch (error) {
-          console.error('Error fetching ERC20 token details:', error);
-        }
-      }
+    // Get secondary market info if active
+    let secondaryInfo = undefined;
+    if (response.secondaryMarketActive) {
+      secondaryInfo = await getSecondaryInfo({
+        contract: contractAddress,
+        tokenId,
+        publicClient
+      });
     }
 
     // Determine sale status based on dates and primary mint status
     let saleStatus: TokenDetails['saleStatus'];
+    const now = BigInt(Math.floor(Date.now() / 1000));
+    const config = 'salesConfig' in response.token ? response.token.salesConfig : null;
     
-    if ('salesConfig' in token) {
-      const { saleStart, saleEnd } = token.salesConfig;
-      if (saleStart && saleEnd) {
-        const now = BigInt(Math.floor(Date.now() / 1000));
-        const start = BigInt(saleStart);
-        const end = BigInt(saleEnd);
-        
-        if (now < start) {
-          saleStatus = 'not_started';
-        } else if (now > end || !primaryMintActive) {
-          saleStatus = 'ended';
-        } else {
-          saleStatus = 'active';
-        }
+    if (config && config.saleStart && config.saleEnd) {
+      const start = BigInt(config.saleStart);
+      const end = BigInt(config.saleEnd);
+      
+      if (now < start) {
+        saleStatus = 'not_started';
+      } else if (now > end || !response.primaryMintActive) {
+        saleStatus = 'ended';
       } else {
-        // No dates specified, just use primaryMintActive
-        saleStatus = primaryMintActive ? 'active' : 'ended';
-      }
-    } else if ('allowlistConfig' in token) {
-      const { startTime, endTime } = token.allowlistConfig;
-      if (startTime && endTime) {
-        const now = BigInt(Math.floor(Date.now() / 1000));
-        const start = BigInt(startTime);
-        const end = BigInt(endTime);
-        
-        if (now < start) {
-          saleStatus = 'not_started';
-        } else if (now > end || !primaryMintActive) {
-          saleStatus = 'ended';
-        } else {
-          saleStatus = 'active';
-        }
-      } else {
-        // No dates specified, just use primaryMintActive
-        saleStatus = primaryMintActive ? 'active' : 'ended';
+        saleStatus = 'active';
       }
     } else {
-      // No sale config at all, treat as ended
-      saleStatus = 'ended';
+      saleStatus = response.primaryMintActive ? 'active' : 'ended';
     }
 
     return {
       // Primary market info
-      totalMinted: BigInt(token.totalMinted),
-      maxSupply: token.maxSupply ? BigInt(token.maxSupply) : null,
+      totalMinted: BigInt(response.token.totalMinted),
+      maxSupply: response.token.maxSupply ? BigInt(response.token.maxSupply) : null,
       mintPrice,
-      primaryMintActive,
-      primaryMintEnd,
+      primaryMintActive: response.primaryMintActive,
+      primaryMintEnd: response.primaryMintEnd,
       paymentToken,
 
-      // Sale type info
-      saleType,
+      // Sale type info (directly from Zora SDK)
+      saleType: 'salesConfig' in response.token && 'saleType' in response.token.salesConfig 
+        ? response.token.salesConfig.saleType 
+        : undefined,
       saleStatus,
 
-      // Timed sale info
-      saleStart: 'salesConfig' in token && token.salesConfig.saleStart ? 
-        BigInt(token.salesConfig.saleStart) : 
-        'allowlistConfig' in token && token.allowlistConfig.startTime ? 
-        BigInt(token.allowlistConfig.startTime) : undefined,
-      saleEnd: 'salesConfig' in token && token.salesConfig.saleEnd ? 
-        BigInt(token.salesConfig.saleEnd) : 
-        'allowlistConfig' in token && token.allowlistConfig.endTime ? 
-        BigInt(token.allowlistConfig.endTime) : undefined,
+      // Sale timing
+      saleStart: config?.saleStart ? BigInt(config.saleStart) : undefined,
+      saleEnd: config?.saleEnd ? BigInt(config.saleEnd) : undefined,
 
       // Secondary market info
-      secondaryActive: secondaryMarketActive,
+      secondaryActive: response.secondaryMarketActive,
       secondaryPool: secondaryInfo?.pool,
       secondaryToken: secondaryInfo ? {
         address: secondaryInfo.erc20z,
@@ -354,7 +220,6 @@ export class EnsuranceCollector {
     const contractAddress = ensuranceContracts[chain] as `0x${string}`;
     const publicClient = this.getPublicClient(chain);
 
-    // Use mint function directly
     const { parameters, erc20Approval } = await mint({
       tokenContract: contractAddress,
       tokenId,
@@ -366,37 +231,20 @@ export class EnsuranceCollector {
       mintRecipient: recipient
     });
 
-    console.log('Raw Zora mint response:', JSON.stringify({ parameters, erc20Approval }, null, 2));
-
-    // Get token details to check if this is an ERC20 mint
-    const { token } = await getToken({
-      tokenContract: contractAddress,
-      tokenId,
-      chainId: chainConfig[chain].id,
-      publicClient
-    });
-
-    console.log('Token details:', JSON.stringify(token, null, 2));
-
-    // Convert any BigInt values to hex strings
+    // Convert BigInts to hex strings for wallet compatibility
     const convertBigInts = (obj: any): any => {
       if (typeof obj !== 'object' || obj === null) return obj;
       if (typeof obj === 'bigint') return `0x${obj.toString(16)}`;
-      
       return Object.entries(obj).reduce((acc, [key, value]) => {
         acc[key] = convertBigInts(value);
         return acc;
       }, {} as any);
     };
 
-    const result = {
+    return {
       parameters: convertBigInts(parameters),
       chainId: chainConfig[chain].id,
       erc20Approval: erc20Approval ? convertBigInts(erc20Approval) : undefined
     };
-
-    console.log('Converted mint parameters:', result);
-
-    return result;
   }
 } 

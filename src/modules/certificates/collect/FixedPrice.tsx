@@ -8,9 +8,10 @@ import { EnsureButton } from './components/button';
 interface FixedPriceProps {
   asset: Asset;
   tokenDetails: TokenDetails;
+  onEnsure: (quantity: number) => Promise<void>;
 }
 
-export function FixedPriceActions({ asset, tokenDetails }: FixedPriceProps) {
+export function FixedPriceActions({ asset, tokenDetails, onEnsure }: FixedPriceProps) {
   const [quantity, setQuantity] = useState(1);
 
   return (
@@ -53,6 +54,7 @@ export function FixedPriceActions({ asset, tokenDetails }: FixedPriceProps) {
         tokenId={asset.token_id}
         quantity={quantity}
         tokenDetails={tokenDetails}
+        onEnsure={onEnsure}
       />
     </div>
   );
