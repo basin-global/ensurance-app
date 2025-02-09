@@ -4,7 +4,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreVertical, PlusCircle } from "lucide-react"
 import Link from 'next/link'
 import Image from 'next/image'
-import { isEnsuranceToken } from '@/modules/certificates/config'
+import { isEnsuranceToken } from '@/modules/certificates/config/ensurance'
 import { Asset, EnsureOperation } from '@/types'
 import { toast } from 'react-toastify'
 

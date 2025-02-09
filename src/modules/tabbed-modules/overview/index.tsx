@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { isEnsuranceToken } from '@/modules/certificates/config'
+import { isEnsuranceToken } from '@/modules/certificates/config/ensurance'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 

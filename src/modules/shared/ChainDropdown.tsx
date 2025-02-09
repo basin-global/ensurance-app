@@ -1,7 +1,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { getActiveChains, chainOrder } from '@/config/chains';
-import { ensuranceContracts } from '@/modules/certificates/config';
+import { ensuranceContracts } from '@/modules/certificates/config/ensurance';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ChainDropdownProps } from '@/types';
 

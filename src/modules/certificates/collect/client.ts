@@ -1,7 +1,7 @@
 import { getToken, mint, getSecondaryInfo, type MintableReturn } from "@zoralabs/protocol-sdk";
 import { type PublicClient, createPublicClient, http, type Chain } from 'viem';
 import { base, zora, arbitrum, optimism } from 'viem/chains';
-import { ensuranceContracts } from '@/modules/certificates/config';
+import { ensuranceContracts } from '@/modules/certificates/config/ensurance';
 
 // Chain configuration
 export type EnsuranceChain = 'base' | 'zora' | 'arbitrum' | 'optimism';

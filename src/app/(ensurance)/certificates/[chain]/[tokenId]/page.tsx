@@ -7,7 +7,7 @@ import { AssetDetailView } from '@/modules/assets/details/AssetDetailView';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { getEnsuranceContractForChain } from '@/modules/certificates/config';
+import { getEnsuranceContractForChain } from '@/modules/certificates/config/ensurance';
 import { EnsuranceCollector, type TokenDetails } from '@/modules/certificates/collect/client';
 import { formatEther } from 'viem';
 import { SplitsBar } from '@/modules/splits/components/SplitsBar';
