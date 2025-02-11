@@ -17,7 +17,7 @@ export function UtilityLinks() {
           $ENSURE
         </a>
         <a
-          href="https://binder.basin.global"
+          href="https://binder.ensurance.app/"
           target="_blank"
           rel="noopener noreferrer"
           className="font-space-mono text-base tracking-wider text-gray-500 hover:text-gray-300 transition-colors"
