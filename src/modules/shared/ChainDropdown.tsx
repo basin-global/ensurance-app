@@ -5,6 +5,9 @@ import { ensuranceContracts } from '@/modules/certificates/config/ensurance';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ChainDropdownProps } from '@/types';
 
+// Exchange-enabled chains
+const EXCHANGE_ENABLED_CHAINS = ['base', 'arbitrum', 'optimism'] as const;
+
 function ChainDropdown({ 
   selectedChain, 
   onChange,
@@ -12,7 +15,10 @@ function ChainDropdown({
   className = ""
 }: ChainDropdownProps) {
   const chains = getActiveChains()
+    // Filter for Ensurance contracts if needed
     .filter(chain => !filterEnsurance || chain.simplehashName in ensuranceContracts)
+    // For exchange variant, only show exchange-enabled chains
+    .filter(chain => !filterEnsurance || EXCHANGE_ENABLED_CHAINS.includes(chain.simplehashName))
     .sort((a, b) => {
       const aIndex = chainOrder.indexOf(a.simplehashName);
       const bIndex = chainOrder.indexOf(b.simplehashName);
@@ -20,7 +26,7 @@ function ChainDropdown({
     });
 
   const chainOptions = filterEnsurance
-    ? Object.keys(ensuranceContracts)
+    ? EXCHANGE_ENABLED_CHAINS
     : chains.map(chain => chain.simplehashName);
 
   const getChainIconPath = (chainName: string) => {

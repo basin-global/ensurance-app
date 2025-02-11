@@ -21,6 +21,20 @@ export const supportedERC20s: { [chainId: string]: ChainERC20Config } = {
       decimals: 6
     }
   },
+  'arbitrum': {
+    'ENSURE': {
+      address: '0x0ea010dCB1DfBE5c9d1AC475901a59642bad90f4',
+      symbol: 'ENSURE',
+      decimals: 18
+    }
+  },
+  'optimism': {
+    'ENSURE': {
+      address: '0x0ea010dCB1DfBE5c9d1AC475901a59642bad90f4',
+      symbol: 'ENSURE',
+      decimals: 18
+    }
+  },
   // Add other chains as needed
   'zora': {
     'USDC': {

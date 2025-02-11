@@ -16,9 +16,10 @@ interface CertificatesGridProps {
   urlPrefix?: string
   walletAddress?: string
   hideSearch?: boolean
-  variant?: 'default' | 'home' | 'tend' | 'account-main'
+  variant?: 'default' | 'home' | 'tend' | 'account-main' | 'exchange'
   maxItems?: number
   accountName?: string
+  selectedChain?: string
 }
 
 export default function CertificatesGrid({ 
@@ -29,7 +30,8 @@ export default function CertificatesGrid({
   hideSearch = false,
   variant = 'default',
   maxItems = 16,
-  accountName
+  accountName,
+  selectedChain
 }: CertificatesGridProps) {
   const [assets, setAssets] = useState<Asset[]>([])
   const [loading, setLoading] = useState(true)
@@ -95,26 +97,31 @@ export default function CertificatesGrid({
     }
   }, [fetchCertificates, error])
 
-  // Filter assets based on search query
+  // Filter assets based on chain
   const filteredAssets = useMemo(() => {
-    if (!searchQuery) return assets;
+    let filtered = assets;
     
-    const keywords = searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
-    console.log('Filtering with keywords:', keywords);
-    
-    return assets.filter(asset => {
-      // Only search in name and description of certificates
-      const searchableFields = [
-        asset.name?.toLowerCase() || '',
-        asset.description?.toLowerCase() || ''
-      ];
-      
-      // Match if any keyword matches any field
-      return keywords.some(keyword => 
-        searchableFields.some(field => field.includes(keyword))
-      );
-    });
-  }, [assets, searchQuery])
+    // Filter by search query if present
+    if (searchQuery) {
+      const keywords = searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
+      filtered = filtered.filter(asset => {
+        const searchableFields = [
+          asset.name?.toLowerCase() || '',
+          asset.description?.toLowerCase() || ''
+        ];
+        return keywords.some(keyword => 
+          searchableFields.some(field => field.includes(keyword))
+        );
+      });
+    }
+
+    // Filter by chain if in exchange variant
+    if (variant === 'exchange' && selectedChain) {
+      filtered = filtered.filter(asset => asset.chain === selectedChain);
+    }
+
+    return filtered;
+  }, [assets, searchQuery, variant, selectedChain]);
 
   // Filter and limit assets based on variant
   const displayAssets = useMemo(() => {
@@ -255,6 +262,32 @@ export default function CertificatesGrid({
         <div className="text-center py-8">
           <p className="text-lg text-gray-600 dark:text-gray-400">
             No certificates found{searchQuery ? ' matching your search' : ''}.
+          </p>
+        </div>
+      )}
+    </div>
+  ) : variant === 'exchange' ? (
+    <div className="space-y-6">
+      {filteredAssets.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {filteredAssets.map((asset) => (
+            <AssetCard 
+              key={asset.nft_id}
+              asset={asset} 
+              address={walletAddress || ""}
+              isEnsuranceTab={true}
+              isTokenbound={false}
+              isOwner={!!walletAddress}
+              variant="exchange"
+              hideCollection={true}
+              hideChain={false}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-8">
+          <p className="text-lg text-gray-600 dark:text-gray-400">
+            No certificates found on {selectedChain}
           </p>
         </div>
       )}
