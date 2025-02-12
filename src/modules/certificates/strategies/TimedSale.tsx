@@ -3,23 +3,27 @@ import { Plus, Minus } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Asset } from '@/types';
 import { TokenDetails } from '@/modules/certificates/collect/client';
-import { QuantityInput } from './components/quantity';
-import { EnsureButton } from './components/button';
+import { QuantityInput } from '../collect/components/quantity';
+import { EnsureButton } from '../collect/components/button';
 import { formatEther } from 'viem';
-import { type SaleActionsProps } from './types';
+import { SaleProps, SaleConfig } from './types';
 
-interface TimedSaleProps {
-  asset: Asset;
-  tokenDetails: TokenDetails;
-  onEnsure: (quantity: number) => Promise<void>;
-}
-
-export function TimedSaleActions({ asset, tokenDetails, onEnsure }: TimedSaleProps) {
+export function TimedSaleStrategy(props: SaleProps) {
+  const { asset, tokenDetails, mode } = props;
   const [quantity, setQuantity] = useState(1);
   const [timeRemaining, setTimeRemaining] = useState<string | null>(null);
+  const [config, setConfig] = useState<Partial<SaleConfig>>({
+    saleType: 'timed',
+    price: tokenDetails.mintPrice?.toString() || '0',
+    maxSupply: Number(tokenDetails.maxSupply) || 0,
+    saleStart: Number(tokenDetails.saleStart) || 0,
+    saleEnd: Number(tokenDetails.saleEnd) || 0
+  });
 
   // Calculate time remaining if sale has started
   useEffect(() => {
+    if (mode !== 'collect') return;
+    
     const calculateTimeRemaining = () => {
       if (!tokenDetails.saleEnd) return null;
       const now = Math.floor(Date.now() / 1000);
@@ -34,20 +38,16 @@ export function TimedSaleActions({ asset, tokenDetails, onEnsure }: TimedSalePro
       return `${hours}h ${minutes}m ${remainingSeconds}s`;
     };
 
-    // Initial calculation
     setTimeRemaining(calculateTimeRemaining());
-
-    // Update every second
     const timer = setInterval(() => {
       setTimeRemaining(calculateTimeRemaining());
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [tokenDetails.saleEnd]);
+  }, [tokenDetails.saleEnd, mode]);
 
-  return (
-    <div className="flex flex-col gap-4">
-      {/* Quantity Selector */}
+  const renderCollectUI = () => (
+    <>
       <QuantityInput
         quantity={quantity}
         onChange={setQuantity}
@@ -55,7 +55,6 @@ export function TimedSaleActions({ asset, tokenDetails, onEnsure }: TimedSalePro
         disabled={tokenDetails.saleStatus !== 'active'}
       />
 
-      {/* Timed Sale Info */}
       <div className="p-4 bg-gray-900 rounded-lg">
         <div className="flex justify-between items-center">
           <p className="text-gray-400">Base Fee</p>
@@ -69,7 +68,6 @@ export function TimedSaleActions({ asset, tokenDetails, onEnsure }: TimedSalePro
         )}
       </div>
 
-      {/* Secondary Market Info */}
       {tokenDetails.secondaryActive && (
         <div className="p-4 bg-gray-900 rounded-lg">
           <h3 className="text-lg font-semibold mb-4">Secondary Market</h3>
@@ -86,30 +84,77 @@ export function TimedSaleActions({ asset, tokenDetails, onEnsure }: TimedSalePro
                 </div>
               </>
             )}
-            {tokenDetails.secondaryCountdown && (
-              <>
-                <div>
-                  <p className="text-gray-400">Market Countdown</p>
-                  <p className="font-mono">{tokenDetails.secondaryCountdown.timeInSeconds.toString()} seconds</p>
-                </div>
-                <div>
-                  <p className="text-gray-400">Required Mints</p>
-                  <p className="font-mono">{tokenDetails.secondaryCountdown.minimumMints.toString()}</p>
-                </div>
-              </>
-            )}
           </div>
         </div>
       )}
 
-      {/* Ensure Button */}
       <EnsureButton
         chain={asset.chain as any}
         tokenId={asset.token_id}
         quantity={quantity}
         tokenDetails={tokenDetails}
-        onEnsure={onEnsure}
+        onEnsure={'onEnsure' in props ? props.onEnsure : undefined}
       />
+    </>
+  );
+
+  const renderCreateUI = () => (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">Start Time</label>
+          <input
+            type="datetime-local"
+            className="w-full rounded-md border-gray-300"
+            value={new Date(config.saleStart! * 1000).toISOString().slice(0, 16)}
+            onChange={(e) => setConfig({
+              ...config,
+              saleStart: Math.floor(new Date(e.target.value).getTime() / 1000)
+            })}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">End Time</label>
+          <input
+            type="datetime-local"
+            className="w-full rounded-md border-gray-300"
+            value={new Date(config.saleEnd! * 1000).toISOString().slice(0, 16)}
+            onChange={(e) => setConfig({
+              ...config,
+              saleEnd: Math.floor(new Date(e.target.value).getTime() / 1000)
+            })}
+          />
+        </div>
+      </div>
+
+      <Button 
+        onClick={() => 'onSave' in props && props.onSave(config as SaleConfig)}
+        className="w-full"
+      >
+        Save Timed Sale Configuration
+      </Button>
+    </div>
+  );
+
+  const renderAdminUI = () => (
+    <div className="space-y-4">
+      {renderCreateUI()}
+      <div className="p-4 bg-gray-900 rounded-lg">
+        <h3 className="text-lg font-semibold mb-4">Current Sale Status</h3>
+        <div className="space-y-2">
+          <p>Status: {tokenDetails.saleStatus}</p>
+          <p>Minted: {tokenDetails.totalMinted?.toString()} / {tokenDetails.maxSupply?.toString()}</p>
+          {timeRemaining && <p>Time Remaining: {timeRemaining}</p>}
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col gap-4">
+      {mode === 'collect' && renderCollectUI()}
+      {mode === 'create' && renderCreateUI()}
+      {mode === 'admin' && renderAdminUI()}
     </div>
   );
 } 

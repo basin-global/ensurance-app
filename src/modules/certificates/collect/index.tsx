@@ -1,14 +1,15 @@
-import { FixedPriceActions } from './FixedPrice';
-import { TimedSaleActions } from './TimedSale';
-import { type SaleActionsProps } from './types';
+import { FixedPriceStrategy } from '../strategies/FixedPrice';
+import { TimedSaleStrategy } from '../strategies/TimedSale';
+import { type CollectSaleProps } from '../strategies/types';
 
-export function SaleActions({ asset, tokenDetails, onEnsure }: SaleActionsProps) {
+export function SaleActions({ asset, tokenDetails, onEnsure }: CollectSaleProps) {
   // Use Zora's saleType directly
   const isTimedSale = tokenDetails.saleType === 'timed';
 
   if (isTimedSale) {
     return (
-      <TimedSaleActions
+      <TimedSaleStrategy
+        mode="collect"
         asset={asset}
         tokenDetails={tokenDetails}
         onEnsure={onEnsure}
@@ -17,7 +18,8 @@ export function SaleActions({ asset, tokenDetails, onEnsure }: SaleActionsProps)
   }
 
   return (
-    <FixedPriceActions
+    <FixedPriceStrategy
+      mode="collect"
       asset={asset}
       tokenDetails={tokenDetails}
       onEnsure={onEnsure}

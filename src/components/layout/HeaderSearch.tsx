@@ -62,7 +62,7 @@ export function HeaderSearch() {
           const shortcutPath = shortcuts[event.key.toLowerCase()]
           if (shortcutPath) {
             event.preventDefault()
-            if (shortcutPath.includes('coinbase.com')) {
+            if (shortcutPath.includes('coinbase.com') || shortcutPath.includes('binder.ensurance.app')) {
               window.open(shortcutPath, '_blank')
             } else {
               window.location.href = shortcutPath
@@ -263,8 +263,8 @@ export function HeaderSearch() {
                   key={i}
                   href={result.path}
                   onClick={() => setIsOpen(false)}
-                  target={result.path.includes('coinbase.com') ? '_blank' : undefined}
-                  rel={result.path.includes('coinbase.com') ? 'noopener noreferrer' : undefined}
+                  target={result.path.includes('coinbase.com') || result.path.includes('binder.ensurance.app') ? '_blank' : undefined}
+                  rel={result.path.includes('coinbase.com') || result.path.includes('binder.ensurance.app') ? 'noopener noreferrer' : undefined}
                   className={cn(
                     "block px-4 py-2 hover:bg-[rgba(var(--foreground-rgb),0.1)]",
                     "text-[rgb(var(--foreground-rgb))] rounded-lg",
