@@ -1,12 +1,14 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { Card, CardContent } from "@/components/ui/card"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { MoreVertical, PlusCircle } from "lucide-react"
+import { MoreVertical, PlusCircle, ArrowLeftRight } from "lucide-react"
 import Link from 'next/link'
 import Image from 'next/image'
 import { isEnsuranceToken } from '@/modules/certificates/config/ensurance'
 import { Asset, EnsureOperation } from '@/types'
 import { toast } from 'react-toastify'
+import { getCertificateUsdValue } from '@/modules/certificates/config/exchange-rates'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface AssetCardProps {
   asset: Asset;
@@ -122,39 +124,96 @@ export default function AssetCard({
                 ×{quantity}
               </div>
 
-              {asset.video_url ? (
-                <video 
-                  src={asset.video_url}
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  className="w-full h-auto object-contain"
-                />
+              {variant === 'exchange' ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="w-full">
+                        {asset.video_url ? (
+                          <video 
+                            src={asset.video_url}
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                            className="w-full h-auto object-contain"
+                          />
+                        ) : (
+                          <div className="relative w-full">
+                            <div className="aspect-[1/1] relative">
+                              <Image 
+                                src={asset.image_url || FALLBACK_IMAGE} 
+                                alt={asset.name || 'NFT'} 
+                                fill
+                                className="object-contain"
+                                unoptimized={asset.image_url?.toLowerCase?.()?.endsWith('.gif') || false}
+                                onError={(e) => {
+                                  const img = e.target as HTMLImageElement;
+                                  img.src = FALLBACK_IMAGE;
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="font-medium">{asset.name || 'Untitled'}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               ) : (
-                <div className="relative w-full">
-                  <div className="aspect-[1/1] relative">
-                    <Image 
-                      src={asset.image_url || FALLBACK_IMAGE} 
-                      alt={asset.name || 'NFT'} 
-                      fill
-                      className="object-contain"
-                      unoptimized={asset.image_url?.toLowerCase?.()?.endsWith('.gif') || false}
-                      onError={(e) => {
-                        const img = e.target as HTMLImageElement;
-                        img.src = FALLBACK_IMAGE;
-                      }}
+                <>
+                  {asset.video_url ? (
+                    <video 
+                      src={asset.video_url}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      className="w-full h-auto object-contain"
                     />
-                  </div>
-                </div>
+                  ) : (
+                    <div className="relative w-full">
+                      <div className="aspect-[1/1] relative">
+                        <Image 
+                          src={asset.image_url || FALLBACK_IMAGE} 
+                          alt={asset.name || 'NFT'} 
+                          fill
+                          className="object-contain"
+                          unoptimized={asset.image_url?.toLowerCase?.()?.endsWith('.gif') || false}
+                          onError={(e) => {
+                            const img = e.target as HTMLImageElement;
+                            img.src = FALLBACK_IMAGE;
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
             <div className="p-4">
-              <h3 className="font-bold text-lg line-clamp-1 text-gray-100">
-                {asset.name || 'Untitled'}
-              </h3>
-              {!hideChain && (
+              {variant === 'exchange' ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <h3 className="font-bold text-lg line-clamp-1 text-gray-100">
+                        {asset.name || 'Untitled'}
+                      </h3>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="font-medium">{asset.name || 'Untitled'}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                <h3 className="font-bold text-lg line-clamp-1 text-gray-100">
+                  {asset.name || 'Untitled'}
+                </h3>
+              )}
+              {!hideChain && variant !== 'exchange' && (
                 <p className="text-xs text-gray-500">{formatChainName(asset.chain)}</p>
               )}
               {exchangeRate && (
@@ -163,10 +222,17 @@ export default function AssetCard({
                   <span className="ml-2 font-medium">${exchangeRate}</span>
                 </div>
               )}
+              {variant === 'exchange' && (
+                <div className="mt-2 text-sm flex items-center justify-center gap-2">
+                  <ArrowLeftRight className="w-4 h-4 text-gray-400" />
+                  <span className="font-medium">${getCertificateUsdValue(asset.chain, asset.contract_address, asset.token_id).toFixed(2)}</span>
+                  <ArrowLeftRight className="w-4 h-4 text-gray-400" />
+                </div>
+              )}
               {isSelected && selectedQuantity > 0 && (
-                <div className="mt-2 text-sm">
-                  <span className="text-gray-400">Selected:</span>
-                  <span className="ml-2 font-medium">×{selectedQuantity}</span>
+                <div className="mt-2 text-sm flex flex-col items-center justify-center">
+                  <span className="font-medium text-lg">×{selectedQuantity}</span>
+                  <span className="text-gray-400 text-xs">selected</span>
                 </div>
               )}
             </div>
