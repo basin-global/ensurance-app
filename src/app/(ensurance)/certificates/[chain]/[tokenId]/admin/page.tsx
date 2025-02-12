@@ -4,7 +4,7 @@ import { ChangeSale } from "@/modules/certificates/admin/ChangeSale"
 import { CurrentSaleInfo } from "@/modules/certificates/admin/CurrentSaleInfo"
 import { useState } from 'react'
 import { usePrivy, useWallets } from '@privy-io/react-auth'
-import { isAdmin } from '@/config/admin'
+import { isAppAdmin } from '@/config/admin'
 
 export default function TokenAdminPage({ 
   params: { chain, tokenId } 
@@ -28,7 +28,7 @@ export default function TokenAdminPage({
 
   // Check if wallet is connected and is admin
   const connectedWallet = wallets[0]
-  if (!connectedWallet || !isAdmin(connectedWallet.address)) {
+  if (!connectedWallet || !isAppAdmin(connectedWallet.address)) {
     return (
       <div className="container mx-auto p-4">
         <div className="p-4 bg-red-900/20 rounded-lg">

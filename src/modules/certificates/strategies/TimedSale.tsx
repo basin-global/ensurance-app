@@ -1,53 +1,66 @@
-import { useState, useEffect } from 'react';
-import { Plus, Minus } from 'lucide-react';
+import { useState } from 'react';
+import { formatEther, parseEther } from 'viem';
 import { Button } from "@/components/ui/button";
 import { Asset } from '@/types';
 import { TokenDetails } from '@/modules/certificates/collect/client';
 import { QuantityInput } from '../collect/components/quantity';
 import { EnsureButton } from '../collect/components/button';
-import { formatEther } from 'viem';
-import { SaleProps, SaleConfig } from './types';
+import { SaleProps, TimedSaleConfig, TimedSaleError } from './types';
+import { TIMED_SALE_MINTER } from './types';
 
 export function TimedSaleStrategy(props: SaleProps) {
   const { asset, tokenDetails, mode } = props;
   const [quantity, setQuantity] = useState(1);
-  const [timeRemaining, setTimeRemaining] = useState<string | null>(null);
-  const [config, setConfig] = useState<Partial<SaleConfig>>({
+  const [error, setError] = useState<TimedSaleError | null>(null);
+  const [config, setConfig] = useState<Partial<TimedSaleConfig>>({
     saleType: 'timed',
-    price: tokenDetails.mintPrice?.toString() || '0',
-    maxSupply: Number(tokenDetails.maxSupply) || 0,
-    saleStart: Number(tokenDetails.saleStart) || 0,
-    saleEnd: Number(tokenDetails.saleEnd) || 0
+    saleStart: Math.floor(Date.now() / 1000),  // Now
+    marketCountdown: 24 * 60 * 60,  // 24 hours until market launch
+    minimumMarketEth: parseEther('0.01').toString(),  // 0.01 ETH minimum
+    name: `${asset.name || 'Token'} Market`,
+    symbol: `${asset.symbol || 'TKN'}z`
   });
 
-  // Calculate time remaining if sale has started
-  useEffect(() => {
-    if (mode !== 'collect') return;
+  const validateConfig = () => {
+    const now = Math.floor(Date.now() / 1000);
     
-    const calculateTimeRemaining = () => {
-      if (!tokenDetails.saleEnd) return null;
-      const now = Math.floor(Date.now() / 1000);
-      const end = Number(tokenDetails.saleEnd);
-      if (now >= end) return null;
-      
-      const seconds = end - now;
-      const hours = Math.floor(seconds / 3600);
-      const minutes = Math.floor((seconds % 3600) / 60);
-      const remainingSeconds = seconds % 60;
-      
-      return `${hours}h ${minutes}m ${remainingSeconds}s`;
-    };
+    if (!config.saleStart || !config.marketCountdown) {
+      setError({ code: 'SaleNotSet' });
+      return false;
+    }
 
-    setTimeRemaining(calculateTimeRemaining());
-    const timer = setInterval(() => {
-      setTimeRemaining(calculateTimeRemaining());
-    }, 1000);
+    if (config.saleStart <= now) {
+      setError({ code: 'SaleHasNotStarted' });
+      return false;
+    }
 
-    return () => clearInterval(timer);
-  }, [tokenDetails.saleEnd, mode]);
+    if (!config.name || !config.symbol) {
+      setError({ code: 'SaleNotSet' });
+      return false;
+    }
+
+    setError(null);
+    return true;
+  };
+
+  // Calculate end time for display
+  const getEndTime = () => {
+    if (!config.saleStart || !config.marketCountdown) return null;
+    return new Date((config.saleStart + config.marketCountdown) * 1000);
+  };
+
+  const handleSave = () => {
+    if (!validateConfig() || !('onSave' in props)) return;
+    props.onSave(config as TimedSaleConfig);
+  };
 
   const renderCollectUI = () => (
     <>
+      {error && (
+        <div className="p-4 bg-red-900/20 rounded-lg mb-4">
+          <p className="text-red-400">{error.code}</p>
+        </div>
+      )}
       <QuantityInput
         quantity={quantity}
         onChange={setQuantity}
@@ -60,12 +73,6 @@ export function TimedSaleStrategy(props: SaleProps) {
           <p className="text-gray-400">Base Fee</p>
           <p className="font-mono">✧111 (0.000111 ETH)</p>
         </div>
-        {timeRemaining && (
-          <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-800">
-            <p className="text-gray-400">Time Remaining</p>
-            <p className="font-mono">{timeRemaining}</p>
-          </div>
-        )}
       </div>
 
       {tokenDetails.secondaryActive && (
@@ -100,35 +107,124 @@ export function TimedSaleStrategy(props: SaleProps) {
 
   const renderCreateUI = () => (
     <div className="space-y-4">
+      {error && (
+        <div className="p-4 bg-red-900/20 rounded-lg">
+          <p className="text-red-400">{error.code}</p>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-4">
+        {/* Sale Start */}
         <div>
-          <label className="block text-sm font-medium mb-1">Start Time</label>
+          <label className="block text-sm font-medium mb-1">Sale Start</label>
           <input
             type="datetime-local"
             className="w-full rounded-md border-gray-300"
             value={new Date(config.saleStart! * 1000).toISOString().slice(0, 16)}
-            onChange={(e) => setConfig({
-              ...config,
-              saleStart: Math.floor(new Date(e.target.value).getTime() / 1000)
-            })}
+            onChange={(e) => {
+              const timestamp = Math.floor(new Date(e.target.value).getTime() / 1000);
+              setConfig({
+                ...config,
+                saleStart: timestamp
+              });
+              setError(null);
+            }}
           />
         </div>
+
+        {/* Market Countdown */}
         <div>
-          <label className="block text-sm font-medium mb-1">End Time</label>
+          <label className="block text-sm font-medium mb-1">Market Launch Delay (hours)</label>
           <input
-            type="datetime-local"
+            type="number"
             className="w-full rounded-md border-gray-300"
-            value={new Date(config.saleEnd! * 1000).toISOString().slice(0, 16)}
-            onChange={(e) => setConfig({
-              ...config,
-              saleEnd: Math.floor(new Date(e.target.value).getTime() / 1000)
-            })}
+            value={Math.floor((config.marketCountdown || 0) / 3600)}
+            onChange={(e) => {
+              const hours = Number(e.target.value);
+              setConfig({
+                ...config,
+                marketCountdown: hours * 3600
+              });
+              setError(null);
+            }}
+            min="1"
+            max="168"  // 1 week
+          />
+        </div>
+
+        {/* Sale End (Read Only) */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Sale End (Calculated)</label>
+          <input
+            type="text"
+            className="w-full rounded-md border-gray-300 bg-gray-100"
+            value={getEndTime()?.toLocaleString() || 'Not set'}
+            disabled
+          />
+        </div>
+
+        {/* Minimum Market ETH */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Minimum Market ETH</label>
+          <input
+            type="number"
+            className="w-full rounded-md border-gray-300"
+            value={Number(formatEther(BigInt(config.minimumMarketEth || '0')))}
+            onChange={(e) => {
+              try {
+                const ethValue = e.target.value || '0';
+                setConfig({
+                  ...config,
+                  minimumMarketEth: parseEther(ethValue).toString()
+                });
+                setError(null);
+              } catch (err) {
+                setError({ code: 'MinimumMarketEthNotMet' });
+              }
+            }}
+            step="0.01"
+            min="0"
+          />
+        </div>
+
+        {/* Token Name */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Market Token Name</label>
+          <input
+            type="text"
+            className="w-full rounded-md border-gray-300"
+            value={config.name}
+            onChange={(e) => {
+              setConfig({
+                ...config,
+                name: e.target.value
+              });
+              setError(null);
+            }}
+            placeholder="Token Market Name"
+          />
+        </div>
+
+        {/* Token Symbol */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Market Token Symbol</label>
+          <input
+            type="text"
+            className="w-full rounded-md border-gray-300"
+            value={config.symbol}
+            onChange={(e) => {
+              setConfig({
+                ...config,
+                symbol: e.target.value.toUpperCase()
+              });
+              setError(null);
+            }}
+            placeholder="TKNz"
           />
         </div>
       </div>
 
       <Button 
-        onClick={() => 'onSave' in props && props.onSave(config as SaleConfig)}
+        onClick={handleSave}
         className="w-full"
       >
         Save Timed Sale Configuration
@@ -144,7 +240,12 @@ export function TimedSaleStrategy(props: SaleProps) {
         <div className="space-y-2">
           <p>Status: {tokenDetails.saleStatus}</p>
           <p>Minted: {tokenDetails.totalMinted?.toString()} / {tokenDetails.maxSupply?.toString()}</p>
-          {timeRemaining && <p>Time Remaining: {timeRemaining}</p>}
+          {tokenDetails.secondaryToken && (
+            <>
+              <p>Market Token: {tokenDetails.secondaryToken.name} ({tokenDetails.secondaryToken.symbol})</p>
+              <p className="text-xs text-gray-500 break-all">Token Address: {tokenDetails.secondaryToken.address}</p>
+            </>
+          )}
         </div>
       </div>
     </div>

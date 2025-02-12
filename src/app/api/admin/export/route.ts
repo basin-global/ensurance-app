@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@vercel/postgres'
 import { headers } from 'next/headers'
-import { isAdmin } from '@/config/admin'
+import { isAppAdmin } from '@/config/admin'
 import { getAddress } from 'viem'
 
 export const dynamic = 'force-dynamic'
@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     const headersList = headers()
     const address = headersList.get('x-address')
     
-    if (!address || !isAdmin(getAddress(address))) {
+    if (!address || !isAppAdmin(getAddress(address))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

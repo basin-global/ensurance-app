@@ -1,36 +1,48 @@
 import { useState } from 'react';
-import { formatEther, parseEther } from 'viem';
 import { Asset } from '@/types';
 import { TokenDetails } from '@/modules/certificates/collect/client';
 import { QuantityInput } from '../collect/components/quantity';
 import { EnsureButton } from '../collect/components/button';
 import { Button } from '@/components/ui/button';
-import { SaleProps, FixedPriceSaleConfig, FixedPriceError } from './types';
+import { SaleProps, ERC20SaleConfig, ERC20Error, ERC20_MINTER } from './types';
+import { supportedERC20s } from '@/modules/certificates/config/erc20';
 
-// Contract address is imported from types.ts
-import { FIXED_PRICE_MINTER } from './types';
-
-export function FixedPriceStrategy(props: SaleProps) {
+export function ERC20Strategy(props: SaleProps) {
   const { asset, tokenDetails, mode } = props;
   const [quantity, setQuantity] = useState(1);
-  const [error, setError] = useState<FixedPriceError | null>(null);
-  const [config, setConfig] = useState<Partial<FixedPriceSaleConfig>>({
-    saleType: 'fixedPrice',
+  const [error, setError] = useState<ERC20Error | null>(null);
+  const [config, setConfig] = useState<Partial<ERC20SaleConfig>>({
+    saleType: 'erc20',
     pricePerToken: tokenDetails.mintPrice?.toString() || '0',
     saleStart: Math.floor(Date.now() / 1000),  // Now
     saleEnd: Math.floor(Date.now() / 1000) + (365 * 24 * 60 * 60),  // 1 year from now
     maxTokensPerAddress: 0,  // Unlimited
-    fundsRecipient: '0x0000000000000000000000000000000000000000'  // Default to zero address
+    fundsRecipient: '0x0000000000000000000000000000000000000000',  // Default to zero address
+    currency: tokenDetails.paymentToken?.address as `0x${string}` || '0x0000000000000000000000000000000000000000'
   });
 
   const validateConfig = () => {
-    const now = Math.floor(Date.now() / 1000);
-    if (config.saleStart && config.saleStart > now) {
-      setError({ code: 'SaleHasNotStarted' });
+    // Validate currency address format
+    if (!config.currency?.startsWith('0x') || config.currency === '0x0000000000000000000000000000000000000000') {
+      setError({ code: 'InvalidCurrency' });
       return false;
     }
-    if (config.saleEnd && config.saleEnd < now) {
-      setError({ code: 'SaleEnded' });
+
+    // Validate price is a valid uint256
+    try {
+      const price = BigInt(config.pricePerToken || '0');
+      if (price === BigInt(0)) {
+        setError({ code: 'PricePerTokenTooLow' });
+        return false;
+      }
+      // Max uint256 check
+      const maxUint256 = BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935');
+      if (price > maxUint256) {
+        setError({ code: 'PricePerTokenTooLow' });
+        return false;
+      }
+    } catch (err) {
+      setError({ code: 'PricePerTokenTooLow' });
       return false;
     }
 
@@ -40,7 +52,7 @@ export function FixedPriceStrategy(props: SaleProps) {
 
   const handleSave = () => {
     if (!validateConfig() || !('onSave' in props)) return;
-    props.onSave(config as FixedPriceSaleConfig);
+    props.onSave(config as ERC20SaleConfig);
   };
 
   const renderCollectUI = () => (
@@ -61,13 +73,17 @@ export function FixedPriceStrategy(props: SaleProps) {
         <div className="flex justify-between items-center">
           <p className="text-gray-400">Price Per Unit</p>
           <p className="font-mono">
-            {`${Number(formatEther(tokenDetails.mintPrice)).toFixed(4)} ETH`}
+            {tokenDetails.paymentToken && (
+              `${(Number(tokenDetails.mintPrice) / Math.pow(10, tokenDetails.paymentToken.decimals)).toFixed(2)} ${tokenDetails.paymentToken.symbol}`
+            )}
           </p>
         </div>
         <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-800">
           <p className="text-gray-400">Total</p>
           <p className="font-mono">
-            {`${(Number(formatEther(tokenDetails.mintPrice)) * quantity).toFixed(4)} ETH`}
+            {tokenDetails.paymentToken && (
+              `${((Number(tokenDetails.mintPrice) * quantity) / Math.pow(10, tokenDetails.paymentToken.decimals)).toFixed(2)} ${tokenDetails.paymentToken.symbol}`
+            )}
           </p>
         </div>
       </div>
@@ -92,32 +108,46 @@ export function FixedPriceStrategy(props: SaleProps) {
       <div className="grid grid-cols-2 gap-4">
         {/* Price */}
         <div>
-          <label className="block text-sm font-medium mb-1">Price (ETH)</label>
+          <label className="block text-sm font-medium mb-1">Price</label>
           <input
             type="number"
             className="w-full rounded-md border-gray-300"
-            value={Number(formatEther(BigInt(config.pricePerToken || '0')))}
+            value={Number(config.pricePerToken || '0') / Math.pow(10, tokenDetails.paymentToken?.decimals || 18)}
             onChange={(e) => {
-              try {
-                const ethValue = e.target.value || '0';
-                const weiValue = parseEther(ethValue);
-                // Ensure it fits in uint96
-                if (weiValue > BigInt('79228162514264337593543950335')) {
-                  setError({ code: 'WrongValueSent' });
-                  return;
-                }
-                setConfig({
-                  ...config,
-                  pricePerToken: weiValue.toString()
-                });
-                setError(null);
-              } catch (err) {
-                setError({ code: 'WrongValueSent' });
-              }
+              const decimals = tokenDetails.paymentToken?.decimals || 18;
+              const rawValue = Math.floor(Number(e.target.value) * Math.pow(10, decimals));
+              setConfig({
+                ...config,
+                pricePerToken: rawValue.toString()
+              });
+              setError(null);
             }}
-            step="0.000000000000000001"
+            step="0.01"
             min="0"
           />
+        </div>
+
+        {/* Currency */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Currency</label>
+          <select
+            className="w-full rounded-md border-gray-300"
+            value={config.currency}
+            onChange={(e) => {
+              setConfig({
+                ...config,
+                currency: e.target.value as `0x${string}`
+              });
+              setError(null);
+            }}
+          >
+            <option value="">Select token...</option>
+            {Object.entries(supportedERC20s[asset.chain] || {}).map(([symbol, token]) => (
+              <option key={token.address} value={token.address}>
+                {symbol} ({token.symbol})
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Max Tokens Per Address */}
@@ -127,26 +157,10 @@ export function FixedPriceStrategy(props: SaleProps) {
             type="number"
             className="w-full rounded-md border-gray-300"
             value={config.maxTokensPerAddress}
-            onChange={(e) => {
-              const value = Number(e.target.value);
-              // Ensure it fits in uint64
-              if (value > 18446744073709551615) {
-                setError({ 
-                  code: 'UserExceedsMintLimit',
-                  params: {
-                    user: '0x0000000000000000000000000000000000000000',
-                    limit: BigInt(18446744073709551615),
-                    requestedAmount: BigInt(value)
-                  }
-                });
-                return;
-              }
-              setConfig({
-                ...config,
-                maxTokensPerAddress: value
-              });
-              setError(null);
-            }}
+            onChange={(e) => setConfig({
+              ...config,
+              maxTokensPerAddress: Number(e.target.value)
+            })}
             min="0"
           />
         </div>
@@ -158,14 +172,10 @@ export function FixedPriceStrategy(props: SaleProps) {
             type="datetime-local"
             className="w-full rounded-md border-gray-300"
             value={new Date(config.saleStart! * 1000).toISOString().slice(0, 16)}
-            onChange={(e) => {
-              const timestamp = Math.floor(new Date(e.target.value).getTime() / 1000);
-              setConfig({
-                ...config,
-                saleStart: timestamp
-              });
-              setError(null);
-            }}
+            onChange={(e) => setConfig({
+              ...config,
+              saleStart: Math.floor(new Date(e.target.value).getTime() / 1000)
+            })}
           />
         </div>
 
@@ -176,14 +186,10 @@ export function FixedPriceStrategy(props: SaleProps) {
             type="datetime-local"
             className="w-full rounded-md border-gray-300"
             value={new Date(config.saleEnd! * 1000).toISOString().slice(0, 16)}
-            onChange={(e) => {
-              const timestamp = Math.floor(new Date(e.target.value).getTime() / 1000);
-              setConfig({
-                ...config,
-                saleEnd: timestamp
-              });
-              setError(null);
-            }}
+            onChange={(e) => setConfig({
+              ...config,
+              saleEnd: Math.floor(new Date(e.target.value).getTime() / 1000)
+            })}
           />
         </div>
 
@@ -194,13 +200,10 @@ export function FixedPriceStrategy(props: SaleProps) {
             type="text"
             className="w-full rounded-md border-gray-300"
             value={config.fundsRecipient}
-            onChange={(e) => {
-              setConfig({
-                ...config,
-                fundsRecipient: e.target.value
-              });
-              setError(null);
-            }}
+            onChange={(e) => setConfig({
+              ...config,
+              fundsRecipient: e.target.value
+            })}
             placeholder="0x..."
           />
         </div>
@@ -210,7 +213,7 @@ export function FixedPriceStrategy(props: SaleProps) {
         onClick={handleSave}
         className="w-full"
       >
-        Save Fixed Price Configuration
+        Save ERC20 Sale Configuration
       </Button>
     </div>
   );
@@ -223,9 +226,14 @@ export function FixedPriceStrategy(props: SaleProps) {
         <div className="space-y-2">
           <p>Status: {tokenDetails.saleStatus}</p>
           <p>Minted: {tokenDetails.totalMinted?.toString()} / {tokenDetails.maxSupply?.toString()}</p>
-          <p>Current Price: {`${Number(formatEther(tokenDetails.mintPrice)).toFixed(4)} ETH`}</p>
-          {tokenDetails.saleEnd && (
-            <p>Sale Ends: {new Date(Number(tokenDetails.saleEnd) * 1000).toLocaleString()}</p>
+          {tokenDetails.paymentToken && (
+            <>
+              <p>Current Price: {
+                `${(Number(tokenDetails.mintPrice) / Math.pow(10, tokenDetails.paymentToken.decimals)).toFixed(2)} ${tokenDetails.paymentToken.symbol}`
+              }</p>
+              <p>Payment Token: {tokenDetails.paymentToken.name} ({tokenDetails.paymentToken.symbol})</p>
+              <p className="text-xs text-gray-500 break-all">Token Address: {tokenDetails.paymentToken.address}</p>
+            </>
           )}
         </div>
       </div>
@@ -239,4 +247,4 @@ export function FixedPriceStrategy(props: SaleProps) {
       {mode === 'admin' && renderAdminUI()}
     </div>
   );
-} 
+}

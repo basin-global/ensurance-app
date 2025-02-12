@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
-import { isAdmin } from '@/config/admin'
+import { isAppAdmin } from '@/config/admin'
 import { usePrivy } from '@privy-io/react-auth'
 
 interface TableInfo {
@@ -72,7 +72,7 @@ export default function ExportsPage() {
   }
 
   // Only show page to admins
-  if (!isAdmin(user?.wallet?.address)) {
+  if (!isAppAdmin(user?.wallet?.address)) {
     return <div className="p-8">Access denied</div>
   }
 
