@@ -14,9 +14,9 @@ export function FooterNavigation() {
 
       {/* Product Features */}
       <div className="flex justify-center gap-12 text-lg mb-4">
-        <span className="cursor-help hover:text-gray-300 transition-colors" title="Coming Soon">
+        <Link href="/syndicates" className="hover:text-gray-300 transition-colors">
           syndicates
-        </span>
+        </Link>
         <Link href="/pools" className="hover:text-gray-300 transition-colors">
           pools
         </Link>

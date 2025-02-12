@@ -28,35 +28,92 @@ export function HeaderSearch() {
   const debouncedSearch = useDebounce(searchQuery, 200)
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const abortControllerRef = useRef<AbortController | null>(null)
+  const [lastKeyTime, setLastKeyTime] = useState(0)
+  const [lastKey, setLastKey] = useState('')
 
-  // Initial load of results
-  useEffect(() => {
-    async function loadInitialResults() {
-      setIsLoading(true)
-      try {
-        const response = await fetch('/api/search?q=')
-        const data = await response.json()
-        setResults(Array.isArray(data) ? data : [])
-      } catch (error) {
-        console.error('Initial search failed:', error)
-        setResults([])
-      }
-      setIsLoading(false)
-    }
-    loadInitialResults()
-  }, [])
+  // Keyboard shortcuts map
+  const shortcuts = {
+    'c': '/certificates/all',  // g c - certificates
+    's': '/syndicates',        // g s - syndicates
+    'p': '/pools',             // g p - pools
+    'e': '/exchange',          // g e - exchange
+    'a': '/all',               // g a - agents
+    'g': '/groups',            // g g - groups
+    'b': 'https://binder.ensurance.app', // g b - binder
+    't': 'https://www.coinbase.com/price/base-ensure', // g t - token ($ENSURE)
+    'd': '/docs'               // g d - docs
+  }
 
+  // Handle keyboard shortcuts
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
-        event.preventDefault()
-        setIsOpen(true)
+      if (!isOpen) {
+        // Handle ⌘K to open search
+        if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+          event.preventDefault()
+          setIsOpen(true)
+          return
+        }
+
+        const now = Date.now()
+        
+        // If 'g' was pressed in the last 500ms, check for shortcuts
+        if (lastKey === 'g' && (now - lastKeyTime) < 500) {
+          const shortcutPath = shortcuts[event.key.toLowerCase()]
+          if (shortcutPath) {
+            event.preventDefault()
+            if (shortcutPath.includes('coinbase.com')) {
+              window.open(shortcutPath, '_blank')
+            } else {
+              window.location.href = shortcutPath
+            }
+          }
+          setLastKey('')
+          return
+        }
+
+        // If 'g' is pressed, start the shortcut sequence
+        if (event.key === 'g') {
+          setLastKeyTime(now)
+          setLastKey('g')
+          return
+        }
+
+        setLastKey('')
       }
     }
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  }, [isOpen, lastKey, lastKeyTime])
+
+  // Load initial results when opened
+  const loadInitialResults = async () => {
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/search?q=')
+      const data = await response.json()
+      setResults(Array.isArray(data) ? data : [])
+    } catch (error) {
+      console.error('Initial search failed:', error)
+      setResults([])
+    }
+    setIsLoading(false)
+  }
+
+  // Load nav items when opened
+  useEffect(() => {
+    if (isOpen) {
+      loadInitialResults()
+    }
+  }, [isOpen])
+
+  // Clear search when closed
+  useEffect(() => {
+    if (!isOpen) {
+      setSearchQuery('')
+    }
+  }, [isOpen])
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -95,8 +152,10 @@ export function HeaderSearch() {
 
   React.useEffect(() => {
     async function performSearch() {
-      if (!debouncedSearch && results.length > 0) {
-        return // Don't clear results if we already have initial results
+      // If search is empty, load initial nav items
+      if (!debouncedSearch) {
+        loadInitialResults()
+        return
       }
 
       if (abortControllerRef.current) {
@@ -108,7 +167,7 @@ export function HeaderSearch() {
       setIsLoading(true)
       try {
         const response = await fetch(
-          `/api/search?q=${encodeURIComponent(debouncedSearch || '')}`,
+          `/api/search?q=${encodeURIComponent(debouncedSearch)}`,
           { 
             signal: abortControllerRef.current.signal,
             headers: {
@@ -204,6 +263,8 @@ export function HeaderSearch() {
                   key={i}
                   href={result.path}
                   onClick={() => setIsOpen(false)}
+                  target={result.path.includes('coinbase.com') ? '_blank' : undefined}
+                  rel={result.path.includes('coinbase.com') ? 'noopener noreferrer' : undefined}
                   className={cn(
                     "block px-4 py-2 hover:bg-[rgba(var(--foreground-rgb),0.1)]",
                     "text-[rgb(var(--foreground-rgb))] rounded-lg",
@@ -213,9 +274,15 @@ export function HeaderSearch() {
                     i === selectedIndex && "bg-[rgba(var(--foreground-rgb),0.1)]"
                   )}
                 >
-                  <span>{result.name}</span>
+                  <span className={result.type === 'nav' ? 'font-bold' : ''}>
+                    {result.name}
+                  </span>
                   <div className="flex items-center gap-2">
-                    {result.type === 'group' && (
+                    {result.type === 'nav' ? (
+                      <span className="text-xs px-2 py-1 rounded bg-[rgba(var(--foreground-rgb),0.1)] text-[rgba(var(--foreground-rgb),0.7)]">
+                        NAV
+                      </span>
+                    ) : result.type === 'group' && (
                       <span className="text-xs px-2 py-1 rounded bg-[rgba(var(--foreground-rgb),0.1)] text-[rgba(var(--foreground-rgb),0.7)]">
                         GROUP
                       </span>

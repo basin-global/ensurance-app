@@ -24,11 +24,66 @@ export async function GET(request: NextRequest) {
     try {
         const query = request.nextUrl.searchParams.get('q')?.toLowerCase();
         
+        // Define navigation items once at the top
+        const navItems = [
+            {
+                name: 'certificates',
+                path: '/certificates/all',
+                type: 'nav'
+            },
+            {
+                name: 'syndicates',
+                path: '/syndicates',
+                type: 'nav'
+            },
+            {
+                name: 'pools',
+                path: '/pools',
+                type: 'nav'
+            },
+            {
+                name: 'exchange',
+                path: '/exchange',
+                type: 'nav'
+            },
+            {
+                name: 'agents',
+                path: '/all',
+                type: 'nav'
+            },
+            {
+                name: 'groups',
+                path: '/groups',
+                type: 'nav'
+            },
+            {
+                name: 'binder',
+                path: 'https://binder.ensurance.app',
+                type: 'nav'
+            },
+            {
+                name: '$ENSURE',
+                path: 'https://www.coinbase.com/price/base-ensure',
+                type: 'nav'
+            },
+            {
+                name: 'docs',
+                path: '/docs',
+                type: 'nav'
+            }
+        ];
+        
+        // If no query, return all nav items
         if (!query) {
-            return NextResponse.json({ results: [] });
+            return NextResponse.json(navItems);
         }
 
         const searchLower = query.toLowerCase();
+        
+        // Filter nav items that match the search
+        const matchingNavItems = navItems.filter(item => 
+            item.name.toLowerCase().includes(searchLower)
+        );
         
         // Initialize data arrays with cached or empty values
         let groupsData = isCacheValid('groups') ? cache.groups.data : [];
@@ -101,8 +156,9 @@ export async function GET(request: NextRequest) {
                 }))
         ]);
 
-        // Combine all results
+        // Combine all results, putting nav items first
         const results = [
+            ...matchingNavItems,
             ...matchingGroups,
             ...matchingAccounts,
             ...matchingCertificates
