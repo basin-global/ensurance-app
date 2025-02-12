@@ -34,12 +34,17 @@ export function GroupLinks() {
 
     return (
         <div className="max-w-2xl mx-auto">
-            <button 
-                onClick={() => setIsOpen(!isOpen)}
-                className="w-full cursor-pointer mt-8"
-            >
-                <h3 className="text-center mb-3 text-lg">groups</h3>
-            </button>
+            <div className="flex justify-center items-center gap-12 mb-2">
+                <Link href="/all" className="text-lg text-gray-500 hover:text-gray-300 transition-colors">
+                    agents
+                </Link>
+                <button 
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="text-lg text-gray-500 hover:text-gray-300 transition-colors cursor-pointer"
+                >
+                    groups
+                </button>
+            </div>
             {isOpen && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-1 text-center">
                     {groups.map((group) => (

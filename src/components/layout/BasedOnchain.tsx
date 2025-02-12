@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic'
 import CertificateVerification from './verifications/CertificateVerification'
 
 // Base link style that all verification links will use
-const baseVerifyLinkStyle = "text-gray-400 hover:text-gray-200 transition-colors text-[9px]"
+const baseVerifyLinkStyle = "text-gray-400 hover:text-white transition-colors"
 
 // Always show SITUS factory link
 const FactoryLink = () => (
@@ -16,7 +16,7 @@ const FactoryLink = () => (
     target="_blank"
     rel="noopener noreferrer"
   >
-    <span className="text-gray-200">SITUS</span>
+    <span className="text-white font-medium">SITUS</span>
   </Link>
 )
 
@@ -88,12 +88,12 @@ export function BasedOnchain() {
     <div>
       <div className="flex flex-col items-center text-center">
         <div className="flex items-center gap-1 mb-1.5">
-          <ShieldCheck className="w-2.5 h-2.5 text-gray-200" />
-          <span className="text-[9px] font-mono text-gray-200">based onchain</span>
-          <ShieldCheck className="w-2.5 h-2.5 text-gray-200" />
+          <ShieldCheck className="w-3 h-3 text-white" />
+          <span className="text-[11px] font-mono text-white font-medium">based onchain</span>
+          <ShieldCheck className="w-3 h-3 text-white" />
         </div>
         
-        <div className="flex flex-col gap-1.5 font-mono text-[9px]">
+        <div className="flex flex-col gap-1.5 font-mono text-[11px]">
           {/* SITUS line */}
           <div className="flex justify-center">
             <FactoryLink />
