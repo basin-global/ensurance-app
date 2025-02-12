@@ -47,9 +47,10 @@ export default function AssetCard({
   const [selectedOperation, setSelectedOperation] = useState<EnsureOperation | null>(null);
   const isERC1155 = asset.contract?.type === 'ERC1155';
   const quantity = asset.queried_wallet_balances?.[0]?.quantity || 0;
-  const hasBalance = quantity > 0;
-  const [isSelected, setIsSelected] = useState(false);
   
+  // Use selectedQuantity to determine if card is selected
+  const isSelected = selectedQuantity > 0;
+
   const isEnsured = isEnsuranceTab
     ? (asset.queried_wallet_balances || []).length > 0
     : isEnsuranceToken(asset.chain, asset.contract_address);
@@ -67,7 +68,7 @@ export default function AssetCard({
 
   const showEnsureMenu = isOwner && (
     !isEnsuranceTab || 
-    (isEnsuranceTab && hasBalance)
+    (isEnsuranceTab && quantity > 0)
   );
 
   const handleOperationSelect = () => {
@@ -80,7 +81,7 @@ export default function AssetCard({
   const isEnsurable = isEnsuranceTab || isEnsuranceToken(asset.chain, asset.contract_address);
 
   const showCardContent = variant !== 'account-main';
-  const showQuantityBadge = hasBalance && quantity >= 1 && variant !== 'account-main';
+  const showQuantityBadge = quantity > 0 && variant !== 'account-main';
   const roundedStyle = variant === 'account-main' ? 'rounded-lg' : 'rounded-xl';
   const imageRoundedStyle = variant === 'account-main' ? 'rounded-lg' : '';
   const cardPadding = variant === 'home' ? 'p-6' : 'p-4';
@@ -88,9 +89,7 @@ export default function AssetCard({
   const handleCardClick = (e: React.MouseEvent) => {
     if (variant === 'exchange') {
       e.preventDefault();
-      const newSelected = !isSelected;
-      setIsSelected(newSelected);
-      onSelect?.(newSelected);
+      onSelect?.(!isSelected);
     }
   };
 
@@ -119,11 +118,9 @@ export default function AssetCard({
                 </div>
               </div>
 
-              {quantity > 0 && (
-                <div className="absolute top-2 left-2 bg-black/80 text-white px-4 py-2 rounded-lg text-lg font-extrabold shadow-md backdrop-blur-sm z-10">
-                  ×{quantity}
-                </div>
-              )}
+              <div className="absolute top-2 left-2 bg-black/80 text-white px-4 py-2 rounded-lg text-lg font-extrabold shadow-md backdrop-blur-sm z-10">
+                ×{quantity}
+              </div>
 
               {asset.video_url ? (
                 <video 
@@ -166,7 +163,7 @@ export default function AssetCard({
                   <span className="ml-2 font-medium">${exchangeRate}</span>
                 </div>
               )}
-              {selectedQuantity > 0 && (
+              {isSelected && selectedQuantity > 0 && (
                 <div className="mt-2 text-sm">
                   <span className="text-gray-400">Selected:</span>
                   <span className="ml-2 font-medium">×{selectedQuantity}</span>

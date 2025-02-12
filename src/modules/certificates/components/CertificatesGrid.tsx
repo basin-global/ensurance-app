@@ -20,6 +20,8 @@ interface CertificatesGridProps {
   maxItems?: number
   accountName?: string
   selectedChain?: string
+  onSelect?: (asset: Asset, selected: boolean) => void
+  selectedCertificates?: Record<string, { selectedQuantity: number }>
 }
 
 export default function CertificatesGrid({ 
@@ -31,7 +33,9 @@ export default function CertificatesGrid({
   variant = 'default',
   maxItems = 16,
   accountName,
-  selectedChain
+  selectedChain,
+  onSelect,
+  selectedCertificates
 }: CertificatesGridProps) {
   const [assets, setAssets] = useState<Asset[]>([])
   const [loading, setLoading] = useState(true)
@@ -281,6 +285,8 @@ export default function CertificatesGrid({
               variant="exchange"
               hideCollection={true}
               hideChain={false}
+              onSelect={onSelect ? (selected) => onSelect(asset, selected) : undefined}
+              selectedQuantity={selectedCertificates?.[asset.nft_id]?.selectedQuantity}
             />
           ))}
         </div>

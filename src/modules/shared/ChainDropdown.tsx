@@ -18,7 +18,7 @@ function ChainDropdown({
     // Filter for Ensurance contracts if needed
     .filter(chain => !filterEnsurance || chain.simplehashName in ensuranceContracts)
     // For exchange variant, only show exchange-enabled chains
-    .filter(chain => !filterEnsurance || EXCHANGE_ENABLED_CHAINS.includes(chain.simplehashName))
+    .filter(chain => !filterEnsurance || EXCHANGE_ENABLED_CHAINS.includes(chain.simplehashName as typeof EXCHANGE_ENABLED_CHAINS[number]))
     .sort((a, b) => {
       const aIndex = chainOrder.indexOf(a.simplehashName);
       const bIndex = chainOrder.indexOf(b.simplehashName);
