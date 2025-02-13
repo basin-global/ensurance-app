@@ -5,8 +5,114 @@ import { Asset } from '@/types';
 import { TokenDetails } from '@/modules/certificates/collect/client';
 import { QuantityInput } from '../collect/components/quantity';
 import { EnsureButton } from '../collect/components/button';
-import { SaleProps, TimedSaleConfig, TimedSaleError } from './types';
+import { SaleProps, TimedSaleConfig, TimedSaleError, DisplayProps } from './types';
 import { TIMED_SALE_MINTER } from './types';
+
+// Shared helper functions
+const formatDate = (timestamp: number | string | undefined) => {
+  if (!timestamp || timestamp === '0' || Number(timestamp) === 0) return 'Not Set';
+  const date = new Date(Number(timestamp) * 1000);
+  return date.toLocaleString();
+};
+
+// Display component for timed sale info
+export const TimedSaleDisplay = ({ 
+  config, 
+  variant = 'full',
+  showDebug = false 
+}: { 
+  config: TimedSaleConfig 
+} & DisplayProps) => {
+  const now = Math.floor(Date.now() / 1000);
+  const marketStarted = now >= config.saleStart;
+  const estimatedEnd = config.saleStart + config.marketCountdown;
+
+  // Minimal variant (for cards)
+  if (variant === 'minimal') {
+    return (
+      <div className="space-y-1 text-sm">
+        <div className="flex justify-between">
+          <span className="text-gray-400">Sale:</span>
+          <span>{marketStarted ? 'Active' : formatDate(config.saleStart)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-400">Min ETH:</span>
+          <span>{formatEther(BigInt(config.minimumMarketEth))}</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Card variant (for grid views)
+  if (variant === 'card') {
+    return (
+      <div className="space-y-2">
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          <div>
+            <p className="text-gray-400">Sale Start</p>
+            <p className="font-mono">{formatDate(config.saleStart)}</p>
+          </div>
+          <div>
+            <p className="text-gray-400">Market Launch</p>
+            <p className="font-mono">
+              {!marketStarted ? 'Market Not Started' : formatDate(estimatedEnd)}
+            </p>
+          </div>
+          <div>
+            <p className="text-gray-400">Min ETH</p>
+            <p className="font-mono">{formatEther(BigInt(config.minimumMarketEth))}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Full variant (default, for detail views)
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <p className="text-gray-400">Market Countdown</p>
+          <p className="font-mono">{config.marketCountdown} seconds</p>
+        </div>
+        <div>
+          <p className="text-gray-400">Minimum Market ETH</p>
+          <p className="font-mono">{formatEther(BigInt(config.minimumMarketEth))} ETH</p>
+        </div>
+        <div>
+          <p className="text-gray-400">Token Name</p>
+          <p className="font-mono">{config.name}</p>
+        </div>
+        <div>
+          <p className="text-gray-400">Token Symbol</p>
+          <p className="font-mono">{config.symbol}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 border-t border-gray-700 pt-4">
+        <div>
+          <p className="text-gray-400">Sale Start</p>
+          <p className="font-mono">{formatDate(config.saleStart)}</p>
+        </div>
+        <div>
+          <p className="text-gray-400">Market Launch</p>
+          <p className="font-mono">
+            {!marketStarted ? 'Market Not Started' : formatDate(estimatedEnd)}
+          </p>
+        </div>
+      </div>
+
+      {showDebug && (
+        <details className="text-xs mt-4">
+          <summary className="cursor-pointer text-gray-400">Debug Info</summary>
+          <pre className="mt-2 p-2 bg-black rounded overflow-auto">
+            {JSON.stringify(config, null, 2)}
+          </pre>
+        </details>
+      )}
+    </div>
+  );
+};
 
 export function TimedSaleStrategy(props: SaleProps) {
   const { asset, tokenDetails, mode } = props;

@@ -5,7 +5,8 @@ import { TokenDetails } from '@/modules/certificates/collect/client';
 import { QuantityInput } from '../collect/components/quantity';
 import { EnsureButton } from '../collect/components/button';
 import { Button } from '@/components/ui/button';
-import { SaleProps, FixedPriceSaleConfig, FixedPriceError } from './types';
+import { SaleProps, FixedPriceSaleConfig, FixedPriceError, DisplayProps } from './types';
+import { BaseSaleInfo } from './components/BaseSaleInfo';
 
 // Contract address is imported from types.ts
 import { FIXED_PRICE_MINTER } from './types';
@@ -239,4 +240,82 @@ export function FixedPriceStrategy(props: SaleProps) {
       {mode === 'admin' && renderAdminUI()}
     </div>
   );
-} 
+}
+
+export const FixedPriceDisplay = ({ 
+  config, 
+  variant = 'full',
+  showDebug = false 
+}: { 
+  config: FixedPriceSaleConfig 
+} & DisplayProps) => {
+  // Minimal variant (for cards)
+  if (variant === 'minimal') {
+    return (
+      <div className="space-y-1 text-sm">
+        <BaseSaleInfo
+          saleStart={config.saleStart}
+          saleEnd={config.saleEnd}
+          maxTokensPerAddress={config.maxTokensPerAddress}
+          fundsRecipient={config.fundsRecipient}
+          variant="minimal"
+        />
+        <div className="flex justify-between">
+          <span className="text-gray-400">Price:</span>
+          <span>{formatEther(BigInt(config.pricePerToken))} ETH</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Card variant (for grid views)
+  if (variant === 'card') {
+    return (
+      <div className="space-y-2">
+        <BaseSaleInfo
+          saleStart={config.saleStart}
+          saleEnd={config.saleEnd}
+          maxTokensPerAddress={config.maxTokensPerAddress}
+          fundsRecipient={config.fundsRecipient}
+          variant="card"
+        />
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          <div>
+            <p className="text-gray-400">Price Per Token</p>
+            <p className="font-mono">{formatEther(BigInt(config.pricePerToken))} ETH</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Full variant (default, for detail views)
+  return (
+    <div className="space-y-4">
+      <BaseSaleInfo
+        saleStart={config.saleStart}
+        saleEnd={config.saleEnd}
+        maxTokensPerAddress={config.maxTokensPerAddress}
+        fundsRecipient={config.fundsRecipient}
+        variant="full"
+        showDebug={showDebug}
+      />
+      
+      <div className="grid grid-cols-2 gap-4 border-t border-gray-700 pt-4">
+        <div>
+          <p className="text-gray-400">Price Per Token</p>
+          <p className="font-mono">{formatEther(BigInt(config.pricePerToken))} ETH</p>
+        </div>
+      </div>
+
+      {showDebug && (
+        <details className="text-xs mt-4">
+          <summary className="cursor-pointer text-gray-400">Fixed Price Info</summary>
+          <pre className="mt-2 p-2 bg-black rounded overflow-auto">
+            {JSON.stringify(config, null, 2)}
+          </pre>
+        </details>
+      )}
+    </div>
+  );
+}; 

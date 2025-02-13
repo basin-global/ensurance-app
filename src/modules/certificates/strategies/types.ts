@@ -7,12 +7,18 @@ export const ERC20_MINTER = '0x777777E8850d8D6d98De2B5f64fae401F96eFF31';
 export const TIMED_SALE_MINTER = '0x777777722D078c97c6ad07d9f36801e653E356Ae';
 
 export type SaleMode = 'collect' | 'create' | 'admin';
+export type DisplayVariant = 'full' | 'card' | 'minimal';
 
 // Base Props
 export interface BaseSaleProps {
   asset: Asset;
   tokenDetails: TokenDetails;
   mode: SaleMode;
+}
+
+export interface DisplayProps {
+  variant?: DisplayVariant;
+  showDebug?: boolean;
 }
 
 export interface CollectSaleProps extends BaseSaleProps {

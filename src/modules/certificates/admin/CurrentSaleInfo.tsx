@@ -6,11 +6,12 @@ import { getToken } from '@zoralabs/protocol-sdk'
 import { createPublicClient, http } from 'viem'
 import { base } from 'viem/chains'
 import { ensuranceContracts } from '@/modules/certificates/config/ensurance'
+import { SaleConfig, FixedPriceSaleConfig, ERC20SaleConfig, TimedSaleConfig } from '../strategies/types'
 
 interface CurrentSaleInfoProps {
   tokenId: string
   chain: string
-  onSaleTypeChange?: (saleType: "fixedPrice" | "erc20" | "allowlist" | "timed" | null) => void
+  onSaleTypeChange?: (saleType: SaleConfig['saleType'] | null) => void
 }
 
 interface TokenMetadata {
@@ -19,11 +20,124 @@ interface TokenMetadata {
   image?: string
 }
 
+interface TokenInfo {
+  totalMinted?: bigint
+  maxSupply?: bigint
+  tokenURI?: string
+  salesConfig?: SaleConfig
+  primaryMintActive?: boolean
+}
+
 // Add helper function for date formatting
 const formatDate = (timestamp: number | string | undefined) => {
-  if (!timestamp) return 'Not Set'
+  if (!timestamp || timestamp === '0' || Number(timestamp) === 0) return 'Not Set'
   const date = new Date(Number(timestamp) * 1000)
   return date.toLocaleString()
+}
+
+// Helper to resolve IPFS or HTTP URLs
+const resolveUri = (uri: string) => {
+  if (!uri) return ''
+  return uri.startsWith('ipfs://') 
+    ? uri.replace('ipfs://', 'https://ipfs.io/ipfs/') 
+    : uri
+}
+
+// Add shared date display component
+const DateInfo = ({ start, end }: { start?: number; end?: number }) => {
+  const showDates = start !== 0 || end !== 0;
+  
+  if (!showDates) return null;
+  
+  return (
+    <div className="col-span-2 grid grid-cols-2 gap-4 border-t border-gray-700 pt-4 mt-2">
+      <div>
+        <p className="text-gray-400">Sale Start</p>
+        <p className="font-mono">{formatDate(start)}</p>
+      </div>
+      <div>
+        <p className="text-gray-400">Sale End</p>
+        <p className="font-mono">{formatDate(end)}</p>
+      </div>
+    </div>
+  );
+}
+
+// Strategy-specific info components
+const FixedPriceInfo = ({ config }: { config: FixedPriceSaleConfig }) => (
+  <div className="grid grid-cols-2 gap-4">
+    <div>
+      <p className="text-gray-400">Price Per Token</p>
+      <p className="font-mono">{formatEther(BigInt(config.pricePerToken))} ETH</p>
+    </div>
+    <div>
+      <p className="text-gray-400">Max Per Address</p>
+      <p className="font-mono">{config.maxTokensPerAddress || 'Unlimited'}</p>
+    </div>
+    <DateInfo start={config.saleStart} end={config.saleEnd} />
+  </div>
+)
+
+const ERC20Info = ({ config }: { config: ERC20SaleConfig }) => (
+  <div className="grid grid-cols-2 gap-4">
+    <div>
+      <p className="text-gray-400">Price Per Token</p>
+      <p className="font-mono">
+        {(Number(config.pricePerToken) / Math.pow(10, 18)).toFixed(2)}
+      </p>
+    </div>
+    <div>
+      <p className="text-gray-400">Currency</p>
+      <p className="font-mono break-all">{config.currency}</p>
+    </div>
+    <div>
+      <p className="text-gray-400">Max Per Address</p>
+      <p className="font-mono">{config.maxTokensPerAddress || 'Unlimited'}</p>
+    </div>
+    <DateInfo start={config.saleStart} end={config.saleEnd} />
+  </div>
+)
+
+const TimedSaleInfo = ({ config }: { config: TimedSaleConfig }) => {
+  const now = Math.floor(Date.now() / 1000);
+  const marketStarted = now >= config.saleStart;
+  const estimatedEnd = config.saleStart + config.marketCountdown;
+  
+  return (
+    <div className="grid grid-cols-2 gap-4">
+      <div>
+        <p className="text-gray-400">Market Countdown</p>
+        <p className="font-mono">{config.marketCountdown} seconds</p>
+      </div>
+      <div>
+        <p className="text-gray-400">Minimum Market ETH</p>
+        <p className="font-mono">{formatEther(BigInt(config.minimumMarketEth))} ETH</p>
+      </div>
+      <div>
+        <p className="text-gray-400">Token Name</p>
+        <p className="font-mono">{config.name}</p>
+      </div>
+      <div>
+        <p className="text-gray-400">Token Symbol</p>
+        <p className="font-mono">{config.symbol}</p>
+      </div>
+      <div className="col-span-2 grid grid-cols-2 gap-4 border-t border-gray-700 pt-4 mt-2">
+        <div>
+          <p className="text-gray-400">Sale Start</p>
+          <p className="font-mono">{formatDate(config.saleStart)}</p>
+        </div>
+        <div>
+          <p className="text-gray-400">Market Launch</p>
+          <p className="font-mono">
+            {!marketStarted 
+              ? 'Market Not Started'
+              : formatDate(estimatedEnd)
+            }
+          </p>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export function CurrentSaleInfo({ 
@@ -32,28 +146,16 @@ export function CurrentSaleInfo({
   onSaleTypeChange
 }: CurrentSaleInfoProps) {
   const [loading, setLoading] = useState(true)
-  const [saleInfo, setSaleInfo] = useState<any>(null)
+  const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null)
   const [metadata, setMetadata] = useState<TokenMetadata | null>(null)
   const [error, setError] = useState<string | null>(null)
-
-  // Helper to resolve IPFS or HTTP URLs
-  const resolveUri = (uri: string) => {
-    if (!uri) return ''
-    // Handle IPFS URIs
-    if (uri.startsWith('ipfs://')) {
-      return uri.replace('ipfs://', 'https://ipfs.io/ipfs/')
-    }
-    return uri
-  }
 
   useEffect(() => {
     async function fetchMetadata(uri: string) {
       try {
         const resolvedUri = resolveUri(uri)
-        console.log('Fetching metadata from:', resolvedUri)
         const response = await fetch(resolvedUri)
         const data = await response.json()
-        console.log('Metadata response:', data)
         setMetadata(data)
       } catch (err) {
         console.error('Error fetching metadata:', err)
@@ -85,22 +187,22 @@ export function CurrentSaleInfo({
           mintType: "1155"
         })
 
-        console.log('Raw Zora SDK Response:', {
-          salesConfig: (response.token as any)?.salesConfig,
-          strategy: (response.token as any)?.saleStrategy,
-          rawResponse: response
-        })
-        
-        setSaleInfo(response)
-        
-        // Notify parent of sale type change
-        if (onSaleTypeChange) {
-          onSaleTypeChange((response.token as any)?.salesConfig?.saleType || null)
+        const info: TokenInfo = {
+          totalMinted: response.token?.totalMinted,
+          maxSupply: response.token?.maxSupply,
+          tokenURI: response.token?.tokenURI,
+          salesConfig: response.token?.salesConfig as SaleConfig,
+          primaryMintActive: response.primaryMintActive
         }
 
-        // Fetch metadata if URI is available
-        if (response?.token?.tokenURI) {
-          await fetchMetadata(response.token.tokenURI)
+        setTokenInfo(info)
+        
+        if (onSaleTypeChange) {
+          onSaleTypeChange(info.salesConfig?.saleType || null)
+        }
+
+        if (info.tokenURI) {
+          await fetchMetadata(info.tokenURI)
         }
       } catch (err) {
         console.error('Error fetching sale info:', err)
@@ -114,31 +216,19 @@ export function CurrentSaleInfo({
   }, [tokenId, chain, onSaleTypeChange])
 
   if (loading) {
-    return (
-      <div className="p-4 bg-gray-900 rounded-lg animate-pulse">
-        <p>Loading sale configuration...</p>
-      </div>
-    )
+    return <div className="animate-pulse">Loading sale configuration...</div>
   }
 
   if (error) {
-    return (
-      <div className="p-4 bg-red-900/20 rounded-lg">
-        <p className="text-red-400">Error: {error}</p>
-      </div>
-    )
+    return <div className="text-red-400">Error: {error}</div>
   }
 
-  if (!saleInfo) {
-    return (
-      <div className="p-4 bg-gray-900 rounded-lg">
-        <p>No sale configuration found</p>
-      </div>
-    )
+  if (!tokenInfo) {
+    return <div>No sale configuration found</div>
   }
 
   return (
-    <div className="p-4 bg-gray-900 rounded-lg space-y-4">
+    <div className="space-y-6">
       {/* Token Info */}
       <div className="flex items-center gap-4">
         {metadata?.image && (
@@ -154,87 +244,55 @@ export function CurrentSaleInfo({
           <h3 className="text-lg font-semibold truncate">
             {metadata?.name || `Token #${tokenId}`}
           </h3>
-        </div>
-      </div>
-
-      <h3 className="text-lg font-semibold">Current Sale Configuration</h3>
-      
-      {/* Basic Token Info */}
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <p className="text-gray-400">Total Minted</p>
-          <p className="font-mono">{saleInfo.token?.totalMinted?.toString() || '0'}</p>
-        </div>
-        <div>
-          <p className="text-gray-400">Max Supply</p>
-          <p className="font-mono">{saleInfo.token?.maxSupply?.toString() || 'Unlimited'}</p>
-        </div>
-      </div>
-
-      {/* Sale Status */}
-      <div className="border-t border-gray-800 pt-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-gray-400">Sale Type</p>
-            <p className="font-mono">{saleInfo.token?.salesConfig?.saleType || 'Not Set'}</p>
-          </div>
-          <div>
-            <p className="text-gray-400">Primary Sale Active</p>
-            <p className="font-mono">{saleInfo.primaryMintActive ? 'Yes' : 'No'}</p>
-          </div>
-          <div>
-            <p className="text-gray-400">Sale Start</p>
-            <p className="font-mono">{formatDate(saleInfo.token?.salesConfig?.saleStart)}</p>
-          </div>
-          <div>
-            <p className="text-gray-400">Sale End</p>
-            <p className="font-mono">{formatDate(saleInfo.token?.salesConfig?.saleEnd)}</p>
+          <div className="grid grid-cols-2 gap-x-8 gap-y-2 mt-2">
+            <div>
+              <span className="text-gray-400">Total Minted:</span>{' '}
+              <span className="font-mono">{tokenInfo.totalMinted?.toString() || '0'}</span>
+            </div>
+            <div>
+              <span className="text-gray-400">Max Supply:</span>{' '}
+              <span className="font-mono">{tokenInfo.maxSupply?.toString() || 'Unlimited'}</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Price Info */}
-      {saleInfo.token?.salesConfig && (
-        <div className="border-t border-gray-800 pt-4">
+      {/* Sale Configuration */}
+      {tokenInfo.salesConfig && (
+        <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            {saleInfo.token.salesConfig.pricePerToken && (
-              <div>
-                <p className="text-gray-400">Price Per Token</p>
-                <p className="font-mono">
-                  {saleInfo.token.salesConfig.currency ? (
-                    `${(Number(saleInfo.token.salesConfig.pricePerToken) / Math.pow(10, 18)).toFixed(2)} ${saleInfo.token.salesConfig.currency}`
-                  ) : (
-                    `${formatEther(BigInt(saleInfo.token.salesConfig.pricePerToken))} ETH`
-                  )}
-                </p>
-              </div>
-            )}
-            {saleInfo.token.salesConfig.currency && (
-              <div>
-                <p className="text-gray-400">Payment Token</p>
-                <p className="font-mono break-all">{saleInfo.token.salesConfig.currency}</p>
-              </div>
-            )}
+            <div>
+              <span className="text-gray-400">Sale Type:</span>{' '}
+              <span className="font-mono">{tokenInfo.salesConfig.saleType}</span>
+            </div>
+            <div>
+              <span className="text-gray-400">Active:</span>{' '}
+              <span className="font-mono">{tokenInfo.primaryMintActive ? 'Yes' : 'No'}</span>
+            </div>
           </div>
+
+          {/* Strategy-specific info */}
+          {tokenInfo.salesConfig.saleType === 'fixedPrice' && (
+            <FixedPriceInfo config={tokenInfo.salesConfig} />
+          )}
+          {tokenInfo.salesConfig.saleType === 'erc20' && (
+            <ERC20Info config={tokenInfo.salesConfig} />
+          )}
+          {tokenInfo.salesConfig.saleType === 'timed' && (
+            <TimedSaleInfo config={tokenInfo.salesConfig} />
+          )}
         </div>
       )}
 
       {/* Debug Info */}
-      <div className="mt-4 pt-4 border-t border-gray-800">
-        <details className="text-xs">
-          <summary className="cursor-pointer text-gray-400">Debug Info</summary>
-          <pre className="mt-2 p-2 bg-black rounded overflow-auto">
-            {JSON.stringify(
-              saleInfo,
-              (key, value) => 
-                typeof value === 'bigint' 
-                  ? value.toString()
-                  : value,
-              2
-            )}
-          </pre>
-        </details>
-      </div>
+      <details className="text-xs">
+        <summary className="cursor-pointer text-gray-400">Debug Info</summary>
+        <pre className="mt-2 p-2 bg-black rounded overflow-auto">
+          {JSON.stringify(tokenInfo, (key, value) => 
+            typeof value === 'bigint' ? value.toString() : value, 2
+          )}
+        </pre>
+      </details>
     </div>
   )
 } 
