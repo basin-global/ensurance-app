@@ -19,27 +19,34 @@ Our contracts are built on top of the Zora Creator 1155 implementation:
 
 ## Overview
 
-Our implementation uses three specific sale strategies from Zora's 1155 contracts:
+Our implementation uses Zora's 1155 contracts and Coins contracts for different strategies:
 
-1. **Zero ETH (Timed Sale Strategy)**
+1. **Zora Coins (ERC20 + Uniswap V3)**
+   - Automatic liquidity pool creation
+   - Built-in reward distribution
+   - 1% trading fee with creator rewards
+   - Contract: `0x777777751622c0d3258f214F9DF38E35BF45baF3`
+   [Learn more about Zora Coins](/docs/technical/zora/coins)
+
+2. **Zero ETH (Timed Sale Strategy)**
    - Enables Zora's secondary market functionality
    - Includes countdown period and minimum ETH requirements
    - Used for community-driven price discovery
    - Contract: `0x777777722D078c97c6ad07d9f36801e653E356Ae`
 
-2. **ERC20 Price (e.g., USDC)**
+3. **ERC20 Price (e.g., USDC)**
    - Fixed price in ERC20 tokens
    - No secondary market functionality
    - Requires token approval before minting
    - Contract: `0x777777E8850d8D6d98De2B5f64fae401F96eFF31`
 
-3. **Fixed ETH Price**
+4. **Fixed ETH Price**
    - Direct ETH payment
    - No secondary market functionality
    - Simple fixed price in ETH
    - Contract: `0x04E2516A2c207E84a1839755675dfd8eF6302F0a`
 
-4. **Merkle Allowlist** _(Not Currently Used)_
+5. **Merkle Allowlist** _(Not Currently Used)_
    - Merkle tree-based access control
    - Supports per-address customization (price/quantity)
    - Contract: `0xf48172CA3B6068B20eE4917Eb27b5472f1f272C7`
@@ -48,7 +55,33 @@ Our implementation uses three specific sale strategies from Zora's 1155 contract
 
 ## Sale Strategy Details
 
-### 1. Timed Sale (Zero ETH)
+### 1. Zora Coins
+
+#### Supply Distribution
+- Total Supply: 1 billion tokens
+- Pool: 99% (990M tokens)
+- Creator: 1% (10M tokens)
+
+#### Fee Structure
+Trading Fee: 1% total split:
+- Creator: 50%
+- Protocol: 20%
+- Platform Referrer: 15%
+- Trade Referrer: 15%
+
+LP Fee Distribution:
+- Creator: 50%
+- Platform Referrer: 25%
+- Protocol: 25%
+
+#### Key Features
+- Automatic Uniswap V3 pool creation
+- Configurable initial tick range
+- Support for ETH/WETH and ERC20 pairs
+- Built-in reward distribution
+[Full Zora Coins Documentation](/docs/technical/zora/coins)
+
+### 2. Timed Sale (Zero ETH)
 
 #### Fee Structure
 Total fee: 0.000111 ETH (✧111)
@@ -67,7 +100,7 @@ Total fee: 0.000111 ETH (✧111)
   3. Market countdown completed
   4. Minimum mints met
 
-### 2. ERC20 Fixed Price
+### 3. ERC20 Fixed Price
 
 #### Configuration
 ```solidity

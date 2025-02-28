@@ -1,0 +1,209 @@
+# Zora Coins
+
+> **Documentation Note**: This guide reflects the implementation of Zora Coins as of February 2024. For the most current information, please refer to the [official Zora documentation](https://docs.zora.co/).
+
+## Implementation Notes
+
+### Contract Addresses (Base Network)
+- Factory: `0x777777751622c0d3258f214F9DF38E35BF45baF3`
+- Implementation: `0x6B78be0808262b1d5E9B1eeDfE448aDCE2C637a8`
+
+### Key Events to Monitor
+```solidity
+// Factory events
+event CoinCreated(...)  // Emitted on deploy()
+
+// Coin contract events
+event CoinBuy(...)      // Emitted on buy()
+event CoinSell(...)     // Emitted on sell()
+event TradeRewards(...) // Trading fee distributions
+event MarketRewards(...) // LP fee distributions
+event CoinPayoutRecipientUpdated(...) // Creator reward address changes
+event ContractMetadataUpdated(...)    // Metadata URI updates
+```
+
+### SDK Status
+Currently implementing direct contract interactions until official Zora Coins SDK is released. Key integration points:
+- Factory's `deploy()` for coin creation
+- Individual coin's `buy()` and `sell()` for trading
+- Event monitoring for rewards and updates
+- Protocol Rewards contract for fee distribution
+
+## Contract Roles
+
+### Payout Recipient (Creator)
+- Receives initial 10M tokens (1% of supply)
+- Collects 50% of trading fees
+- Collects 50% of LP fees
+- Can be updated by owners via `setPayoutRecipient()`
+
+### Contract Owners
+- Set during initialization as array of addresses
+- Multiple owners possible through `MultiOwnable`
+- Admin rights to:
+  - Update payout recipient
+  - Update contract metadata
+  - Other admin functions
+
+### Minter/Deployer
+- Account that calls factory's `deploy()`
+- Can be different from creator/owners
+- Often a platform account deploying on behalf of creator
+
+Note: The "creator" (payout recipient) and contract owners can be different addresses. A platform could deploy and own the contract while setting a creator as the payout recipient.
+
+## Overview
+
+Zora Coins are ERC20 tokens created through a factory system that integrates with Uniswap V3 for liquidity and includes built-in reward distribution mechanisms.
+
+## Contract Architecture
+
+### Factory Contract
+The `ZoraFactoryImpl` contract creates new Zora Coin instances using minimal proxies (EIP-1167). Each deployment configures:
+- Payout recipient (creator)
+- Token URI (metadata)
+- Name and symbol
+- Platform referrer
+- Currency (ETH/WETH or ERC20)
+- Initial pool configuration
+
+### Coin Implementation
+Each Zora Coin is an ERC20 token with:
+- Upgradeable contracts (OpenZeppelin)
+- Multi-owner capability
+- Automatic liquidity pool creation
+- Built-in reward distribution
+- Reentrancy protection
+
+## Core Constants
+
+All Zora Coins share the same immutable constants defined in the `CoinConstants` contract. These values cannot be changed after deployment.
+
+### Supply Distribution
+```solidity
+// Total supply: 1 billion coins
+MAX_TOTAL_SUPPLY = 1_000_000_000e18
+
+// Initial distribution:
+POOL_LAUNCH_SUPPLY = 990_000_000e18    // 99% to liquidity pool
+CREATOR_LAUNCH_REWARD = 10_000_000e18   // 1% to creator
+```
+
+### Trading Parameters
+```solidity
+// Minimum trade size
+MIN_ORDER_SIZE = 0.0000001 ether    // Prevents dust transactions
+
+// Uniswap V3 pool fee
+LP_FEE = 10000                      // 1% fee on all trades
+```
+
+### Fee Structure
+All fees are specified in basis points (1 bps = 0.01%):
+
+#### Trading Fees (1% total)
+| Recipient | Basis Points | Percentage |
+|-----------|-------------|------------|
+| Creator | 5000 | 50% |
+| Protocol | 2000 | 20% |
+| Platform Referrer | 1500 | 15% |
+| Trade Referrer | 1500 | 15% |
+
+#### LP Fee Distribution
+| Recipient | Basis Points | Percentage |
+|-----------|-------------|------------|
+| Creator | 5000 | 50% |
+| Platform Referrer | 2500 | 25% |
+| Protocol | 2500 | 25% |
+
+### Pool Configuration
+```solidity
+// Price range for WETH pairs
+LP_TICK_LOWER_WETH = -199200
+LP_TICK_UPPER = 887200
+```
+
+## Key Features
+
+### Liquidity Management
+- Automatic Uniswap V3 pool creation
+- Configurable initial tick range
+- 1% pool fee structure
+- Initial supply split between creator and pool
+
+### Trading Mechanics
+- Buy/sell functionality through Uniswap V3
+- Slippage protection
+- Support for both ETH and ERC20 trading pairs
+- Automatic reward distribution on trades
+
+### Reward System
+Integrated with Protocol Rewards contract (`0x7777777F279eba3d3Ad8F4E708545291A6fDBA8B`):
+- Creator rewards
+- Platform referrer rewards
+- Trade referrer rewards
+- Protocol fees
+- Market rewards from LP fees
+
+## External System Integration
+
+### Comments System
+Contract Address: `0x7777777C2B3132e03a65721a41745C07170a5877`
+
+Coins provide three key functions for the comments system:
+```solidity
+interface ICoinComments {
+    function isOwner(address) external view returns (bool);
+    function payoutRecipient() external view returns (address);
+    function balanceOf(address) external view returns (uint256);
+}
+```
+
+### Protocol Rewards
+Contract Address: `0x7777777F279eba3d3Ad8F4E708545291A6fDBA8B`
+
+Handles distribution of:
+- Trading fees
+- Market rewards
+- Referral rewards
+- Protocol fees
+
+## Implementation Notes
+
+### Deployment Parameters
+```solidity
+function initialize(
+    address payoutRecipient_,
+    address[] memory owners_,
+    string memory tokenURI_,
+    string memory name_,
+    string memory symbol_,
+    address platformReferrer_,
+    address currency_,
+    int24 tickLower_
+) public initializer
+```
+
+### Fee Structure
+Trading fees are distributed as follows:
+- Creator rewards
+- Platform referrer rewards
+- Trade referrer rewards
+- Protocol fees
+
+Market rewards from LP fees are split between:
+- Creator
+- Platform referrer
+- Protocol
+
+### Security Features
+- Reentrancy protection
+- Multi-owner capability
+- Address validation
+- Slippage protection
+- ETH handling safety checks
+
+### Standards Support
+- ERC20 with Permit
+- ERC165 interface detection
+- ERC7572 contract metadata
