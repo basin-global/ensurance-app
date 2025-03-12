@@ -1,0 +1,1 @@
+erc 20 details page

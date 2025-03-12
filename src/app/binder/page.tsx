@@ -1,0 +1,1 @@
+// all natural assets in the binder
