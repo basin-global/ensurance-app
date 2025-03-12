@@ -19,7 +19,7 @@ Our contracts are built on top of the Zora Creator 1155 implementation:
 
 ## Overview
 
-Our implementation uses Zora's 1155 contracts and Coins contracts for different strategies:
+Our implementation uses both Zora's Coins and 1155 contracts for different strategies:
 
 1. **Zora Coins (ERC20 + Uniswap V3)**
    - Automatic liquidity pool creation
@@ -28,30 +28,17 @@ Our implementation uses Zora's 1155 contracts and Coins contracts for different 
    - Contract: `0x777777751622c0d3258f214F9DF38E35BF45baF3`
    [Learn more about Zora Coins](/docs/technical/zora/coins)
 
-2. **Zero ETH (Timed Sale Strategy)**
-   - Enables Zora's secondary market functionality
-   - Includes countdown period and minimum ETH requirements
-   - Used for community-driven price discovery
-   - Contract: `0x777777722D078c97c6ad07d9f36801e653E356Ae`
-
-3. **ERC20 Price (e.g., USDC)**
+2. **ERC20 Price (e.g., USDC)**
    - Fixed price in ERC20 tokens
    - No secondary market functionality
    - Requires token approval before minting
    - Contract: `0x777777E8850d8D6d98De2B5f64fae401F96eFF31`
 
-4. **Fixed ETH Price**
+3. **Fixed ETH Price**
    - Direct ETH payment
    - No secondary market functionality
    - Simple fixed price in ETH
    - Contract: `0x04E2516A2c207E84a1839755675dfd8eF6302F0a`
-
-5. **Merkle Allowlist** _(Not Currently Used)_
-   - Merkle tree-based access control
-   - Supports per-address customization (price/quantity)
-   - Contract: `0xf48172CA3B6068B20eE4917Eb27b5472f1f272C7`
-
-   Allowlist may be added later. Premint is not supported.
 
 ## Sale Strategy Details
 
@@ -81,26 +68,7 @@ LP Fee Distribution:
 - Built-in reward distribution
 [Full Zora Coins Documentation](/docs/technical/zora/coins)
 
-### 2. Timed Sale (Zero ETH)
-
-#### Fee Structure
-Total fee: 0.000111 ETH (✧111)
-- Creator: 0.0000555 ETH (✧55)
-- Create Referral: 0.0000111 ETH (✧11)
-- Mint Referral: 0.0000222 ETH (✧22)
-- Zora: 0.0000111 ETH (✧11)
-- Market: 0.0000111 ETH (✧11)
-
-#### Secondary Market
-- Creates ERC20z token and Uniswap V3 pool (1% fee)
-- Secondary price starts at 0.000111 ETH
-- Requirements for market launch:
-  1. Primary sale must end
-  2. Minimum ETH threshold reached
-  3. Market countdown completed
-  4. Minimum mints met
-
-### 3. ERC20 Fixed Price
+### 2. ERC20 Fixed Price
 
 #### Configuration
 ```solidity
@@ -775,3 +743,24 @@ interface QuotePrice {
   };
 }
 ```
+
+## Deprecated Strategies
+
+### Zero ETH (Timed Sale)
+> **Note**: This strategy has been deprecated in favor of Zora Coins, which provides improved liquidity and trading features.
+
+The Zero ETH strategy was previously used for community-driven price discovery and secondary market functionality. It has been replaced by Zora Coins which offers better liquidity management and reward distribution through Uniswap V3 integration.
+
+Contract: `0x777777722D078c97c6ad07d9f36801e653E356Ae` (Historical reference only)
+
+### Merkle Allowlist
+> **Note**: This strategy is not currently used in our implementation.
+
+The Merkle Allowlist strategy was designed for:
+- Merkle tree-based access control
+- Per-address customization (price/quantity)
+- Whitelist-based sales
+
+Contract: `0xf48172CA3B6068B20eE4917Eb27b5472f1f272C7` (Historical reference only)
+
+While this strategy could be useful for specific use cases like whitelist sales or custom pricing per address, we currently handle such requirements through other mechanisms.
