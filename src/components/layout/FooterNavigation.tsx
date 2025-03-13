@@ -17,8 +17,8 @@ export function FooterNavigation() {
         <Link href="/syndicates" className="hover:text-gray-300 transition-colors">
           syndicates
         </Link>
-        <Link href="/pools" className="hover:text-gray-300 transition-colors">
-          pools
+        <Link href="/natural-capital" className="hover:text-gray-300 transition-colors">
+          stocks & flows of natural capital
         </Link>
         <Link href="/exchange" className="hover:text-gray-300 transition-colors">
           exchange

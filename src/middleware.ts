@@ -15,9 +15,9 @@ export function middleware(request: NextRequest) {
     })
   }
 
-  // Redirect /groups/ensurance/all to /pools
+  // Update: Redirect /groups/ensurance/all to /natural-capital instead of /pools
   if (pathname === '/groups/ensurance/all') {
-    return NextResponse.redirect(new URL('/pools', request.url))
+    return NextResponse.redirect(new URL('/natural-capital', request.url))
   }
 
   // Skip for static files and API routes
