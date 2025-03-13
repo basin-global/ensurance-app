@@ -23,3 +23,9 @@ export const CardTitle: React.FC<React.HTMLAttributes<HTMLHeadingElement>> = ({ 
     {children}
   </h3>
 );
+
+export const CardDescription: React.FC<React.HTMLAttributes<HTMLParagraphElement>> = ({ children, className, ...props }) => (
+  <p className={`text-sm text-gray-400 ${className}`} {...props}>
+    {children}
+  </p>
+);

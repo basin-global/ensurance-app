@@ -71,7 +71,7 @@ export function useData({
           break;
           
         case 'syndicate':
-          endpoint = '/api/syndicates/vaults';
+          endpoint = '/api/syndicates';
           break;
           
         case 'pool':
@@ -194,7 +194,7 @@ export function useData({
           name: item.name,
           description: item.description,
           image: item.image_url,
-          url: `/syndicates/vaults/${item.id}`,
+          url: `/syndicates/${item.id}`,
           targetYield: item.targetYield,
           actualYield: item.actualYield,
           deposits: item.deposits,
