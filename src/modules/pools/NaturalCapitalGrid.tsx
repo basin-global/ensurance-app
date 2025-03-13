@@ -135,12 +135,14 @@ export default function NaturalCapitalGrid({
         >
             <div className="text-center space-y-8 mb-24">
                 <p className="text-2xl tracking-wider text-white/80">ensuring</p>
-                <h2 className="text-5xl md:text-6xl lg:text-7xl font-bold bg-clip-text text-transparent bg-gradient-to-b from-white via-white/95 to-white/80">
-                    critical infrastructure
-                </h2>
-                <div className="h-16">
-                    <TypewriterEffect words={words} className="justify-center" />
-                </div>
+                <Link href="/natural-capital" className="block group space-y-8">
+                    <h2 className="text-5xl md:text-6xl lg:text-7xl font-bold bg-clip-text text-transparent bg-gradient-to-b from-white via-white/95 to-white/80 group-hover:opacity-80 transition-opacity">
+                        critical infrastructure
+                    </h2>
+                    <div className="h-16">
+                        <TypewriterEffect words={words} className="justify-center group-hover:opacity-80 transition-opacity" />
+                    </div>
+                </Link>
                 <div className="flex justify-center gap-16 mt-8 text-lg tracking-widest">
                     <button 
                         onClick={() => setCategory('stocks')}
