@@ -27,8 +27,6 @@ export function HeaderLogo() {
     pathname.includes('/pools') || 
     pathname.includes('/groups/ensurance/all')
 
-  const isCertificates = pathname.includes('/certificates/')
-
   // Determine logo source
   const logoSrc = isEnsurancePools
     ? "/groups/orbs/ensurance-orb.png"
@@ -37,18 +35,15 @@ export function HeaderLogo() {
       : "/groups/orbs/ensurance-orb.png"
 
   // Determine header text
-  const headerText = isCertificates
-    ? 'certificates of ensurance'
-    : isEnsurancePools
-      ? 'ensurance pools'
-      : groupName 
-        ? `${groupName} ensurance agents`
-        : 'ensurance agents'
+  const headerText = groupName 
+    ? groupName.endsWith('.ensurance')
+      ? `${groupName} agents`
+      : `${groupName} ensurance agents`
+    : 'natural capital ensurance'
 
   // Determine URLs
   const homeUrl = '/'
-  const poolsUrl = '/pools'
-  const certificatesUrl = '/certificates/all'
+  const poolsUrl = '/natural-capital'
   const groupUrl = isEnsurancePools
     ? poolsUrl
     : groupName && `/groups/${groupName.replace(/^\./, '')}`
@@ -63,11 +58,7 @@ export function HeaderLogo() {
           height={28}
         />
       </Link>
-      {isCertificates ? (
-        <Link href={certificatesUrl} className="hover:opacity-80 transition-opacity">
-          {headerText}
-        </Link>
-      ) : (groupName || isEnsurancePools) ? (
+      {(groupName || isEnsurancePools) ? (
         <Link href={groupUrl} className="hover:opacity-80 transition-opacity">
           {headerText}
         </Link>

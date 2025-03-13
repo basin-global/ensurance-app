@@ -7,8 +7,8 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        grotesk: ['var(--font-space-grotesk)'],
-        mono: ['var(--font-space-mono)'],
+        grotesk: ['var(--font-space-grotesk)', 'sans-serif'],
+        mono: ['var(--font-space-mono)', 'Space Mono', 'monospace'],
       },
     },
   },

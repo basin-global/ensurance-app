@@ -33,7 +33,7 @@ export default function RootLayout({
       <head>
         <WebAnalytics />
       </head>
-      <body className="antialiased min-h-screen flex flex-col font-grotesk">
+      <body className="antialiased min-h-screen flex flex-col font-grotesk bg-black text-white">
         <PrivyProviderWrapper>
           <Header />
           <ToastContainer 
