@@ -12,6 +12,8 @@ interface GroupData {
     email: string | null;
     website: string | null;
     chat: string | null;
+    situs_account: string | null;
+    tba_address: string | null;
 }
 
 export function GroupInfo({ groupName }: { groupName: string }) {
@@ -112,35 +114,49 @@ export function GroupInfo({ groupName }: { groupName: string }) {
                         {groupData.tagline && (
                             <p className="text-gray-300 text-sm mb-3 line-clamp-2">{groupData.tagline}</p>
                         )}
-                        <div className="flex gap-4">
-                            {groupData.website && (
-                                <a 
-                                    href={groupData.website}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
-                                >
-                                    Website
-                                </a>
+                        <div className="flex flex-col gap-2">
+                            {groupData.situs_account && (
+                                <div className="text-sm">
+                                    <span className="text-gray-400">Situs Account:</span>{' '}
+                                    <span className="font-mono">{groupData.situs_account}</span>
+                                </div>
                             )}
-                            {groupData.chat && (
-                                <a 
-                                    href={groupData.chat}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
-                                >
-                                    Chat
-                                </a>
+                            {groupData.tba_address && (
+                                <div className="text-sm">
+                                    <span className="text-gray-400">Group Account:</span>{' '}
+                                    <span className="font-mono text-xs">{groupData.tba_address}</span>
+                                </div>
                             )}
-                            {groupData.email && (
-                                <a 
-                                    href={`mailto:${groupData.email}`}
-                                    className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
-                                >
-                                    Email
-                                </a>
-                            )}
+                            <div className="flex gap-4 mt-2">
+                                {groupData.website && (
+                                    <a 
+                                        href={groupData.website}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                                    >
+                                        Website
+                                    </a>
+                                )}
+                                {groupData.chat && (
+                                    <a 
+                                        href={groupData.chat}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                                    >
+                                        Chat
+                                    </a>
+                                )}
+                                {groupData.email && (
+                                    <a 
+                                        href={`mailto:${groupData.email}`}
+                                        className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                                    >
+                                        Email
+                                    </a>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>

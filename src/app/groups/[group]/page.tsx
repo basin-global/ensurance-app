@@ -1,6 +1,7 @@
 import { groups } from '@/lib/database/queries/groups'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
+import Link from 'next/link'
 
 export default async function GroupPage({ params }: { params: { group: string } }) {
     const groupData = await groups.getByName(`.${params.group}`)
@@ -69,6 +70,24 @@ export default async function GroupPage({ params }: { params: { group: string } 
                             <div className="space-y-6">
                                 <h3 className="text-xl font-semibold">Details</h3>
                                 <dl className="space-y-4">
+                                    {groupData.situs_account && (
+                                        <div>
+                                            <dt className="text-sm text-gray-400">Situs Account</dt>
+                                            <dd className="mt-1">
+                                                <Link 
+                                                    href={`/${groupData.situs_account}`}
+                                                    className="font-mono text-blue-400 hover:text-blue-300"
+                                                >
+                                                    {groupData.situs_account}
+                                                </Link>
+                                            </dd>
+                                            {groupData.tba_address && (
+                                                <dd className="mt-1 font-mono text-sm text-gray-500 break-all">
+                                                    {groupData.tba_address}
+                                                </dd>
+                                            )}
+                                        </div>
+                                    )}
                                     <div>
                                         <dt className="text-sm text-gray-400">Contract Address</dt>
                                         <dd className="font-mono mt-1">{groupData.contract_address}</dd>

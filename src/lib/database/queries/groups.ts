@@ -31,8 +31,26 @@ export const groups = {
     // Get single group
     getByName: async (ogName: string) => {
         const result = await sql`
-            SELECT * FROM situs_ogs 
-            WHERE og_name = ${ogName} 
+            WITH group_data AS (
+                SELECT 
+                    og_name,
+                    name_front,
+                    tagline,
+                    description,
+                    email,
+                    website,
+                    chat,
+                    situs_account,
+                    contract_address,
+                    total_supply
+                FROM situs_ogs 
+                WHERE og_name = ${ogName}
+            )
+            SELECT 
+                g.*,
+                s.tba_address
+            FROM group_data g
+            LEFT JOIN situs_accounts_situs s ON s.full_account_name = g.situs_account
             LIMIT 1`;
         return result.rows[0];
     },
@@ -45,7 +63,8 @@ export const groups = {
         description?: string,
         email?: string,
         website?: string,
-        chat?: string
+        chat?: string,
+        situs_account?: string
     }) => {
         const result = await sql`
             INSERT INTO situs_ogs (
@@ -55,7 +74,8 @@ export const groups = {
                 description, 
                 email, 
                 website, 
-                chat
+                chat,
+                situs_account
             ) VALUES (
                 ${data.og_name},
                 ${data.name_front},
@@ -63,7 +83,8 @@ export const groups = {
                 ${data.description},
                 ${data.email},
                 ${data.website},
-                ${data.chat}
+                ${data.chat},
+                ${data.situs_account}
             ) 
             RETURNING *`;
         return result.rows[0];
