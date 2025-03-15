@@ -1,0 +1,135 @@
+# Technical Documentation
+
+## Certificates of Ensurance
+
+### General Ensurance (`ERC-20`)
+Values what matters, flowing like a currency where market activity **indirectly** funds place, people, and purpose.
+
+*Full contract list available in /market for active general ensurance*
+
+### Specific Ensurance (`ERC-1155`)
+Protects what matters, anchoring as an asset to **directly** fund natural assets and stewardship.
+
+*Full contract list available in /market for active specific ensurance*
+
+## ENSURE Currency
+Nature-based utility token that provides liquidity between currencies and assets.
+- Standard: `ERC-20`
+- Primary Chain: Base
+- Cross-chain: EVM via [Axelar ITS](https://interchain.axelar.dev/base/0x0c66d591d1ff5944A44aebB65c33f6B6e82a124F)
+
+### Contract Addresses
+```
+Base:           0x0c66d591d1ff5944a44aebb65c33f6b6e82a124f
+Other EVMs:     0x0ea010dCB1DfBE5c9d1AC475901a59642bad90f4
+Axelar Relayer: 0xF29D33e99F770caC53Aad2CE125711329804A76a
+```
+
+## Group Protocol (SITUS)
+
+### Core Contracts
+```
+Factory:  0x67c814835e1920324634fd6da416a0e79c949970 [Base]
+Resolver: 0x30EF3151Ca370562F25ea6F3611fEFD70B5a93df [Base]
+```
+
+### Groups
+Available via [`getTldsArray`](https://basescan.org/address/0x67c814835e1920324634fd6da416a0e79c949970#readContract#F3) e.g.
+```
+[.basin, .situs, .boulder, .regen, .mumbai, .refi, .ebf, 
+.bloom, .bioregion, .kokonut, .ogallala, .sicilia, .tokyo, .earth]
+```
+
+Use [`tldNamesAddresses`](https://basescan.org/address/0x67c814835e1920324634fd6da416a0e79c949970#readContract#F9) to get contract addresses (e.g., `.basin` → `0x76AC406218413950DB2b050f7C3449AB5E24AABc`)
+
+### Metadata Contracts
+1. **Onchain Default** (Basic SVG)
+   ```
+   0x780A9a92BA66a29d942bdb289DB455F8e3ED0dFa [Base]
+   ```
+
+2. **Dynamic Custom** (API Route)
+   ```
+   0x38b34fe7Ae46aEB93ca0afDa165568656720B31d [Base]
+   ```
+
+## Tokenbound Implementation (`ERC-6551`)
+
+All contracts on Base network:
+```
+Create2 Factory:             0x4e59b44847b379578588920ca78fbf26c0b4956c
+ERC-6551 Registry:           0x000000006551c19487814612e58FE06813775758
+V3 Account Proxy:            0x55266d75D1a14E4572138116aF39863Ed6596E7F
+V3 Account Implementation:   0x41C8f39463A868d3A88af00cd0fe7102F30E44eC
+V3 Account Guardian:         0x2FE5ccb0d7Ea195FEb87987d3573F9fcCE2b5D57
+Authenticated Multicall:     0xcA1167915584462449EE5b4Ea51c37fE81eCDCCD
+LayerZero V2 Executor:       0x0F220412Bf22E05EBcC5070D60fd7136A08aF22C
+```
+
+## Accounts & Agents
+
+### Types
+1. **Human Operated**
+   - EOA
+   - Smart wallet
+   - Safe
+   
+2. **Semi-Autonomous**
+   - Agent Account: Tokenbound account with agent + human controls
+   - Operator Account: OwnerOf account with human controls
+   - Can be EOA or Server Wallet
+
+### Account Properties
+- `name`: Unique onchain name within Group namespace
+- `tokenId`: Distinct numerical identifier
+- `AgentAccount`: Cross-chain 0x wallet for onchain interactions
+
+### Group Contract Functions
+- `buyingEnabled`: Controls new account creation
+- `metadataAddress`: Data reference storage
+- `minter`: Account issuance control
+- `price`: Account cost
+- `referral`: Referral structure
+- `owner`: Contract ownership
+
+### Token Standards
+Accounts can hold and transact:
+- `ERC-20`: Fungible tokens/currency
+- `ERC-721`: NFTs/unique assets
+- `ERC-1155`: Semi-fungible tokens/certificates
+
+## Ensurance Proceeds
+Modeled after natural water cycles, proceeds flow through three distribution mechanisms:
+
+### Distribution Types
+```
+Instance-based:  Immediate funding
+Time-based:      3 months to 512 years
+Continuous:      Ongoing stewardship
+```
+
+*Full contract list available soon in /proceeds*
+
+All proceeds can be traced from [HEADWATERS](https://app.splits.org/accounts/0xa187F8CBdd36D63967c33f5BD4dD4B9ECA51270e/?chainId=8453) on Base.
+
+## Deprecated Contracts
+*If you own assets on these contracts, contact us for migration to new versions*
+
+### ENSURANCE
+```
+Base:      0x1f98380fb1b3ae8cd097d5f9d49a7e79cd69a4fb
+Zora:      0x14b71a8e0c2c4d069cb230cc88a1423736b34096
+Arbitrum:  0xc6e4e6e5a11e70af6334bf3274f4d4c2e0ce3571
+Optimism:  0x5c738cdf228d8c6e8dc68a94b08be7d8958bcccf
+```
+
+### Legacy Protocols
+```
+Emergent Streams (Polygon): 0xc31b90964a5062376a62e2c772a6c4d422cd73b2
+.basin MVP (Polygon):       0x4bf5a99ea2f8de061f7d77ba9edd749503d945da
+```
+
+
+
+
+

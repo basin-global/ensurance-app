@@ -2,21 +2,6 @@
 
 > **Documentation Note**: This guide reflects our implementation of the Zora Protocol as of February 2024. For the most current information, please refer to the [official Zora documentation](https://docs.zora.co/).
 
-## Contract Addresses
-
-### Ensurance Contracts (Primary)
-- Base: `0x1f98380fb1b3ae8cd097d5f9d49a7e79cd69a4fb`
-- Zora: `0x14b71a8e0c2c4d069cb230cc88a1423736b34096`
-- Arbitrum: `0xc6e4e6e5a11e70af6334bf3274f4d4c2e0ce3571`
-- Optimism: `0x5c738cdf228d8c6e8dc68a94b08be7d8958bcccf`
-
-### Zora Creator 1155 Implementation
-Our contracts are built on top of the Zora Creator 1155 implementation:
-- Base: `0x5Eb5bABCEFEa846b220C82f222F00Df95934F5f0`
-- Zora: `0xDB07C4525E82340A27077Ad258160928f271BB7F`
-- Optimism: `0xF77330C8b1c41f2e44470763Cf9E3ACa78Db4381`
-- Arbitrum: `0xC04050e04708b33302E30E5A0fB1e8c38F4EBbB0`
-
 ## Overview
 
 Our implementation uses both Zora's Coins and 1155 contracts for different strategies:
@@ -28,17 +13,11 @@ Our implementation uses both Zora's Coins and 1155 contracts for different strat
    - Contract: `0x777777751622c0d3258f214F9DF38E35BF45baF3`
    [Learn more about Zora Coins](/docs/technical/zora/coins)
 
-2. **ERC20 Price (e.g., USDC)**
+2. **ERC1155 in ERC20 Price (e.g., USDC)**
    - Fixed price in ERC20 tokens
    - No secondary market functionality
    - Requires token approval before minting
    - Contract: `0x777777E8850d8D6d98De2B5f64fae401F96eFF31`
-
-3. **Fixed ETH Price**
-   - Direct ETH payment
-   - No secondary market functionality
-   - Simple fixed price in ETH
-   - Contract: `0x04E2516A2c207E84a1839755675dfd8eF6302F0a`
 
 ## Sale Strategy Details
 
@@ -68,7 +47,7 @@ LP Fee Distribution:
 - Built-in reward distribution
 [Full Zora Coins Documentation](/docs/technical/zora/coins)
 
-### 2. ERC20 Fixed Price
+### 2. ERC1155 in ERC20 Fixed Price
 
 #### Configuration
 ```solidity
@@ -764,3 +743,18 @@ The Merkle Allowlist strategy was designed for:
 Contract: `0xf48172CA3B6068B20eE4917Eb27b5472f1f272C7` (Historical reference only)
 
 While this strategy could be useful for specific use cases like whitelist sales or custom pricing per address, we currently handle such requirements through other mechanisms.
+
+### Fixed ETH Price
+> **Note**: This strategy has been deprecated in favor of ERC20 Minter for fixed pricing and Zora Coins for ETH-based trading.
+
+The Fixed ETH Price strategy was previously used for direct ETH payments. It has been replaced by:
+- ERC20 Minter for fixed pricing (using USDC/$ENSURE)
+- Zora Coins for ETH-based trading and liquidity
+
+This change better serves our corporate and non-crypto users by:
+- Providing stable pricing in USD-pegged tokens
+- Offering better reward distribution
+- Supporting more sophisticated trading features
+- Enabling clearer business accounting
+
+Contract: `0x04E2516A2c207E84a1839755675dfd8eF6302F0a` (Historical reference only)

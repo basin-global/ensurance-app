@@ -62,12 +62,17 @@ export function useData({
           break;
           
         case 'generalCert':
-        case 'specificCert':
-          endpoint = '/api/ensurance';
+          endpoint = '/api/certificates';
           if (walletAddress) queryParams.append('address', walletAddress);
           if (chainId) queryParams.append('chain', chainId);
-          if (type === 'generalCert') queryParams.append('type', 'erc20');
-          if (type === 'specificCert') queryParams.append('type', 'erc1155');
+          queryParams.append('type', 'general');
+          break;
+          
+        case 'specificCert':
+          endpoint = '/api/certificates';
+          if (walletAddress) queryParams.append('address', walletAddress);
+          if (chainId) queryParams.append('chain', chainId);
+          queryParams.append('type', 'specific');
           break;
           
         case 'syndicate':

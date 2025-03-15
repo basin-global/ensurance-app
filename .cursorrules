@@ -25,3 +25,7 @@ Some multi-domain code may still exist in the codebase:
 - Domain-specific routing logic
 
 These remnants are gradually being cleaned up but don't affect functionality as all traffic now routes to ensurance.app.
+
+### Development Rules
+- Do not open a new terminal tab if `npm run dev` is already running
+- Never expose PostgreSQL connection strings or passwords in chat/composer - use `.env` for current credentials

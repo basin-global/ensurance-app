@@ -1,10 +1,7 @@
 import { ReferralButton } from '@/modules/rewards/RewardsLink';
 import { GroupLinks } from '@/modules/groups/GroupLinks';
-import { BasedOnchain } from '@/components/layout/BasedOnchain';
-import { BuiltInPublic } from '@/components/layout/BuiltInPublic';
 import { FooterNavigation } from '@/components/layout/FooterNavigation';
 import { UtilityLinks } from '@/components/layout/UtilityLinks';
-import { LegalLinks } from '@/components/layout/LegalLinks';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -35,29 +32,114 @@ export default function Footer() {
           
           {/* Bottom Footer */}
           <div className="max-w-3xl mx-auto w-full">
-            <div className="grid grid-cols-3 divide-x divide-gray-800 pt-4">
-              <div className="flex items-start justify-end pr-12">
-                <BuiltInPublic />
+            <div className="grid grid-cols-2 gap-8">
+              {/* Left Column - BASIN */}
+              <div className="flex flex-col items-center justify-center">
+                <div className="text-center h-[120px] flex items-center justify-center w-72">
+                  <Link href="/" className="opacity-60 hover:opacity-100 transition-opacity">
+                    <Image
+                      src="/assets/logos/basin-blue-circle%20300.png"
+                      alt="BASIN"
+                      width={65}
+                      height={65}
+                    />
+                  </Link>
+                </div>
+                <div className="flex flex-col items-center gap-1.5 w-72">
+                  {/* Gradient Divider */}
+                  <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-800 to-transparent mb-1.5" />
+                  <div className="flex flex-col items-center gap-1.5">
+                    <Link
+                      href="https://github.com/basin-global"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] font-mono text-gray-400 hover:text-gray-200 transition-colors"
+                    >
+                      github
+                    </Link>
+                    <Link
+                      href="https://docs.basin.global"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] font-mono text-gray-400 hover:text-gray-200 transition-colors"
+                    >
+                      field manual
+                    </Link>
+                    <Link
+                      href="https://dispatches.basin.global"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] font-mono text-gray-400 hover:text-gray-200 transition-colors"
+                    >
+                      dispatches
+                    </Link>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center justify-center">
-                <Link href="/" className="opacity-50 hover:opacity-100 transition-opacity">
-                  <Image
-                    src="/assets/logos/basin-blue-circle%20300.png"
-                    alt="BASIN"
-                    width={50}
-                    height={50}
-                  />
-                </Link>
-              </div>
-              <div className="flex items-start justify-start pl-12">
-                <BasedOnchain />
+
+              {/* Right Column - Legal Links and Logos */}
+              <div className="flex flex-col items-center justify-center">
+                <div className="text-center h-[120px] flex items-center justify-center w-72">
+                  <div className="flex flex-col items-center">
+                    {/* Built on Ethereum Logo */}
+                    <Link
+                      href="https://x.com/jackbutcher/status/1887159739815018794"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="opacity-60 hover:opacity-100 transition-opacity mb-6"
+                    >
+                      <Image
+                        src="/assets/logos/builtOnEthereum.png"
+                        alt="Built on Ethereum"
+                        width={50}
+                        height={23}
+                        className="w-auto h-auto"
+                      />
+                    </Link>
+
+                    {/* ELIZA OS Logo */}
+                    <Link
+                      href="https://elizaos.github.io/eliza/docs/intro/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="opacity-60 hover:opacity-100 transition-opacity"
+                    >
+                      <Image
+                        src="/assets/logos/eliza-os_logo-mark_light.png"
+                        alt="ELIZA OS"
+                        width={42}
+                        height={42}
+                        className="w-auto h-auto"
+                      />
+                    </Link>
+                  </div>
+                </div>
+                <div className="flex flex-col items-center gap-1.5 w-72">
+                  {/* Gradient Divider */}
+                  <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-800 to-transparent mb-1.5" />
+                  {/* Links line */}
+                  <div className="flex flex-col items-center gap-1.5">
+                    <Link
+                      href="https://docs.basin.global/dossier/formalities/license"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] font-mono text-gray-400 hover:text-gray-200 transition-colors"
+                    >
+                      license
+                    </Link>
+                    <Link
+                      href="https://docs.basin.global/dossier/formalities/disclaimer"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] font-mono text-gray-400 hover:text-gray-200 transition-colors"
+                    >
+                      terms
+                    </Link>
+                    <span className="text-[11px] font-mono text-gray-400">privacy</span>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-
-          {/* Legal Links Section */}
-          <div className="mt-8">
-            <LegalLinks />
           </div>
 
           {/* Bottom Padding */}

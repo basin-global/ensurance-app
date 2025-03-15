@@ -6,17 +6,17 @@ import { useRouter } from 'next/navigation'
 
 export default function EnsureTestPage() {
   const router = useRouter();
-  const [activeVariant, setActiveVariant] = useState<EnsureVariant>('home');
+  const [activeVariant, setActiveVariant] = useState<EnsureVariant>('market');
   
   // List of available variants
-  const variants: EnsureVariant[] = ['home', 'certificates', 'syndicates', 'markets', 'custom'];
+  const variants: EnsureVariant[] = ['home', 'certificates', 'syndicates', 'market', 'custom'];
   
   // Variant display names
   const variantLabels: Record<EnsureVariant, string> = {
     'home': 'Home Page',
     'certificates': 'Certificates',
     'syndicates': 'Syndicates',
-    'markets': 'Markets',
+    'market': 'Market',
     'custom': 'Custom'
   };
 
@@ -75,9 +75,9 @@ export default function EnsureTestPage() {
             Shows only syndicates in a grid layout - ideal for a syndicates page.
           </p>
         )}
-        {activeVariant === 'markets' && (
+        {activeVariant === 'market' && (
           <p className="text-gray-400">
-            Shows groups, certificates, and syndicates in a list layout - suitable for a markets page.
+            Shows both general and specific certificates in a list layout - suitable for trading and transfers.
           </p>
         )}
         {activeVariant === 'custom' && (
@@ -90,14 +90,8 @@ export default function EnsureTestPage() {
       {/* The Ensure component with the selected variant */}
       <Ensure 
         variant={activeVariant}
-        // For custom variant, we could add specific props here
-        // These would override the variant defaults
-        {...(activeVariant === 'custom' ? {
-          fetchGroups: true,
-          fetchCertificates: true,
-          showAccounts: true,
-          viewMode: 'grid'
-        } : {})}
+        // For testing, we'll pass a wallet address to see some data
+        walletAddress="0x1234567890123456789012345678901234567890"
       />
     </div>
   )

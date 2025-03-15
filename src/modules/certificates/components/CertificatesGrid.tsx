@@ -5,7 +5,7 @@ import AssetCard from '@/modules/assets/AssetCard'
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Asset } from '@/types'
-import { ensuranceContracts } from '@/modules/certificates/config/ensurance'
+import { ensuranceContracts } from '@/modules/certificates/specific/config/ensurance'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { buttonVariants } from '@/components/ui/button'

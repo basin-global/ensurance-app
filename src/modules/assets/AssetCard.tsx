@@ -4,10 +4,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreVertical, PlusCircle, ArrowLeftRight } from "lucide-react"
 import Link from 'next/link'
 import Image from 'next/image'
-import { isEnsuranceToken } from '@/modules/certificates/config/ensurance'
+import { isEnsuranceToken } from '@/modules/certificates/specific/config/ensurance'
 import { Asset, EnsureOperation } from '@/types'
 import { toast } from 'react-toastify'
-import { getCertificateUsdValue } from '@/modules/certificates/config/exchange-rates'
+import { getCertificateUsdValue } from '@/modules/certificates/specific/config/exchange-rates'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface AssetCardProps {

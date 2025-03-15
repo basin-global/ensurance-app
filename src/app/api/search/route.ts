@@ -1,5 +1,5 @@
 import { accounts } from '@/lib/database/queries/accounts';
-import { ensurance } from '@/lib/database/queries/ensurance';
+import { ensurance } from '@/lib/database/queries/ensurance/specific';
 import { groups } from '@/lib/database/queries/groups';
 import { searchDocs } from '@/lib/docs-search';
 import { NextRequest, NextResponse } from 'next/server';

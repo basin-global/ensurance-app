@@ -12,8 +12,8 @@ import { MinusCircle, PlusCircle } from 'lucide-react'
 import Image from 'next/image'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
-// Only use Base, Arbitrum, and Optimism for exchange
-const EXCHANGE_ENABLED_CHAINS = ['base', 'arbitrum', 'optimism'] as const;
+// Only use Base for exchange
+const EXCHANGE_ENABLED_CHAINS = ['base'] as const;
 
 interface SelectedCertificate {
   asset: Asset;

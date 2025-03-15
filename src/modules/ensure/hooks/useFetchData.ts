@@ -104,27 +104,65 @@ export function useFetchData({
         
         // Fetch certificates if enabled
         if (fetchCertificates) {
-          // Build query params for certificates
-          const certParams = new URLSearchParams();
-          if (walletAddress) certParams.append('owner', walletAddress);
-          if (chainId) certParams.append('chain', chainId);
-          
-          const certsUrl = `/api/ensurance${certParams.toString() ? `?${certParams.toString()}` : ''}`;
-          const certsData = await fetch(certsUrl).then(res => res.json());
-          
-          const certs = certsData.map((item: any) => ({
-            id: `${item.chain}-${item.contract_address}-${item.token_id}`,
-            type: 'specificCert' as EntityType,
-            name: item.name || 'Untitled Certificate',
-            description: item.description || 'Certificate',
-            image: item.image_url || 'https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com/default.png',
-            url: `/certificates/${item.chain}/${item.token_id}`,
-            chain: item.chain,
-            contractAddress: item.contract_address,
-            tokenId: item.token_id,
-            isEnsured: true
-          }));
-          allItems.push(...certs);
+          try {
+            // Build query params for certificates
+            const certParams = new URLSearchParams();
+            if (walletAddress) certParams.append('owner', walletAddress);
+            if (chainId) certParams.append('chain', chainId);
+            
+            // Fetch all certificates in one call
+            const certsUrl = `/api/certificates${certParams.toString() ? `?${certParams.toString()}` : ''}`;
+            const response = await fetch(certsUrl);
+            
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.details || 'Failed to fetch certificates');
+            }
+            
+            const certsData = await response.json();
+            
+            // Ensure we have an array to work with
+            const certItems = Array.isArray(certsData) ? certsData : [];
+            
+            // Process certificates based on their type
+            const certificates = certItems.map((item: any) => {
+              const baseProps = {
+                id: `${item.chain}-${item.contract_address}${item.token_id ? `-${item.token_id}` : ''}`,
+                chain: item.chain,
+                contractAddress: item.contract_address,
+                isEnsured: true
+              };
+
+              if (item.cert_type === 'general') {
+                return {
+                  ...baseProps,
+                  type: 'generalCert' as EntityType,
+                  name: item.symbol || 'Untitled Certificate',
+                  description: 'General Certificate',
+                  image: 'https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com/default.png',
+                  url: `/certificates/${item.chain}/${item.contract_address}`,
+                  symbol: item.symbol,
+                  decimals: item.decimals
+                };
+              } else {
+                return {
+                  ...baseProps,
+                  type: 'specificCert' as EntityType,
+                  name: item.name || 'Untitled Certificate',
+                  description: item.description || 'Certificate',
+                  image: item.image_url || 'https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com/default.png',
+                  url: `/certificates/${item.chain}/${item.token_id}`,
+                  tokenId: item.token_id,
+                  metadata: item.metadata
+                };
+              }
+            });
+            
+            allItems.push(...certificates);
+          } catch (err) {
+            console.error('Error fetching certificates:', err);
+            // Continue with other data even if certificates fail
+          }
         }
         
         // Fetch syndicates if enabled
