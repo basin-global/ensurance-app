@@ -82,24 +82,19 @@ export default function Footer() {
                 <div className="text-center h-[120px] flex items-center justify-center w-72">
                   <div className="flex flex-col items-center">
                     {/* Built on Ethereum Logo */}
-                    <Link
-                      href="https://x.com/jackbutcher/status/1887159739815018794"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="opacity-60 hover:opacity-100 transition-opacity mb-6"
-                    >
+                    <div className="opacity-60 hover:opacity-100 transition-opacity mb-6">
                       <Image
                         src="/assets/logos/builtOnEthereum.png"
-                        alt="Built on Ethereum"
+                        alt="Built on Ethereum - Jack Butcher"
                         width={50}
                         height={23}
                         className="w-auto h-auto"
                       />
-                    </Link>
+                    </div>
 
                     {/* ELIZA OS Logo */}
                     <Link
-                      href="https://elizaos.github.io/eliza/docs/intro/"
+                      href="https://elizaos.github.io/eliza/"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="opacity-60 hover:opacity-100 transition-opacity"
@@ -120,7 +115,7 @@ export default function Footer() {
                   {/* Links line */}
                   <div className="flex flex-col items-center gap-1.5">
                     <Link
-                      href="https://docs.basin.global/dossier/formalities/license"
+                      href="https://github.com/basin-global/ensurance-app/blob/main/LICENSE"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-[11px] font-mono text-gray-400 hover:text-gray-200 transition-colors"
@@ -135,7 +130,14 @@ export default function Footer() {
                     >
                       terms
                     </Link>
-                    <span className="text-[11px] font-mono text-gray-400">privacy</span>
+                    <Link
+                      href="https://docs.basin.global/dossier/formalities/privacy"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] font-mono text-gray-400 hover:text-gray-200 transition-colors"
+                    >
+                      privacy
+                    </Link>
                   </div>
                 </div>
               </div>
