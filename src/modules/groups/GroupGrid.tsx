@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 
 interface Group {
-    og_name: string;
+    group_name: string;
     name_front: string | null;
     tagline: string | null;
     total_supply: number;
@@ -45,7 +45,7 @@ export default function GroupGrid({ searchQuery }: GroupGridProps) {
 
     const filteredGroups = groups.filter(group => 
         group.is_active && (
-            group.og_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            group.group_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             (group.name_front?.toLowerCase().includes(searchQuery.toLowerCase())) ||
             (group.tagline?.toLowerCase().includes(searchQuery.toLowerCase()))
         )
@@ -59,20 +59,20 @@ export default function GroupGrid({ searchQuery }: GroupGridProps) {
             {filteredGroups.map((group) => (
                 <Link
                     key={group.contract_address}
-                    href={getGroupUrl(group.og_name)}
+                    href={getGroupUrl(group.group_name)}
                     className="bg-primary dark:bg-primary-dark hover:bg-primary-dark dark:hover:bg-primary text-primary-foreground dark:text-primary-dark-foreground font-bold py-4 px-6 rounded-lg transition duration-300 ease-in-out transform hover:-translate-y-1 hover:scale-105 flex items-center"
                 >
                     <div className="w-16 h-16 flex-shrink-0 mr-4">
                         <Image
-                            src={`/groups/orbs/${group.og_name.replace(/^\./, '')}-orb.png`}
-                            alt={`${group.og_name} orb`}
+                            src={`/groups/orbs/${group.group_name.replace(/^\./, '')}-orb.png`}
+                            alt={`${group.group_name} orb`}
                             width={64}
                             height={64}
                             className="object-cover rounded-full"
                         />
                     </div>
                     <span className="text-lg font-mono truncate">
-                        {group.og_name}
+                        {group.group_name}
                     </span>
                 </Link>
             ))}

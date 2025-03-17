@@ -125,12 +125,12 @@ export async function GET(request: NextRequest) {
         const [matchingGroups, matchingAccounts, matchingCertificates] = await Promise.all([
             groupsData
                 .filter(group => 
-                    (group?.og_name?.toLowerCase().includes(searchLower) ||
+                    (group?.group_name?.toLowerCase().includes(searchLower) ||
                     group?.name_front?.toLowerCase().includes(searchLower))
                 )
                 .map(group => ({
-                    name: group.name_front || group.og_name,
-                    path: `/groups/${group.og_name.replace(/^\./, '')}/all`,
+                    name: group.name_front || group.group_name,
+                    path: `/groups/${group.group_name.replace(/^\./, '')}/all`,
                     type: 'group'
                 })),
             accountsData
@@ -142,7 +142,7 @@ export async function GET(request: NextRequest) {
                     path: `/${account.full_account_name}`,
                     type: 'account',
                     is_agent: account.is_agent,
-                    is_pool: account.og_name === '.ensurance' && account.full_account_name !== 'situs.ensurance'
+                    is_pool: account.group_name === '.ensurance' && account.full_account_name !== 'situs.ensurance'
                 })),
             certificatesData
                 .filter(cert => 

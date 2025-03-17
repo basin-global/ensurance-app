@@ -25,10 +25,10 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
           accountName={accountData.full_account_name}
           tokenId={accountData.token_id}
           tbaAddress={accountData.tba_address}
-          groupName={accountData.og_name}
+          groupName={accountData.group_name}
           isAgent={accountData.is_agent}
-          isPool={accountData.og_name === 'ensurance' && params.account !== 'situs.ensurance'}
-          {...(accountData.og_name === 'ensurance' && params.account !== 'situs.ensurance' ? { displayName: accountData.display_name } : {})}
+          isPool={accountData.group_name === 'ensurance' && params.account !== 'situs.ensurance'}
+          {...(accountData.group_name === 'ensurance' && params.account !== 'situs.ensurance' ? { displayName: accountData.display_name } : {})}
         />
         <AccountNavigation accountName={params.account} />
         <main className="mt-8">

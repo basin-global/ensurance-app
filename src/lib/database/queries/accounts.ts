@@ -5,24 +5,27 @@ export const accounts = {
     getSearchResults: async () => {
         try {
             // First get all groups
-            const groups = await sql`SELECT og_name FROM situs_ogs ORDER BY og_name`;
+            const groups = await sql`SELECT group_name FROM members.groups ORDER BY group_name`;
             
             let allAccounts = [];
             
             // Query each group's table sequentially but only get search-relevant fields
             for (const group of groups.rows) {
-                const tableName = `situs_accounts_${group.og_name.replace('.', '')}`;
-            const query = `
-                SELECT 
-                    full_account_name,
-                    token_id,
-                    is_agent,
-                        '${group.og_name}' as og_name
-                    FROM "${tableName}"
-            `;
-            
-            const result = await sql.query(query);
-                allAccounts = [...allAccounts, ...result.rows];
+                const tableName = `accounts_${group.group_name.substring(1)}`; // Remove the leading dot
+                try {
+                    const result = await sql`
+                        SELECT 
+                            full_account_name,
+                            token_id,
+                            is_agent,
+                            ${group.group_name} as group_name
+                        FROM members.${tableName}
+                    `;
+                    allAccounts = [...allAccounts, ...result.rows];
+                } catch (error) {
+                    console.error(`Error querying ${tableName}:`, error.message);
+                    continue;
+                }
             }
             
             // Sort results: agents first, then alphabetically
@@ -47,43 +50,47 @@ export const accounts = {
     getAll: async () => {
         try {
             // First get all groups
-            const groups = await sql`SELECT og_name FROM situs_ogs ORDER BY og_name`;
+            const groups = await sql`SELECT group_name FROM members.groups ORDER BY group_name`;
             
             let allAccounts = [];
             
             // Query each group's table sequentially to avoid connection issues
             for (const group of groups.rows) {
-                const tableName = `situs_accounts_${group.og_name.replace('.', '')}`;
-                const isEnsurance = group.og_name === '.ensurance';
+                const tableName = `accounts_${group.group_name.substring(1)}`; // Remove the leading dot
+                const isEnsurance = group.group_name === '.ensurance';
                 
                 // Conditionally include pool_type, display_name, and stats only for .ensurance group
                 const ensuranceColumns = isEnsurance 
                     ? 'pool_type, display_name, total_currency_value, total_assets, ensured_assets,' 
                     : '';
                 
-                    const query = `
+                try {
+                    const result = await sql`
                         SELECT 
                             full_account_name,
                             token_id,
                             is_agent,
-                        ${ensuranceColumns}
-                            '${group.og_name}' as og_name
-                        FROM "${tableName}"
+                            ${ensuranceColumns}
+                            ${group.group_name} as group_name
+                        FROM members.${tableName}
                     `;
                     
-                    const result = await sql.query(query);
-                    
-                // Add default values for stats only for ensurance accounts
-                const accounts = isEnsurance 
-                    ? result.rows.map(account => ({
-                        ...account,
-                        total_currency_value: account.total_currency_value || 0,
-                        total_assets: account.total_assets || 0,
-                        ensured_assets: account.ensured_assets || 0
-                    }))
-                    : result.rows;
-                    
+                    // Add default values for stats only for ensurance accounts
+                    const accounts = isEnsurance 
+                        ? result.rows.map(account => ({
+                            ...account,
+                            total_currency_value: account.total_currency_value || 0,
+                            total_assets: account.total_assets || 0,
+                            ensured_assets: account.ensured_assets || 0
+                        }))
+                        : result.rows;
+                        
                     allAccounts = [...allAccounts, ...accounts];
+                } catch (error) {
+                    // If table doesn't exist, skip this group
+                    console.log(`No account table for group ${group.group_name}`);
+                    continue;
+                }
             }
             
             // Sort results: agents first, then alphabetically
@@ -114,33 +121,28 @@ export const accounts = {
         }
 
         const groupName = parts[1];
-        const tableName = `situs_accounts_${groupName}`;
+        const tableName = `accounts_${groupName}`;
         const isEnsurance = groupName === 'ensurance';
         
         // Conditionally include pool_type and display_name only for .ensurance group
         const ensuranceColumns = isEnsurance ? 'pool_type, display_name,' : '';
         
         try {
-            const query = `
+            const result = await sql`
                 SELECT 
                     full_account_name,
                     tba_address,
                     token_id,
                     is_agent,
-                ${ensuranceColumns}
+                    ${ensuranceColumns}
                     description,
-                    '${groupName}' as og_name
-                FROM "${tableName}"
-                WHERE full_account_name = $1
+                    ${groupName} as group_name
+                FROM members.${tableName}
+                WHERE full_account_name = ${fullAccountName}
                 LIMIT 1
             `;
-                
-            // Add more detailed debug logging
-            console.log('Running query:', query);
-            console.log('For account:', fullAccountName);
-            const result = await sql.query(query, [fullAccountName]);
             
-            if (!result.rows[0]) {
+            if (!result.rows.length) {
                 console.log('No account found for:', fullAccountName);
                 return null;
             }
@@ -154,7 +156,7 @@ export const accounts = {
                 token_id: row.token_id,
                 is_agent: row.is_agent,
                 description: row.description,
-                og_name: groupName,
+                group_name: groupName,
                 ...(isEnsurance && { 
                     pool_type: row.pool_type,
                     display_name: row.display_name

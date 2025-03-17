@@ -17,7 +17,7 @@ export const metadata = {
         try {
             // Get OG info from contract address
             const { rows: [og] } = await sql`
-                SELECT * FROM situs_ogs 
+                SELECT * FROM members.groups 
                 WHERE decode(replace(contract_address, '0x', ''), 'hex') = decode(replace(${contract}, '0x', ''), 'hex')
                 LIMIT 1
             `;
@@ -26,8 +26,8 @@ export const metadata = {
                 throw new Error('OG not found');
             }
 
-            const sanitizedOG = og.og_name.replace('.', '');
-            const tableName = `situs_accounts_${sanitizedOG}`;
+            const sanitizedGroup = og.group_name.replace('.', '');
+            const tableName = `members.accounts_${sanitizedGroup}`;
 
             // Get account info
             const accountQuery = await sql.query(
@@ -50,8 +50,8 @@ export const metadata = {
 
             // Get base image URL with fallbacks
             const baseUrl = process.env.NEXT_PUBLIC_BLOB_URL;
-            const tokenImageUrl = `${baseUrl}/${sanitizedOG}/${tokenId}.png`;
-            const defaultImageUrl = `${baseUrl}/${sanitizedOG}/0.png`;
+            const tokenImageUrl = `${baseUrl}/${sanitizedGroup}/${tokenId}.png`;
+            const defaultImageUrl = `${baseUrl}/${sanitizedGroup}/0.png`;
             const fallbackImageUrl = `${baseUrl}/default.png`;
 
             // Check images in order: token specific -> OG default -> global default
@@ -70,17 +70,17 @@ export const metadata = {
             const imageUrl = await ImageGenerator.generate({
                 baseImageUrl,
                 fullAccountName: account.full_account_name,
-                ogName: sanitizedOG,
+                ogName: sanitizedGroup,
                 tokenId,
                 contract
             });
 
             return {
-                name: `${account.account_name}${og.og_name}`,
+                name: `${account.account_name}${og.group_name}`,
                 description: account.description || '',
                 animation_url: `https://iframe-tokenbound.vercel.app/${contract}/${tokenId}/8453`,
                 image: imageUrl,
-                og_name: sanitizedOG,
+                group_name: sanitizedGroup,
                 tba_address: account.tba_address,
                 full_account_name: account.full_account_name
             };

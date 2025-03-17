@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 
 interface GroupData {
-    og_name: string;
+    group_name: string;
     name_front: string | null;
     tagline: string | null;
     description: string | null;
@@ -27,7 +27,7 @@ export function GroupInfo({ groupName }: { groupName: string }) {
             try {
                 console.log('Fetching group data for:', groupName)
                 const ogName = groupName.startsWith('.') ? groupName : `.${groupName}`
-                const response = await fetch(`/api/groups?og_name=${encodeURIComponent(ogName)}`)
+                const response = await fetch(`/api/groups?group_name=${encodeURIComponent(ogName)}`)
                 if (!response.ok) throw new Error('Failed to fetch group')
                 const data = await response.json()
                 console.log('Received group data:', data)
@@ -85,7 +85,7 @@ export function GroupInfo({ groupName }: { groupName: string }) {
             <div className="relative h-24">
                 <Image
                     src={`/groups/banners/${cleanGroupName}-banner.jpg`}
-                    alt={`${groupData.og_name} Banner`}
+                    alt={`${groupData.group_name} Banner`}
                     fill
                     className="object-cover brightness-75"
                 />
@@ -96,14 +96,14 @@ export function GroupInfo({ groupName }: { groupName: string }) {
                     <div className="relative w-12 h-12 flex-shrink-0">
                         <Image
                             src={`/groups/orbs/${cleanGroupName}-orb.png`}
-                            alt={`${groupData.og_name} orb`}
+                            alt={`${groupData.group_name} orb`}
                             fill
                             className="rounded-full"
                         />
                     </div>
                     <div className="flex-1">
                         <div className="flex items-center mb-2">
-                            <h2 className="text-lg font-bold">{groupData.og_name}</h2>
+                            <h2 className="text-lg font-bold">{groupData.group_name}</h2>
                             <span className="text-sm text-gray-400 flex items-center gap-0.5 ml-2">
                                 Details
                                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

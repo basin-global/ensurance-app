@@ -10,7 +10,7 @@
 // -----------------------------------------------------------------------------
 export interface OG {
     contract_address: string;
-    og_name: string; // Expected to always start with a dot (e.g., ".example")
+    group_name: string; // Expected to always start with a dot (e.g., ".example")
     name: string;    // OG Name from OGs.json
     email: string;   // OG Email from OGs.json
     name_front?: string;

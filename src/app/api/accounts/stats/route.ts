@@ -21,7 +21,7 @@ export async function POST(request: Request) {
             });
         }
 
-        const tableName = `situs_accounts_${groupName}`;
+        const tableName = `members.accounts_${groupName}`;
         console.log('Using table:', tableName);
 
         // Update the stats in the database

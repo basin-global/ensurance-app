@@ -16,7 +16,7 @@ export default async function GroupPage({ params }: { params: { group: string } 
                 <div className="relative h-[40vh] min-h-[400px]">
                     <Image
                         src={`/groups/banners/${params.group}-banner.jpg`}
-                        alt={`${groupData.og_name} Banner`}
+                        alt={`${groupData.group_name} Banner`}
                         fill
                         className="object-cover brightness-75"
                         priority
@@ -30,14 +30,14 @@ export default async function GroupPage({ params }: { params: { group: string } 
                                 <div className="relative w-40 h-40">
                                     <Image
                                         src={`/groups/orbs/${params.group}-orb.png`}
-                                        alt={`${groupData.og_name} Orb`}
+                                        alt={`${groupData.group_name} Orb`}
                                         fill
                                         className="rounded-full"
                                     />
                                 </div>
                                 <div>
                                     <h1 className="text-5xl font-bold mb-4 text-white">
-                                        {groupData.og_name}
+                                        {groupData.group_name}
                                     </h1>
                                     
                                     {groupData.name_front && (

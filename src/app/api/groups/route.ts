@@ -7,10 +7,10 @@ export const revalidate = 3600;
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
-        const ogName = searchParams.get('og_name');
+        const groupName = searchParams.get('group_name');
 
-        if (ogName) {
-            const group = await groups.getByName(ogName);
+        if (groupName) {
+            const group = await groups.getByName(groupName);
             return NextResponse.json(group, {
                 headers: {
                     'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',

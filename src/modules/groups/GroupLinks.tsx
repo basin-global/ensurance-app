@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
 interface Group {
-    og_name: string;
+    group_name: string;
     name_front: string | null;
 }
 
@@ -49,11 +49,11 @@ export function GroupLinks() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-1 text-center">
                     {groups.map((group) => (
                         <Link
-                            key={group.og_name}
-                            href={`/groups/${group.og_name.replace(/^\./, '')}/all`}
+                            key={group.group_name}
+                            href={`/groups/${group.group_name.replace(/^\./, '')}/all`}
                             className="text-sm text-gray-500 hover:text-gray-300 transition-colors truncate px-2"
                         >
-                            {group.og_name}
+                            {group.group_name}
                         </Link>
                     ))}
                 </div>

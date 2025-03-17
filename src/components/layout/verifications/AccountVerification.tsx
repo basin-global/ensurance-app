@@ -14,7 +14,7 @@ interface Props {
 
 export default function AccountVerification({ name, group }: Props) {
   const { data: groupData } = useSWR(
-    `/api/groups?og_name=${encodeURIComponent(group.startsWith('.') ? group : `.${group}`)}`,
+    `/api/groups?group_name=${encodeURIComponent(group.startsWith('.') ? group : `.${group}`)}`,
     fetcher,
     { 
       revalidateOnFocus: false,

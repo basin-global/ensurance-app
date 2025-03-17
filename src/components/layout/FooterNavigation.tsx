@@ -29,15 +29,12 @@ export function FooterNavigation() {
         </div>
 
         {/* Right Column - Operations */}
-        <div className="flex flex-col items-center text-base text-gray-300">
-          <Link href="/market" className="hover:text-gray-100 transition-colors mb-2">
-            market
-          </Link>
+        <div className="flex flex-col items-center justify-center text-base text-gray-300 mt-4">
           <Link href="/proceeds" className="hover:text-gray-100 transition-colors mb-2">
             proceeds
           </Link>
-          <Link href="/exchange" className="hover:text-gray-100 transition-colors mb-2">
-            exchange
+          <Link href="/market" className="hover:text-gray-100 transition-colors mb-2">
+            market
           </Link>
           <Link href="/syndicates" className="hover:text-gray-100 transition-colors mb-2">
             syndicates

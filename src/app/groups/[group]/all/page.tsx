@@ -10,9 +10,9 @@ export default function GroupAllPage({ params }: { params: { group: string } }) 
 
   return (
     <div className="min-h-screen flex flex-col">
-      <div className="container mx-auto px-4 pt-0 pb-4 flex-1">
+      <div className="container mx-auto px-4 py-8 flex-1">
         <div className="space-y-4">
-          <div className="flex justify-center">
+          <div className="w-full flex justify-center mb-8">
             <AssetSearch 
               searchQuery={searchQuery} 
               setSearchQuery={setSearchQuery}

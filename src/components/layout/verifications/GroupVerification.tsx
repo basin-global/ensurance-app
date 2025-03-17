@@ -12,7 +12,7 @@ interface Props {
 
 export default function GroupVerification({ name }: Props) {
   const { data: groupData } = useSWR(
-    `/api/groups?og_name=${encodeURIComponent(name.startsWith('.') ? name : `.${name}`)}`,
+    `/api/groups?group_name=${encodeURIComponent(name.startsWith('.') ? name : `.${name}`)}`,
     fetcher,
     { 
       revalidateOnFocus: false,

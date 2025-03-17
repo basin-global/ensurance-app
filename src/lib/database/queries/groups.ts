@@ -7,10 +7,10 @@ export const groups = {
         try {
             const result = await sql`
                 SELECT 
-                    og_name,
+                    group_name,
                     name_front
-                FROM situs_ogs 
-                ORDER BY og_name
+                FROM members.groups 
+                ORDER BY group_name
             `;
             return result.rows;
         } catch (error) {
@@ -22,18 +22,18 @@ export const groups = {
     // Get all groups
     getAll: async (includeInactive = false) => {
         const result = await sql`
-            SELECT * FROM situs_ogs 
+            SELECT * FROM members.groups 
             WHERE is_active = true 
-            ORDER BY og_name`;
+            ORDER BY group_name`;
         return result.rows;
     },
     
     // Get single group
-    getByName: async (ogName: string) => {
+    getByName: async (groupName: string) => {
         const result = await sql`
             WITH group_data AS (
                 SELECT 
-                    og_name,
+                    group_name,
                     name_front,
                     tagline,
                     description,
@@ -43,21 +43,21 @@ export const groups = {
                     situs_account,
                     contract_address,
                     total_supply
-                FROM situs_ogs 
-                WHERE og_name = ${ogName}
+                FROM members.groups 
+                WHERE group_name = ${groupName}
             )
             SELECT 
                 g.*,
                 s.tba_address
             FROM group_data g
-            LEFT JOIN situs_accounts_situs s ON s.full_account_name = g.situs_account
+            LEFT JOIN members.accounts_situs s ON s.full_account_name = g.situs_account
             LIMIT 1`;
         return result.rows[0];
     },
     
     // Create group
     create: async (data: {
-        og_name: string,
+        group_name: string,
         name_front?: string,
         tagline?: string,
         description?: string,
@@ -67,8 +67,8 @@ export const groups = {
         situs_account?: string
     }) => {
         const result = await sql`
-            INSERT INTO situs_ogs (
-                og_name, 
+            INSERT INTO members.groups (
+                group_name, 
                 name_front, 
                 tagline, 
                 description, 
@@ -77,7 +77,7 @@ export const groups = {
                 chat,
                 situs_account
             ) VALUES (
-                ${data.og_name},
+                ${data.group_name},
                 ${data.name_front},
                 ${data.tagline},
                 ${data.description},

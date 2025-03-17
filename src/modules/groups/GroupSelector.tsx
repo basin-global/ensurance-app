@@ -4,7 +4,7 @@ import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface Group {
-  og_name: string;
+  group_name: string;
   contract_address?: string;
 }
 
@@ -23,11 +23,11 @@ export function GroupSelector({ groups, currentGroup, onGroupChange }: GroupSele
       <SelectContent className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg">
         {groups.map((group) => (
           <SelectItem 
-            key={group.contract_address || group.og_name} 
-            value={group.og_name}
+            key={group.contract_address || group.group_name} 
+            value={group.group_name}
             className="text-lg font-semibold text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300"
           >
-            {group.og_name}
+            {group.group_name}
           </SelectItem>
         ))}
       </SelectContent>
