@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react'
 import { isEnsuranceToken } from '@/modules/certificates/specific/config/ensurance'
+import AccountStats from '@/modules/accounts/AccountStats'
+import CertificatesGrid from '@/modules/certificates/components/CertificatesGrid'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -61,9 +63,6 @@ export default function OverviewTab({ description, tbaAddress, isOwner }: Overvi
         const currencyData = await currencyResponse.json()
         const assetData = await assetResponse.json()
 
-        console.log('Raw currency data:', currencyData);
-        console.log('Raw asset data:', assetData);
-
         // Calculate currency summary
         let totalValue = 0;
         let currencyCount = 0;
@@ -79,8 +78,6 @@ export default function OverviewTab({ description, tbaAddress, isOwner }: Overvi
           })
         });
 
-        console.log('Calculated currency summary:', { totalValue, currencyCount, chains });
-
         // Calculate asset summary
         const uniqueCount = assetData.nfts?.length || 0;
         let totalCount = 0;
@@ -91,18 +88,11 @@ export default function OverviewTab({ description, tbaAddress, isOwner }: Overvi
           const quantity = Number(nft.queried_wallet_balances?.[0]?.quantity_string || 1)
           totalCount += quantity
 
-          if (isEnsuranceToken(nft.chain, nft.contract_address)) {
+          if (isEnsuranceToken(nft.contract_address)) {
             ensuredCount++
           } else {
             nonEnsuredCount++
           }
-        });
-
-        console.log('Calculated asset summary:', {
-          uniqueCount,
-          totalCount,
-          ensuredCount,
-          nonEnsuredCount
         });
 
         if (isMounted) {
@@ -127,16 +117,11 @@ export default function OverviewTab({ description, tbaAddress, isOwner }: Overvi
             }
           };
           
-          console.log('Sending stats update:', statsPayload);
-          
           const response = await fetch('/api/accounts/stats', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(statsPayload)
           });
-          
-          const result = await response.json();
-          console.log('Stats update result:', result);
           
         } catch (error) {
           console.error('Failed to update stats in database:', error)
@@ -177,99 +162,32 @@ export default function OverviewTab({ description, tbaAddress, isOwner }: Overvi
         </div>
       )}
 
-      {/* Main Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-1 mb-1">
-        {/* Assets Stats */}
-        <Link href={`/${accountName}/hold`} className="block h-full">
-          <div className="bg-gray-900/50 rounded-lg p-2 hover:bg-gray-900/70 transition-colors h-full">
-            <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Assets</div>
-            <div className="space-y-2.5">
-              <div className="flex justify-between items-baseline">
-                <span className="text-xs text-gray-500">Total Portfolio</span>
-                <span className="text-base text-gray-300 tabular-nums">
-                  {assetSummary.uniqueCount.toLocaleString()} unique
-                </span>
-              </div>
-              <div className="flex justify-between items-baseline">
-                <span className="text-xs text-gray-500">Total Assets</span>
-                <span className="text-base text-gray-300 tabular-nums">
-                  {assetSummary.totalCount.toLocaleString()} items
-                </span>
-              </div>
-              <div className="flex justify-between items-baseline">
-                <span className="text-xs text-gray-500">Ensured Assets</span>
-                <div className="flex flex-col items-end">
-                  <span className="text-base bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-yellow-500 to-amber-600 tabular-nums">
-                    {assetSummary.ensuredCount.toLocaleString()}
-                  </span>
-                  <span className="text-[10px] text-gray-600">
-                    {((assetSummary.ensuredCount / assetSummary.uniqueCount) * 100).toFixed(1)}% of portfolio
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Link>
+      {/* Stats */}
+      <AccountStats 
+        variant="full"
+        total_currency_value={currencySummary.totalValue}
+        total_assets={assetSummary.totalCount}
+        ensured_assets={assetSummary.ensuredCount}
+        uniqueCount={assetSummary.uniqueCount}
+        currencyCount={currencySummary.currencyCount}
+        chains={currencySummary.chains}
+        accountName={accountName}
+        loading={loading}
+        className="mb-1"
+      />
 
-        {/* Currency Stats */}
-        <Link href={`/${accountName}/hold?module=currency`} className="block h-full">
-          <div className="bg-gray-900/50 rounded-lg p-2 hover:bg-gray-900/70 transition-colors h-full">
-            <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Currency</div>
-            <div className="space-y-2.5">
-              <div className="flex justify-between items-baseline">
-                <span className="text-xs text-gray-500">Total Value</span>
-                <span className="text-base bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-yellow-500 to-amber-600 tabular-nums">
-                  ${Math.round(currencySummary.totalValue).toLocaleString()}
-                </span>
-              </div>
-              <div className="flex justify-between items-baseline">
-                <span className="text-xs text-gray-500">Currencies</span>
-                <span className="text-base text-gray-300 tabular-nums">
-                  {currencySummary.currencyCount}
-                </span>
-              </div>
-              <div className="flex justify-between items-baseline">
-                <span className="text-xs text-gray-500">Chains</span>
-                <span className="text-base text-gray-300 tabular-nums">
-                  {currencySummary.chains.length}
-                </span>
-              </div>
-            </div>
-          </div>
-        </Link>
-      </div>
-
-      {/* Coming Soon Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-1">
-        {/* Place */}
-        <Link href={`/${accountName}/presence?module=place`} className="block">
-          <div className="bg-gray-900/30 rounded-lg p-2">
-            <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Place</div>
-            <div className="text-xs text-gray-600 italic">
-              Data coming soon
-            </div>
-          </div>
-        </Link>
-
-        {/* Impact */}
-        <Link href={`/${accountName}/presence?module=impact`} className="block">
-          <div className="bg-gray-900/30 rounded-lg p-2">
-            <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Impact</div>
-            <div className="text-xs text-gray-600 italic">
-              Data coming soon
-            </div>
-          </div>
-        </Link>
-
-        {/* Reputation */}
-        <Link href={`/${accountName}/presence?module=reputation`} className="block">
-          <div className="bg-gray-900/30 rounded-lg p-2">
-            <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Reputation</div>
-            <div className="text-xs text-gray-600 italic">
-              Data coming soon
-            </div>
-          </div>
-        </Link>
+      {/* Full Width Certificates Grid */}
+      <div className="lg:col-span-2">
+        <div className="bg-gray-900/30 rounded-lg p-3">
+          <h3 className="text-lg font-medium text-gray-200 mb-1">Related Certificates</h3>
+          <CertificatesGrid 
+            variant="account-main"
+            maxItems={10}
+            hideSearch={true}
+            searchQuery={keyword}
+            accountName={accountName}
+          />
+        </div>
       </div>
     </div>
   )

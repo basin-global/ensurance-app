@@ -4,44 +4,57 @@ import { useState, useEffect, forwardRef } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import AccountImage from '@/modules/accounts/AccountImage'
+import AccountStats from '@/modules/accounts/AccountStats'
 import { cn } from '@/lib/utils'
 import { TypewriterEffect } from '@/components/ui/typewriter-effect'
+import { useRouter } from 'next/navigation'
 
 interface Account {
     full_account_name: string;
     token_id: number;
     og_name: string;
     is_agent: boolean;
-    pool_type: string | null;
+    stock_or_flow: string | null;
     display_name: string | null;
+    total_currency_value: number;
+    total_assets: number;
+    ensured_assets: number;
+    stats_last_updated?: string;
 }
 
 interface NaturalCapitalGridProps {
     groupName?: string;
     searchQuery?: string;
-    activeCategory: 'all' | 'stocks' | 'flows';
+    activeCategory: 'all' | 'stock' | 'flow';
     urlPrefix?: string;
+    variant?: 'showcase' | 'detailed' | 'standard';
+    showHeader?: boolean;
 }
 
 interface CircleItemProps {
     account: Account;
     groupName: string;
     urlPrefix: string;
+    variant?: 'showcase' | 'detailed' | 'standard';
 }
 
 const CircleItem = forwardRef<HTMLAnchorElement, CircleItemProps>(({ 
     account, 
     groupName, 
-    urlPrefix 
+    urlPrefix,
+    variant = 'showcase'
 }, ref) => {
     const displayName = account.display_name || account.full_account_name;
     
     return (
         <Link 
             ref={ref}
-            href={`${urlPrefix}/${account.full_account_name}`}
-            className="circle-item group"
-            data-type={account.pool_type || 'unknown'}
+            href={`/${account.full_account_name}`}
+            className={cn(
+                "circle-item group",
+                variant === 'detailed' && "detailed"
+            )}
+            data-type={account.stock_or_flow || 'unknown'}
         >
             <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -57,9 +70,18 @@ const CircleItem = forwardRef<HTMLAnchorElement, CircleItemProps>(({
                     className="circle-image"
                 />
                 <div className="circle-overlay">
-                    <span className="text-sm text-white font-medium px-4 text-center">
-                        {displayName}
-                    </span>
+                    <div className="flex flex-col items-center gap-2">
+                        <span className="text-sm text-white font-medium px-4 text-center">
+                            {displayName}
+                        </span>
+                        {variant === 'detailed' && (
+                            <AccountStats
+                                total_currency_value={account.total_currency_value}
+                                total_assets={account.total_assets}
+                                ensured_assets={account.ensured_assets}
+                            />
+                        )}
+                    </div>
                 </div>
             </motion.div>
         </Link>
@@ -69,13 +91,21 @@ const CircleItem = forwardRef<HTMLAnchorElement, CircleItemProps>(({
 export default function NaturalCapitalGrid({ 
     groupName = 'ensurance', 
     searchQuery = '', 
-    activeCategory: initialCategory = 'all',
-    urlPrefix = ''
+    activeCategory = 'all',
+    urlPrefix = '',
+    variant = 'standard',
+    showHeader = true
 }: NaturalCapitalGridProps) {
-    const [category, setCategory] = useState<'all' | 'stocks' | 'flows'>(initialCategory)
+    const router = useRouter()
+    const [localCategory, setLocalCategory] = useState(activeCategory)
     const [accounts, setAccounts] = useState<Account[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+
+    // Update local category when prop changes
+    useEffect(() => {
+        setLocalCategory(activeCategory)
+    }, [activeCategory])
 
     const words = [
         { text: "natural capital" },
@@ -117,69 +147,80 @@ export default function NaturalCapitalGrid({
 
     const filteredAccounts = accounts
         .filter(account => {
-            if (category === 'all') return true;
-            return account.pool_type === (category === 'stocks' ? 'stock' : 'flow');
-        })
-        .filter(account => {
-            if (!searchQuery) return true;
-            const displayName = (account.display_name || account.full_account_name).toLowerCase();
-            return displayName.includes(searchQuery.toLowerCase());
+            // If there's a search query, only filter by search
+            if (searchQuery) {
+                const displayName = (account.display_name || account.full_account_name).toLowerCase();
+                return displayName.includes(searchQuery.toLowerCase());
+            }
+            // If no search query, filter by category
+            if (localCategory === 'all') return true;
+            return account.stock_or_flow === localCategory;
         });
 
     return (
         <motion.div 
-            className="natural-capital-section"
+            className={cn(
+                "natural-capital-section",
+                variant === 'standard' && "py-4",
+                variant === 'detailed' && "py-8",
+                variant === 'showcase' && "py-16"
+            )}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3 }}
         >
-            <div className="text-center space-y-8 mb-24">
-                <p className="text-2xl tracking-wider text-white/80">ensuring</p>
-                <Link href="/natural-capital" className="block group space-y-8">
-                    <h2 className="text-5xl md:text-6xl lg:text-7xl font-bold bg-clip-text text-transparent bg-gradient-to-b from-white via-white/95 to-white/80 group-hover:opacity-80 transition-opacity">
-                        critical infrastructure
-                    </h2>
-                    <div className="h-16">
-                        <TypewriterEffect words={words} className="justify-center group-hover:opacity-80 transition-opacity" />
+            {showHeader && variant === 'showcase' && (
+                <div className="text-center space-y-8 mb-24">
+                    <p className="text-2xl tracking-wider text-white/80">ensuring</p>
+                    <Link href="/natural-capital" className="block group space-y-8">
+                        <h2 className="text-5xl md:text-6xl lg:text-7xl font-bold bg-clip-text text-transparent bg-gradient-to-b from-white via-white/95 to-white/80 group-hover:opacity-80 transition-opacity">
+                            critical infrastructure
+                        </h2>
+                        <div className="h-16">
+                            <TypewriterEffect words={words} className="justify-center group-hover:opacity-80 transition-opacity" />
+                        </div>
+                    </Link>
+                    <div className="flex justify-center gap-16 mt-8 text-lg tracking-widest">
+                        <button 
+                            onClick={() => setLocalCategory('stock')}
+                            className={cn(
+                                "transition-colors duration-300 relative uppercase",
+                                localCategory === 'stock' ? "text-white" : "text-white/40 hover:text-white/60"
+                            )}
+                            disabled={loading}
+                        >
+                            Stocks
+                            {localCategory === 'stock' && (
+                                <motion.div 
+                                    layoutId="underline"
+                                    className="absolute -bottom-2 left-0 right-0 h-px bg-white"
+                                />
+                            )}
+                        </button>
+                        <button 
+                            onClick={() => setLocalCategory('flow')}
+                            className={cn(
+                                "transition-colors duration-300 relative uppercase",
+                                localCategory === 'flow' ? "text-white" : "text-white/40 hover:text-white/60"
+                            )}
+                            disabled={loading}
+                        >
+                            Flows
+                            {localCategory === 'flow' && (
+                                <motion.div 
+                                    layoutId="underline"
+                                    className="absolute -bottom-2 left-0 right-0 h-px bg-white"
+                                />
+                            )}
+                        </button>
                     </div>
-                </Link>
-                <div className="flex justify-center gap-16 mt-8 text-lg tracking-widest">
-                    <button 
-                        onClick={() => setCategory('stocks')}
-                        className={cn(
-                            "transition-colors duration-300 relative uppercase",
-                            category === 'stocks' ? "text-white" : "text-white/40 hover:text-white/60"
-                        )}
-                        disabled={loading}
-                    >
-                        Stocks
-                        {category === 'stocks' && (
-                            <motion.div 
-                                layoutId="underline"
-                                className="absolute -bottom-2 left-0 right-0 h-px bg-white"
-                            />
-                        )}
-                    </button>
-                    <button 
-                        onClick={() => setCategory('flows')}
-                        className={cn(
-                            "transition-colors duration-300 relative uppercase",
-                            category === 'flows' ? "text-white" : "text-white/40 hover:text-white/60"
-                        )}
-                        disabled={loading}
-                    >
-                        Flows
-                        {category === 'flows' && (
-                            <motion.div 
-                                layoutId="underline"
-                                className="absolute -bottom-2 left-0 right-0 h-px bg-white"
-                            />
-                        )}
-                    </button>
                 </div>
-            </div>
+            )}
 
-            <div className="max-w-[1200px] mx-auto px-[30px]">
+            <div className={cn(
+                "max-w-[1200px] mx-auto",
+                variant === 'standard' ? "px-4" : "px-[30px]"
+            )}>
                 {loading ? (
                     <div className="circle-grid">
                         {[...Array(8)].map((_, index) => (
@@ -203,6 +244,7 @@ export default function NaturalCapitalGrid({
                                     account={account}
                                     groupName={groupName}
                                     urlPrefix={urlPrefix}
+                                    variant={variant}
                                 />
                             ))}
                         </AnimatePresence>
@@ -218,8 +260,8 @@ export default function NaturalCapitalGrid({
 
                 .natural-capital-section {
                     position: relative;
-                    padding: 60px 0 120px;
-                    background: 
+                    padding: ${variant === 'showcase' ? '60px 0 120px' : variant === 'detailed' ? '30px 0 60px' : '20px 0 40px'};
+                    background: ${variant !== 'standard' ? `
                         linear-gradient(180deg, 
                             rgba(0, 0, 0, 0) 0%,
                             rgba(255, 255, 255, 0.03) 5%,
@@ -233,7 +275,8 @@ export default function NaturalCapitalGrid({
                             rgba(255, 255, 255, 0.02) 25%,
                             rgba(255, 255, 255, 0.02) 75%,
                             rgba(0, 0, 0, 0) 100%
-                        );
+                        )
+                    ` : 'none'};
                 }
 
                 .natural-capital-section::before {
@@ -348,6 +391,20 @@ export default function NaturalCapitalGrid({
                 .circle-item:hover .circle-overlay span {
                     font-weight: 500;
                     transform: translateY(-4px);
+                }
+
+                .circle-item.detailed .circle-overlay {
+                    padding-bottom: 2rem;
+                }
+
+                .circle-item.detailed:hover .circle-overlay {
+                    opacity: 0.9;
+                    background: linear-gradient(
+                        to top,
+                        rgba(0, 0, 0, 0.9) 0%,
+                        rgba(0, 0, 0, 0.5) 60%,
+                        rgba(0, 0, 0, 0) 100%
+                    );
                 }
 
                 @media (max-width: 900px) {

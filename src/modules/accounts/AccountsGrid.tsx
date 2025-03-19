@@ -18,12 +18,14 @@ interface AccountsGridProps {
     groupName?: string;
     searchQuery?: string;
     walletAddress?: string;
+    isAgent?: boolean;
 }
 
 export default function AccountsGrid({ 
     groupName, 
     searchQuery = '', 
-    walletAddress
+    walletAddress,
+    isAgent
 }: AccountsGridProps) {
     const [accounts, setAccounts] = useState<Account[]>([])
     const [loading, setLoading] = useState(true)
@@ -169,6 +171,11 @@ export default function AccountsGrid({
             )
         }
 
+        // Filter by isAgent if specified
+        if (isAgent !== undefined) {
+            filtered = filtered.filter(account => account.is_agent === isAgent)
+        }
+
         // Sort: agents first, then alphabetically
         return filtered.sort((a, b) => {
             // First sort by is_agent (agents come first)
@@ -182,7 +189,7 @@ export default function AccountsGrid({
             if (!b.full_account_name) return -1;
             return a.full_account_name.localeCompare(b.full_account_name);
         });
-    }, [accounts, searchQuery])
+    }, [accounts, searchQuery, isAgent])
 
     // Memoized paginated accounts
     const displayedAccounts = useMemo(() => {

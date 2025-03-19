@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useParams } from 'next/navigation'
+import { cn } from '@/lib/utils'
 
 interface Params {
   group?: string
@@ -22,30 +23,28 @@ export function HeaderLogo() {
     groupName = `.${params.account.split('.')[1]}`
   }
 
-  // Special case for .ensurance group and pools page
-  const isEnsurancePools = groupName === '.ensurance' || 
-    pathname.includes('/pools') || 
-    pathname.includes('/groups/ensurance/all')
+  // Special case for natural capital routes and .ensurance accounts
+  const isNaturalCapital = pathname.includes('/natural-capital') || 
+    (groupName && groupName.endsWith('.ensurance'))
 
   // Determine logo source
-  const logoSrc = isEnsurancePools
+  const logoSrc = isNaturalCapital
     ? "/groups/orbs/ensurance-orb.png"
     : groupName 
       ? `/groups/orbs/${groupName.replace(/^\./, '')}-orb.png`
       : "/groups/orbs/ensurance-orb.png"
 
   // Determine header text
-  const headerText = groupName 
-    ? groupName.endsWith('.ensurance')
-      ? `${groupName} agents`
-      : `${groupName} ensurance agents`
-    : 'natural capital ensurance'
+  const headerText = isNaturalCapital
+    ? 'natural capital ensurance'
+    : groupName 
+      ? `${groupName} ensurance agents`
+      : 'natural capital ensurance'
 
   // Determine URLs
   const homeUrl = '/'
-  const poolsUrl = '/natural-capital'
-  const groupUrl = isEnsurancePools
-    ? poolsUrl
+  const groupUrl = isNaturalCapital
+    ? '/natural-capital'
     : groupName && `/groups/${groupName.replace(/^\./, '')}`
 
   return (
@@ -58,8 +57,11 @@ export function HeaderLogo() {
           height={28}
         />
       </Link>
-      {(groupName || isEnsurancePools) ? (
-        <Link href={groupUrl} className="hover:opacity-80 transition-opacity">
+      {groupName || isNaturalCapital ? (
+        <Link href={groupUrl} className={cn(
+          "hover:opacity-80 transition-opacity",
+          isNaturalCapital && "bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-yellow-500 to-amber-600"
+        )}>
           {headerText}
         </Link>
       ) : (

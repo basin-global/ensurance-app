@@ -1,31 +1,27 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
-import EnsurancePoolGrid from '@/modules/natural-capital/EnsurancePoolGrid'
-import { AssetSearch } from '@/modules/assets/AssetSearch'
-import { cn } from '@/lib/utils'
+import { Suspense } from 'react'
+import NaturalCapitalGrid from '@/modules/natural-capital/NaturalCapitalGrid'
 import { useSearch } from './SearchContext'
 
-// Define the category type with the actual values we want to use for filtering
-type Category = 'all' | 'stocks' | 'flows'
-
-interface CategoryOption {
-    value: Category
-    display: string
-}
-
-interface Props {
-    searchQuery?: string
-}
-
-export default function AllPools() {
+function NaturalCapitalContent() {
     const { searchQuery } = useSearch()
+    
     return (
-        <EnsurancePoolGrid 
-            groupName="ensurance" 
-            activeCategory="all"
-            searchQuery={searchQuery}
-        />
+        <div className="container mx-auto px-4">
+            <Suspense fallback={<div>Loading...</div>}>
+                <NaturalCapitalGrid
+                    variant="standard"
+                    showHeader={false}
+                    activeCategory="all"
+                    urlPrefix="/natural-capital"
+                    searchQuery={searchQuery}
+                />
+            </Suspense>
+        </div>
     )
+}
+
+export default function NaturalCapitalPage() {
+    return <NaturalCapitalContent />
 } 

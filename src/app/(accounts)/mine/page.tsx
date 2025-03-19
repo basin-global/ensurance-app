@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
 import AccountsGrid from '@/modules/accounts/AccountsGrid'
-import { AssetSearch } from '@/modules/assets/AssetSearch'
+import { PageHeader } from '@/components/layout/PageHeader'
 
 export default function MinePage() {
   const [searchQuery, setSearchQuery] = useState('')
@@ -36,16 +36,14 @@ export default function MinePage() {
   }
 
   return (
-    <div>
-      <div className="container mx-auto px-4 pt-0 pb-4">
+    <div className="min-h-screen flex flex-col">
+      <div className="container mx-auto px-4 py-8 flex-1">
         <div className="space-y-4">
-          <div className="flex justify-center">
-            <AssetSearch 
-              searchQuery={searchQuery} 
-              setSearchQuery={setSearchQuery}
-              placeholder="Search accounts..."
-            />
-          </div>
+          <PageHeader
+            title="my agent accounts"
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+          />
           <AccountsGrid 
             searchQuery={searchQuery}
             walletAddress={walletAddress}

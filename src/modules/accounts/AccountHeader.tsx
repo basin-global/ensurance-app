@@ -27,7 +27,7 @@ export default function AccountHeader({
 
   // Format display name for pools
   const formattedDisplayName = isPool && displayName 
-    ? `${displayName} Ensurance Pool`
+    ? `${displayName.toLowerCase()} ensurance`
     : decodedAccountName
 
   return (

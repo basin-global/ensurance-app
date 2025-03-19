@@ -19,7 +19,7 @@ export const accounts = {
             
             // Query each active group's table
             for (const group of groups.rows) {
-                const tableName = `accounts_${group.group_name.substring(1)}`; // Remove the leading dot
+                const tableName = `accounts_${group.group_name.startsWith('.') ? group.group_name.substring(1) : group.group_name}`; // Handle both formats
                 try {
                     console.log(`Querying table: members.${tableName}`);
                     const result = await sql.query(
@@ -70,7 +70,7 @@ export const accounts = {
             
             // Query each active group's table
             for (const group of groups.rows) {
-                const tableName = `accounts_${group.group_name.substring(1)}`; // Remove the leading dot
+                const tableName = `accounts_${group.group_name.startsWith('.') ? group.group_name.substring(1) : group.group_name}`; // Handle both formats
                 try {
                     console.log(`Querying table: members.${tableName}`);
                     const result = await sql.query(
@@ -108,7 +108,6 @@ export const accounts = {
 
     // Get single account by full name (e.g., "alice.earth")
     getByFullName: async (fullAccountName: string) => {
-        // Validate account name format
         const parts = fullAccountName.split('.');
         if (parts.length !== 2) {
             console.log('Invalid account name format:', fullAccountName);
@@ -135,7 +134,7 @@ export const accounts = {
 
             const contractAddress = groupResult.rows[0].contract_address;
             
-            // Remove schema for dynamic table query
+            // Query by full_account_name
             const query = `
                 SELECT 
                     full_account_name,
@@ -143,15 +142,15 @@ export const accounts = {
                     token_id,
                     is_agent,
                     account_name,
-                    ${isEnsurance ? 'pool_type, display_name,' : ''}
+                    ${isEnsurance ? 'stock_or_flow, display_name,' : ''}
                     description,
-                    ${groupName} as group_name
-                FROM ${tableName}
-                WHERE token_id = $1
+                    $2 as group_name
+                FROM members.${tableName}
+                WHERE full_account_name = $1
                 LIMIT 1
             `;
             
-            const result = await sql.query(query, [parts[0]]);
+            const result = await sql.query(query, [fullAccountName, groupName]);
             
             if (!result.rows.length) {
                 console.log('No account found for:', fullAccountName);
@@ -200,7 +199,7 @@ export const accounts = {
                 description: row.description,
                 group_name: groupName,
                 ...(isEnsurance && { 
-                    pool_type: row.pool_type,
+                    stock_or_flow: row.stock_or_flow,
                     display_name: row.display_name
                 })
             };
@@ -219,6 +218,7 @@ export const accounts = {
             // Remove leading dot if present
             const cleanGroupName = groupName.startsWith('.') ? groupName.substring(1) : groupName;
             const tableName = `accounts_${cleanGroupName}`;
+            const isEnsurance = cleanGroupName === 'ensurance';
             
             console.log(`Querying group table: members.${tableName}`);
             const result = await sql.query(
@@ -227,6 +227,7 @@ export const accounts = {
                     token_id,
                     is_agent,
                     '.${cleanGroupName}' as group_name
+                    ${isEnsurance ? ', stock_or_flow, display_name' : ''}
                 FROM members.${tableName}`
             );
             

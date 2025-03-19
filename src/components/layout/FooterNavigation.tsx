@@ -33,8 +33,8 @@ export function FooterNavigation() {
           <Link href="/proceeds" className="hover:text-gray-100 transition-colors mb-2">
             proceeds
           </Link>
-          <Link href="/market" className="hover:text-gray-100 transition-colors mb-2">
-            market
+          <Link href="/markets" className="hover:text-gray-100 transition-colors mb-2">
+            markets
           </Link>
           <Link href="/syndicates" className="hover:text-gray-100 transition-colors mb-2">
             syndicates
