@@ -1,4 +1,4 @@
-import { groups } from '@/lib/database/queries/groups'
+import { groups } from '@/lib/database/groups'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'

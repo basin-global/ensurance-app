@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import AccountHeader from '@/modules/accounts/AccountHeader'
 import { AccountNavigation } from '@/components/layout/AccountNavigation'
 import { AccountProvider } from '@/modules/accounts/context'
-import { accounts } from '@/lib/database/queries/accounts'
+import { accounts } from '@/lib/database/accounts'
 
 interface AccountLayoutProps {
   children: React.ReactNode

@@ -1,34 +1,59 @@
 import { NextResponse } from 'next/server';
-import { accounts } from '@/lib/database/queries/accounts';
+import { accounts } from '@/lib/database/accounts';
 
 // Cache successful responses for 1 minute
 export const revalidate = 60;
 
-// Simple in-memory cache
+// Separate caches for all accounts and group-specific accounts
 const CACHE_DURATION = 60 * 1000; // 1 minute
-let accountsCache = {
-    data: null as any,
-    timestamp: 0
+const cache = {
+    all: {
+        data: null as any,
+        timestamp: 0
+    },
+    byGroup: new Map<string, { data: any, timestamp: number }>()
 };
 
-async function getAccountsWithCache() {
-    if (accountsCache.data && (Date.now() - accountsCache.timestamp) < CACHE_DURATION) {
-        return accountsCache.data;
+async function getAccountsWithCache(group?: string) {
+    const now = Date.now();
+
+    // If group specified, use group-specific cache and getByGroup
+    if (group) {
+        const groupCache = cache.byGroup.get(group);
+        if (groupCache && (now - groupCache.timestamp) < CACHE_DURATION) {
+            return groupCache.data;
+        }
+        
+        const data = await accounts.getByGroup(group);
+        cache.byGroup.set(group, {
+            data,
+            timestamp: now
+        });
+        return data;
+    }
+
+    // Otherwise use all accounts cache and getAll
+    if (cache.all.data && (now - cache.all.timestamp) < CACHE_DURATION) {
+        return cache.all.data;
     }
 
     const data = await accounts.getAll();
-    accountsCache = {
+    cache.all = {
         data,
-        timestamp: Date.now()
+        timestamp: now
     };
     return data;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
-        const allAccounts = await getAccountsWithCache();
+        // Parse group from URL
+        const { searchParams } = new URL(request.url);
+        const group = searchParams.get('group');
         
-        return NextResponse.json(allAccounts, {
+        const accountData = await getAccountsWithCache(group || undefined);
+        
+        return NextResponse.json(accountData, {
             headers: {
                 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300'
             }

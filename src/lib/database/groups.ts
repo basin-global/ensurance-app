@@ -56,6 +56,9 @@ export const groups = {
     },
     
     // Create group
+    // Note: This is for initial group creation only. contract_address (which is NOT NULL in DB) 
+    // must be added separately after contract deployment. For groups found during sync,
+    // we'll need a different approach that includes contract_address.
     create: async (data: {
         group_name: string,
         name_front?: string,

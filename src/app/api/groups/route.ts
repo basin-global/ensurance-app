@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { groups } from '@/lib/database/queries/groups';
+import { groups } from '@/lib/database/groups';
 
 // Cache successful responses for 1 hour
 export const revalidate = 3600;

@@ -88,12 +88,12 @@ export default function NaturalCapitalGrid({
     useEffect(() => {
         async function fetchAccounts() {
             try {
-                const response = await fetch('/api/accounts')
+                const response = await fetch(`/api/accounts?group=${groupName}`)
                 if (!response.ok) throw new Error('Failed to fetch accounts')
                 const data = await response.json()
                 
+                // Filter out situs.ensurance if this is the ensurance group
                 const filteredAccounts = data.filter(account => 
-                    account.og_name === `.${groupName}` && 
                     account.full_account_name !== 'situs.ensurance'
                 )
                 

@@ -6,13 +6,13 @@
 // =============================================================================
 
 // -----------------------------------------------------------------------------
-// OG & Account Core Types
+// Group & Account Core Types
 // -----------------------------------------------------------------------------
-export interface OG {
+export interface Group {
     contract_address: string;
     group_name: string; // Expected to always start with a dot (e.g., ".example")
-    name: string;    // OG Name from OGs.json
-    email: string;   // OG Email from OGs.json
+    name: string;    // Group Name
+    email: string;   // Group Email
     name_front?: string;
     tagline?: string;
     description?: string;
@@ -22,24 +22,27 @@ export interface OG {
     group_ensurance?: string | boolean;
 }
 
-export type OgConfig = OG;
+export type GroupConfig = Group;
 
-export interface OgAccount {
-    tba_address: string;
-    account_name: string;
-    token_id: number;
-    created_at?: string;
-    owner_of?: string;
-    description?: string;
+export interface GroupAccount {
+    token_id: number;           // Primary key, NOT NULL
+    account_name: string;       // NOT NULL
+    full_account_name?: string; // Can be NULL
+    tba_address?: string;       // Can be NULL
+    is_agent: boolean;          // NOT NULL
+    group_name: string;         // The group this account belongs to (with dot)
+    description?: string;       // Can be NULL
+    created_at?: string;        // Optional timestamp
+    owner_of?: string;          // Optional owner address
 }
 
-export interface AllAccountsProps {
-    og: string;
-    accounts: OgAccount[];
+export interface GroupAccountsProps {
+    group: string;
+    accounts: GroupAccount[];
     searchQuery: string;
-    hideOgSuffix?: boolean;
+    hideGroupSuffix?: boolean;
     showCreateOption?: boolean;
-    getAccountUrl?: (account: OgAccount) => string;
+    getAccountUrl?: (account: GroupAccount) => string;
 }
 
 // -----------------------------------------------------------------------------
@@ -128,7 +131,7 @@ export interface EnsureModalProps {
 
 export interface EnsurancePreviewProps {
     contractAddress: string;
-    og: string;
+    group: string;
 }
 
 export interface EnsuranceForm {
@@ -140,7 +143,7 @@ export interface EnsuranceForm {
 // Validation Types
 // -----------------------------------------------------------------------------
 export interface ValidationReport {
-    ogs: {
+    groups: {
         total: number;
         missing: string[];
         invalid: string[];

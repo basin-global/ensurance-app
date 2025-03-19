@@ -1,6 +1,6 @@
-import { accounts } from '@/lib/database/queries/accounts';
-import { ensurance } from '@/lib/database/queries/ensurance/specific';
-import { groups } from '@/lib/database/queries/groups';
+import { accounts } from '@/lib/database/accounts';
+import { ensurance } from '@/lib/database/ensurance/specific';
+import { groups } from '@/lib/database/groups';
 import { searchDocs } from '@/lib/docs-search';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
             }
         ];
         
-        // If no query, return all nav items
+        // If no query, return only nav items
         if (!query) {
             return NextResponse.json(navItems);
         }
@@ -84,41 +84,44 @@ export async function GET(request: NextRequest) {
         const matchingNavItems = navItems.filter(item => 
             item.name.toLowerCase().includes(searchLower)
         );
-        
-        // Initialize data arrays with cached or empty values
-        let groupsData = isCacheValid('groups') ? cache.groups.data : [];
-        let accountsData = isCacheValid('accounts') ? cache.accounts.data : [];
-        let certificatesData = isCacheValid('certificates') ? cache.certificates.data : [];
 
-        try {
-            // Only fetch what's not in cache
-            if (!isCacheValid('groups')) {
+        // Only fetch and search other data if we have a search query
+        let groupsData = [];
+        let accountsData = [];
+        let certificatesData = [];
+
+        // Initialize from cache if valid
+        if (isCacheValid('groups')) {
+            groupsData = cache.groups.data || [];
+        } else {
+            try {
                 groupsData = await groups.getSearchResults();
                 cache.groups = { data: groupsData, timestamp: Date.now() };
+            } catch (error) {
+                console.error('[Search API] Failed to load groups:', error);
             }
-        } catch (error) {
-            console.error('[Search API] Failed to load groups:', error);
-            groupsData = groupsData || [];
         }
 
-        try {
-            if (!isCacheValid('accounts')) {
+        if (isCacheValid('accounts')) {
+            accountsData = cache.accounts.data || [];
+        } else {
+            try {
                 accountsData = await accounts.getSearchResults();
                 cache.accounts = { data: accountsData, timestamp: Date.now() };
+            } catch (error) {
+                console.error('[Search API] Failed to load accounts:', error);
             }
-        } catch (error) {
-            console.error('[Search API] Failed to load accounts:', error);
-            accountsData = accountsData || [];
         }
 
-        try {
-            if (!isCacheValid('certificates')) {
+        if (isCacheValid('certificates')) {
+            certificatesData = cache.certificates.data || [];
+        } else {
+            try {
                 certificatesData = await ensurance.getSearchResults();
                 cache.certificates = { data: certificatesData, timestamp: Date.now() };
+            } catch (error) {
+                console.error('[Search API] Failed to load certificates:', error);
             }
-        } catch (error) {
-            console.error('[Search API] Failed to load certificates:', error);
-            certificatesData = certificatesData || [];
         }
 
         // Process results in parallel with null checks

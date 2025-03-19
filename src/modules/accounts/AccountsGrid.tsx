@@ -10,7 +10,7 @@ import Image from 'next/image'
 interface Account {
     full_account_name: string;
     token_id: number;
-    og_name: string;
+    group_name: string;
     is_agent: boolean;
 }
 
@@ -54,7 +54,7 @@ export default function AccountsGrid({
                 // If groupName provided, filter to single group
                 if (groupName) {
                     const group = groups.find((g: any) => 
-                        g.og_name === (groupName.startsWith('.') ? groupName : `.${groupName}`)
+                        g.group_name === (groupName.startsWith('.') ? groupName : `.${groupName}`)
                     )
                     if (!group) throw new Error('Group not found')
                     contractAddresses = [group.contract_address.toLowerCase()]
@@ -85,17 +85,17 @@ export default function AccountsGrid({
 
                 // Transform NFTs to match Account interface
                 const transformedNfts = nftData.nfts.map((nft: any) => {
-                    // Find matching group for og_name
+                    // Find matching group for group_name
                     const contractAddress = nft.contract_address.toLowerCase()
                     const matchingGroup = groups.find((group: any) => 
                         group.contract_address.toLowerCase() === contractAddress
                     )
-                    const ogName = matchingGroup?.og_name || nft.collection?.name || ''
+                    const groupName = matchingGroup?.group_name || nft.collection?.name || ''
 
                     return {
                         full_account_name: nft.name,
                         token_id: parseInt(nft.token_id),
-                        og_name: ogName,
+                        group_name: groupName,
                         is_agent: false // TODO: Determine if this is an agent based on metadata
                     }
                 })
@@ -161,11 +161,6 @@ export default function AccountsGrid({
     const filteredAccounts = useMemo(() => {
         let filtered = accounts;
 
-        // Filter by group
-        if (groupName) {
-            filtered = filtered.filter(account => account.og_name === `.${groupName}`)
-        }
-
         // Filter by search
         if (searchQuery) {
             const searchLower = searchQuery.toLowerCase()
@@ -187,7 +182,7 @@ export default function AccountsGrid({
             if (!b.full_account_name) return -1;
             return a.full_account_name.localeCompare(b.full_account_name);
         });
-    }, [accounts, groupName, searchQuery])
+    }, [accounts, searchQuery])
 
     // Memoized paginated accounts
     const displayedAccounts = useMemo(() => {
@@ -277,7 +272,7 @@ export default function AccountsGrid({
                         <div className="w-20 h-20 flex-shrink-0 mr-6">
                             <AccountImage
                                 tokenId={account.token_id}
-                                groupName={account.og_name.replace('.', '')}
+                                groupName={groupName || account.group_name?.replace('.', '')}
                             />
                         </div>
                         <span className="text-xl font-mono break-all">

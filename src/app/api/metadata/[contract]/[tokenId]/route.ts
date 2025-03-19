@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { metadata } from '@/lib/database/queries/metadata';
+import { metadata } from '@/lib/database/metadata';
 
 export async function GET(
     request: Request,
