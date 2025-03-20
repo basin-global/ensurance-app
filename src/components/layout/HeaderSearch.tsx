@@ -14,7 +14,7 @@ interface SearchResult {
   type: string
   chain?: string
   is_agent?: boolean
-  is_pool?: boolean
+  is_ensurance?: boolean
   doc_section?: string
 }
 
@@ -33,15 +33,14 @@ export function HeaderSearch() {
 
   // Keyboard shortcuts map
   const shortcuts = {
-    'c': '/certificates/all',  // g c - certificates
-    's': '/syndicates',        // g s - syndicates
-    'p': '/pools',             // g p - pools
-    'e': '/exchange',          // g e - exchange
-    'a': '/all',               // g a - agents
     'g': '/groups',            // g g - groups
+    'a': '/all',               // g a - agents
+    'm': '/markets',  // g m - markets
+    'p': '/proceeds',             // g p - proceeds
+    's': '/syndicates',        // g s - syndicates
     'b': 'https://binder.ensurance.app', // g b - binder
-    't': 'https://www.coinbase.com/price/base-ensure', // g t - token ($ENSURE)
-    'd': '/docs'               // g d - docs
+    'd': '/docs',              // g d - docs
+    'h': '/' // g h home
   }
 
   // Handle keyboard shortcuts
@@ -217,7 +216,7 @@ export function HeaderSearch() {
     return [...results].sort((a, b) => {
       const typeOrder = {
         group: 1,
-        account: a.is_pool ? 2 : (a.is_agent ? 3 : 4),
+        account: a.is_ensurance ? 2 : (a.is_agent ? 3 : 4),
         certificate: 5,
         doc: 6
       }
@@ -289,9 +288,9 @@ export function HeaderSearch() {
                     )}
                     {result.type === 'account' && (
                       <>
-                        {result.is_pool ? (
+                        {result.is_ensurance ? (
                           <span className="text-xs px-2 py-1 rounded bg-emerald-500/20 text-emerald-400">
-                            POOL
+                            ENSURANCE
                           </span>
                         ) : result.is_agent ? (
                           <span className="text-xs px-2 py-1 rounded bg-purple-500/20 text-purple-400">

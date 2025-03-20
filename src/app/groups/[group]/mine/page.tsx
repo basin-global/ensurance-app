@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
 import AccountsGrid from '@/modules/accounts/AccountsGrid'
-import { AssetSearch } from '@/modules/assets/AssetSearch'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { GroupInfo } from '@/modules/groups/GroupInfo'
 
 export default function GroupMinePage({ params }: { params: { group: string } }) {
@@ -41,15 +41,13 @@ export default function GroupMinePage({ params }: { params: { group: string } })
 
   return (
     <div className="min-h-screen flex flex-col">
-      <div className="container mx-auto px-4 pt-0 pb-4 flex-1">
+      <div className="container mx-auto px-4 py-8 flex-1">
         <div className="space-y-4">
-          <div className="flex justify-center">
-            <AssetSearch 
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              placeholder="Search accounts..."
-            />
-          </div>
+          <PageHeader
+            title={`my ${params.group} accounts`}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+          />
           <AccountsGrid 
             groupName={params.group} 
             searchQuery={searchQuery}

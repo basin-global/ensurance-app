@@ -4,15 +4,15 @@ export const ensurance = {
   // Get minimal data for search results
   getSearchResults: async () => {
     try {
-      // Get all certificates from specific_certificates table
+      // Get all certificates from specific table
       const result = await sql.query(`
         SELECT 
-          sc.token_id,
-          sc.name,
-          sc.chain
-        FROM specific_certificates sc
-        JOIN ensurance_specific_contracts esc ON sc.chain = esc.chain
-        ORDER BY sc.token_id DESC
+          s.token_id,
+          s.name,
+          s.chain
+        FROM certificates.specific s
+        JOIN certificates.specific_contracts sc ON s.chain = sc.chain
+        ORDER BY s.token_id DESC
       `);
       
       return result.rows;
@@ -25,22 +25,22 @@ export const ensurance = {
   // Get ALL certificates across all chains
   getAll: async () => {
     try {
-      // Get all certificates from specific_certificates table
+      // Get all certificates from specific table
       const result = await sql.query(`
         SELECT 
-          sc.token_id,
-          sc.name,
-          sc.description,
-          sc.chain,
-          sc.image_ipfs,
-          sc.animation_url_ipfs,
-          sc.creator_reward_recipient,
-          sc.creator_reward_recipient_split,
-          sc.mime_type,
-          esc.contract_address
-        FROM specific_certificates sc
-        JOIN ensurance_specific_contracts esc ON sc.chain = esc.chain
-        ORDER BY sc.token_id DESC
+          s.token_id,
+          s.name,
+          s.description,
+          s.chain,
+          s.image_ipfs,
+          s.animation_url_ipfs,
+          s.creator_reward_recipient,
+          s.creator_reward_recipient_split,
+          s.mime_type,
+          sc.contract_address
+        FROM certificates.specific s
+        JOIN certificates.specific_contracts sc ON s.chain = sc.chain
+        ORDER BY s.token_id DESC
       `);
       
       return result.rows.map(row => ({
@@ -61,7 +61,7 @@ export const ensurance = {
     try {
       // Verify chain is supported
       const chainResult = await sql.query(`
-        SELECT contract_address FROM ensurance_specific_contracts WHERE chain = $1 LIMIT 1
+        SELECT contract_address FROM certificates.specific_contracts WHERE chain = $1 LIMIT 1
       `, [chain]);
       
       if (chainResult.rows.length === 0) {
@@ -70,20 +70,20 @@ export const ensurance = {
 
       const result = await sql.query(`
         SELECT 
-          sc.token_id,
-          sc.name,
-          sc.description,
-          sc.chain,
-          sc.image_ipfs,
-          sc.animation_url_ipfs,
-          sc.creator_reward_recipient,
-          sc.creator_reward_recipient_split,
-          sc.mime_type,
-          esc.contract_address
-        FROM specific_certificates sc
-        JOIN ensurance_specific_contracts esc ON sc.chain = esc.chain
-        WHERE sc.chain = $1
-        ORDER BY sc.token_id DESC
+          s.token_id,
+          s.name,
+          s.description,
+          s.chain,
+          s.image_ipfs,
+          s.animation_url_ipfs,
+          s.creator_reward_recipient,
+          s.creator_reward_recipient_split,
+          s.mime_type,
+          sc.contract_address
+        FROM certificates.specific s
+        JOIN certificates.specific_contracts sc ON s.chain = sc.chain
+        WHERE s.chain = $1
+        ORDER BY s.token_id DESC
       `, [chain]);
       
       return result.rows.map(row => ({
@@ -104,7 +104,7 @@ export const ensurance = {
     try {
       // Verify chain is supported
       const chainResult = await sql.query(`
-        SELECT contract_address FROM ensurance_specific_contracts WHERE chain = $1 LIMIT 1
+        SELECT contract_address FROM certificates.specific_contracts WHERE chain = $1 LIMIT 1
       `, [chain]);
       
       if (chainResult.rows.length === 0) {
@@ -113,19 +113,19 @@ export const ensurance = {
 
       const result = await sql.query(`
         SELECT 
-          sc.token_id,
-          sc.name,
-          sc.description,
-          sc.chain,
-          sc.image_ipfs,
-          sc.animation_url_ipfs,
-          sc.creator_reward_recipient,
-          sc.creator_reward_recipient_split,
-          sc.mime_type,
-          esc.contract_address
-        FROM specific_certificates sc
-        JOIN ensurance_specific_contracts esc ON sc.chain = esc.chain
-        WHERE sc.chain = $1 AND sc.token_id = $2
+          s.token_id,
+          s.name,
+          s.description,
+          s.chain,
+          s.image_ipfs,
+          s.animation_url_ipfs,
+          s.creator_reward_recipient,
+          s.creator_reward_recipient_split,
+          s.mime_type,
+          sc.contract_address
+        FROM certificates.specific s
+        JOIN certificates.specific_contracts sc ON s.chain = sc.chain
+        WHERE s.chain = $1 AND s.token_id = $2
         LIMIT 1
       `, [chain, tokenId]);
       

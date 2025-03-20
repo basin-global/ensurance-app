@@ -19,6 +19,12 @@ export default function AdminLayout({
             
             <div className="ml-8 space-x-4">
               <Link 
+                href="/admin/sync"
+                className="text-sm hover:text-blue-500"
+              >
+                Sync
+              </Link>
+              <Link 
                 href="/admin/exports"
                 className="text-sm hover:text-blue-500"
               >

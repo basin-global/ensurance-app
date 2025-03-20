@@ -10,6 +10,7 @@ export const groups = {
                     group_name,
                     name_front
                 FROM members.groups 
+                WHERE is_active = true
                 ORDER BY group_name
             `;
             return result.rows;

@@ -72,19 +72,18 @@ export const accounts = {
             for (const group of groups.rows) {
                 const tableName = `accounts_${group.group_name.startsWith('.') ? group.group_name.substring(1) : group.group_name}`; // Handle both formats
                 try {
-                    console.log(`Querying table: members.${tableName}`);
                     const result = await sql.query(
-                        `SELECT 
+                        `SELECT DISTINCT
                             full_account_name,
-                            token_id,
                             is_agent,
                             '${group.group_name}' as group_name
-                        FROM members.${tableName}`
+                        FROM members.${tableName}
+                        WHERE is_active = true`
                     );
                     allAccounts = [...allAccounts, ...result.rows];
                 } catch (error) {
                     console.error(`Error querying ${tableName}:`, error.message);
-                    continue;
+                    continue; // Skip failed tables and continue with others
                 }
             }
             
@@ -99,10 +98,9 @@ export const accounts = {
                 if (!b.full_account_name) return -1;
                 return a.full_account_name.localeCompare(b.full_account_name);
             });
-            
         } catch (error) {
-            console.error('Database query error:', error);
-            throw error;
+            console.error('Error fetching search results:', error);
+            return [];
         }
     },
 

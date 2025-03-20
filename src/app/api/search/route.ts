@@ -1,21 +1,60 @@
 import { accounts } from '@/lib/database/accounts';
-import { ensurance } from '@/lib/database/ensurance/specific';
+import { ensurance } from '@/lib/database/certificates/specific';
 import { groups } from '@/lib/database/groups';
 import { searchDocs } from '@/lib/docs-search';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const revalidate = 60;
 
-// Simple in-memory cache
+// Simple in-memory cache with stale-while-revalidate
 let cache = {
-    groups: { data: null, timestamp: 0 },
-    accounts: { data: null, timestamp: 0 },
-    certificates: { data: null, timestamp: 0 }
+    groups: { data: null, timestamp: 0, isRevalidating: false },
+    accounts: { data: null, timestamp: 0, isRevalidating: false },
+    certificates: { data: null, timestamp: 0, isRevalidating: false }
 };
+
+const CACHE_TTL = 60000; // 1 minute
+const STALE_TTL = 300000; // 5 minutes
 
 function isCacheValid(type: keyof typeof cache) {
     const cacheEntry = cache[type];
-    return cacheEntry.data && (Date.now() - cacheEntry.timestamp) < 60000;
+    return cacheEntry.data && (Date.now() - cacheEntry.timestamp) < CACHE_TTL;
+}
+
+function isCacheStale(type: keyof typeof cache) {
+    const cacheEntry = cache[type];
+    return cacheEntry.data && (Date.now() - cacheEntry.timestamp) > STALE_TTL;
+}
+
+async function getDataWithCache(type: keyof typeof cache, fetchFn: () => Promise<any>) {
+    const cacheEntry = cache[type];
+    
+    // Return fresh cache
+    if (isCacheValid(type)) {
+        return cacheEntry.data;
+    }
+    
+    // Return stale cache and revalidate in background
+    if (cacheEntry.data && !cacheEntry.isRevalidating) {
+        cacheEntry.isRevalidating = true;
+        fetchFn().then(newData => {
+            cache[type] = { data: newData, timestamp: Date.now(), isRevalidating: false };
+        }).catch(error => {
+            console.error(`Background revalidation failed for ${type}:`, error);
+            cacheEntry.isRevalidating = false;
+        });
+        return cacheEntry.data;
+    }
+    
+    // No cache or stale cache, fetch new data
+    try {
+        const newData = await fetchFn();
+        cache[type] = { data: newData, timestamp: Date.now(), isRevalidating: false };
+        return newData;
+    } catch (error) {
+        console.error(`Failed to fetch ${type}:`, error);
+        return cacheEntry.data || []; // Return stale data if available, empty array if not
+    }
 }
 
 export const dynamic = 'force-dynamic';
@@ -27,28 +66,13 @@ export async function GET(request: NextRequest) {
         // Define navigation items once at the top
         const navItems = [
             {
-                name: 'certificates',
-                path: '/certificates/all',
+                name: 'natural capital',
+                path: '/natural-capital',
                 type: 'nav'
             },
             {
-                name: 'syndicates',
-                path: '/syndicates',
-                type: 'nav'
-            },
-            {
-                name: 'pools',
-                path: '/pools',
-                type: 'nav'
-            },
-            {
-                name: 'exchange',
-                path: '/exchange',
-                type: 'nav'
-            },
-            {
-                name: 'agents',
-                path: '/all',
+                name: 'markets',
+                path: '/markets',
                 type: 'nav'
             },
             {
@@ -57,13 +81,23 @@ export async function GET(request: NextRequest) {
                 type: 'nav'
             },
             {
-                name: 'binder',
-                path: 'https://binder.ensurance.app',
+                name: 'agent accounts',
+                path: '/agents',
                 type: 'nav'
             },
             {
-                name: '$ENSURE',
-                path: 'https://www.coinbase.com/price/base-ensure',
+                name: 'syndicates',
+                path: '/syndicates',
+                type: 'nav'
+            },
+            {
+                name: 'proceeds',
+                path: '/proceeds',
+                type: 'nav'
+            },
+            {
+                name: 'binder',
+                path: 'https://binder.ensurance.app',
                 type: 'nav'
             },
             {
@@ -91,38 +125,9 @@ export async function GET(request: NextRequest) {
         let certificatesData = [];
 
         // Initialize from cache if valid
-        if (isCacheValid('groups')) {
-            groupsData = cache.groups.data || [];
-        } else {
-            try {
-                groupsData = await groups.getSearchResults();
-                cache.groups = { data: groupsData, timestamp: Date.now() };
-            } catch (error) {
-                console.error('[Search API] Failed to load groups:', error);
-            }
-        }
-
-        if (isCacheValid('accounts')) {
-            accountsData = cache.accounts.data || [];
-        } else {
-            try {
-                accountsData = await accounts.getSearchResults();
-                cache.accounts = { data: accountsData, timestamp: Date.now() };
-            } catch (error) {
-                console.error('[Search API] Failed to load accounts:', error);
-            }
-        }
-
-        if (isCacheValid('certificates')) {
-            certificatesData = cache.certificates.data || [];
-        } else {
-            try {
-                certificatesData = await ensurance.getSearchResults();
-                cache.certificates = { data: certificatesData, timestamp: Date.now() };
-            } catch (error) {
-                console.error('[Search API] Failed to load certificates:', error);
-            }
-        }
+        groupsData = await getDataWithCache('groups', () => groups.getSearchResults());
+        accountsData = await getDataWithCache('accounts', () => accounts.getSearchResults());
+        certificatesData = await getDataWithCache('certificates', () => ensurance.getSearchResults());
 
         // Process results in parallel with null checks
         const [matchingGroups, matchingAccounts, matchingCertificates] = await Promise.all([
@@ -145,7 +150,7 @@ export async function GET(request: NextRequest) {
                     path: `/${account.full_account_name}`,
                     type: 'account',
                     is_agent: account.is_agent,
-                    is_pool: account.group_name === '.ensurance' && account.full_account_name !== 'situs.ensurance'
+                    is_ensurance: account.group_name === '.ensurance' && account.full_account_name !== 'situs.ensurance'
                 })),
             certificatesData
                 .filter(cert => 

@@ -22,11 +22,12 @@ export async function GET(request: Request) {
         s.chain,
         s.impact_tags,
         s.media,
+        s.image_url,
         a.symbol as currency
       FROM 
-        syndicates s
-      JOIN 
-        approved_assets a ON s.asset_address = a.contract_address AND s.chain = a.chain
+        syndicates.syndicates s
+      LEFT JOIN 
+        market.approved_assets a ON s.asset_address = a.contract_address AND s.chain = a.chain
     `;
     
     const whereConditions = [];
@@ -70,8 +71,8 @@ export async function GET(request: Request) {
       impact_tags: item.impact_tags,
       currency: item.currency,
       media: item.media || {},
-      // For backward compatibility, use banner from media or default
-      image_url: item.media?.banner || '/assets/ensurance-example.png'
+      // Use the image_url from the database, fallback to banner from media or default
+      image_url: item.image_url || item.media?.banner || '/assets/ensurance-example.png'
     }));
     
     return NextResponse.json(syndicates);

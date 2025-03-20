@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import Image from 'next/image'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { PageHeader } from '@/components/layout/PageHeader'
 
 interface SyndicateDetails {
   id: string
@@ -61,6 +62,7 @@ export default function SyndicateDetailsPage() {
   if (loading) {
     return (
       <div className="container mx-auto py-6 px-4">
+        <PageHeader title="ensurance syndicate" showSearch={false} />
         <div className="max-w-4xl mx-auto">
           <Skeleton className="h-[30vh] min-h-[300px] w-full rounded-lg mb-6" />
           <Skeleton className="h-10 w-3/4 mb-3" />
@@ -73,6 +75,7 @@ export default function SyndicateDetailsPage() {
   if (error || !syndicate) {
     return (
       <div className="container mx-auto py-6 px-4">
+        <PageHeader title="ensurance syndicate" showSearch={false} />
         <div className="max-w-4xl mx-auto">
           <Card>
             <CardContent className="pt-4">
@@ -93,7 +96,7 @@ export default function SyndicateDetailsPage() {
   return (
     <div className="flex flex-col">
       {/* Hero Section with Banner */}
-      <div className="relative h-[30vh] min-h-[250px]">
+      <div className="relative h-[50vh] min-h-[400px]">
         <Image
           src={bannerImage}
           alt={`${syndicate.name} Banner`}
@@ -103,12 +106,20 @@ export default function SyndicateDetailsPage() {
           sizes="100vw"
           quality={90}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
         
-        {/* Title Content */}
-        <div className="container mx-auto px-4 h-full relative z-10">
-          <div className="flex items-end h-full pb-8 max-w-4xl mx-auto">
-            <div>
+        {/* Overlay Content */}
+        <div className="absolute inset-0 flex flex-col">
+          <div className="flex-1 pt-8">
+            <PageHeader 
+              title="ensurance syndicate" 
+              showSearch={false} 
+            />
+          </div>
+          
+          {/* Title Content */}
+          <div className="container mx-auto px-4 pb-8">
+            <div className="max-w-4xl mx-auto">
               <h1 className="text-4xl font-bold mb-3 text-white">
                 {syndicate.name}
               </h1>
@@ -169,9 +180,12 @@ export default function SyndicateDetailsPage() {
           </div>
 
           <div className="flex justify-center">
-            <button className="bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 w-full md:w-auto md:min-w-[200px]">
-              Deposit {syndicate.currency}
-            </button>
+            <a 
+              href={`mailto:tmo@basin.global?subject=Join Waitlist: ${syndicate.name}&body=Hi, I'm interested in joining the waitlist for the ${syndicate.name} syndicate.%0D%0A%0D%0ASyndicate ID: ${syndicate.id}`}
+              className="bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 w-full md:w-auto md:min-w-[200px] text-center"
+            >
+              Join Waitlist
+            </a>
           </div>
         </div>
       </div>

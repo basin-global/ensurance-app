@@ -343,15 +343,16 @@ export default function NaturalCapitalGrid({
                 }
 
                 .circle-overlay span {
-                    font-size: 0.8rem;
-                    line-height: 1.3;
-                    max-width: 80%;
+                    font-size: 1rem;
+                    line-height: 1.4;
+                    max-width: 90%;
                     text-align: center;
-                    word-wrap: break-word;
-                    word-break: break-word;
-                    hyphens: auto;
-                    font-weight: normal;
+                    word-wrap: normal;
+                    word-break: normal;
+                    hyphens: none;
+                    font-weight: 500;
                     transition: all 0.3s ease;
+                    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
                 }
 
                 [data-type="stock"] .circle-content {

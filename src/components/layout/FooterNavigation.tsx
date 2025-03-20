@@ -4,7 +4,9 @@ export function FooterNavigation() {
   return (
     <div className="flex flex-col items-center w-full max-w-5xl">
       {/* Header */}
-      <span className="font-bold mb-12 text-5xl text-gray-100">ensurance</span>
+      <Link href="/" className="mb-12 hover:text-gray-100 transition-colors">
+        <span className="font-bold text-5xl text-gray-100">ensurance</span>
+      </Link>
       
       {/* Two Columns */}
       <div className="grid grid-cols-2 gap-48 mb-12">
