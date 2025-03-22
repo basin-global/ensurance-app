@@ -79,7 +79,7 @@ export default function Footer() {
 
               {/* Right Column - Legal Links and Logos */}
               <div className="flex flex-col items-center justify-center">
-                <div className="text-center h-[120px] flex items-center justify-center w-72">
+                <div className="text-center h-[120px] flex items-center justify-center w-72 mb-[3px]">
                   <div className="flex flex-col items-center">
                     {/* Built on Ethereum Logo */}
                     <div className="opacity-60 hover:opacity-100 transition-opacity mb-6">

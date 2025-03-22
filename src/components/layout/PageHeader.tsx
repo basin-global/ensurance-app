@@ -46,13 +46,13 @@ export function PageHeader({
                     <button
                       onClick={() => onTabChange?.(tab.value)}
                       className={cn(
-                        "inline-block py-4 font-medium transition-colors lowercase",
+                        "inline-block py-4 font-medium transition-colors",
                         activeTab === tab.value
                           ? "text-white border-b-2 border-white"
                           : "text-gray-400 hover:text-white"
                       )}
                     >
-                      {tab.display.toLowerCase()}
+                      {tab.display}
                     </button>
                   </li>
                 ))}

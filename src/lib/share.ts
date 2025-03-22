@@ -10,13 +10,13 @@ export const viewport: Viewport = {
 export async function generateShare(pathname: string = '/', params: any = {}): Promise<Metadata> {
   const baseMetadata = {
     metadataBase: new URL('https://ensurance.app'),
-    title: 'ensurance agents | ensuring natural capital',
+    title: 'ensurance: markets for what matters - ensuring the stocks & flows of natural capital',
     description: 'reducing risk, increasing resilience',
     applicationName: 'ensurance agents',
     authors: [{ name: 'BASIN Natural Capital' }],
     openGraph: {
       type: 'website',
-      title: 'ensurance agents | ensuring natural capital',
+      title: 'ensurance: markets for what matters - ensuring the stocks & flows of natural capital',
       description: 'reducing risk, increasing resilience',
       images: [{
         url: 'https://ensurance.app/assets/share-default.png',
@@ -28,7 +28,7 @@ export async function generateShare(pathname: string = '/', params: any = {}): P
     },
     twitter: {
       card: 'summary_large_image',
-      title: 'ensurance agents | ensuring natural capital',
+      title: 'ensurance: markets for what matters - ensuring the stocks & flows of natural capital',
       description: 'reducing risk, increasing resilience',
       images: ['https://ensurance.app/assets/share-default.png'],
       creator: '@ensurance_app',

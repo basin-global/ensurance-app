@@ -20,9 +20,9 @@ function NavigationContent() {
     const isMainPage = pathname === '/natural-capital'
 
     const allTabs = [
-        { value: 'all', display: 'All', href: '/natural-capital' },
-        { value: 'stock', display: 'Stocks', href: '/natural-capital/stocks' },
-        { value: 'flow', display: 'Flows', href: '/natural-capital/flows' }
+        { value: 'all', display: 'ALL', href: '/natural-capital' },
+        { value: 'stock', display: 'STOCKS', href: '/natural-capital/stocks' },
+        { value: 'flow', display: 'FLOWS', href: '/natural-capital/flows' }
     ]
 
     const mainPageTabs = allTabs.filter(tab => tab.value !== 'all')
