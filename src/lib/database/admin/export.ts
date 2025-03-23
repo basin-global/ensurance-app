@@ -22,15 +22,15 @@ export async function getExportableTables(): Promise<TableInfo[]> {
   const { rows: allTables } = await sql`
     SELECT table_schema, table_name 
     FROM information_schema.tables 
-    WHERE table_schema IN ('members', 'certificates', 'syndicates')
+    WHERE table_schema IN ('agents', 'binder', 'certificates', 'market', 'members', 'proceeds', 'syndicates')
     AND table_type = 'BASE TABLE'
-    ORDER BY table_name
+    ORDER BY table_schema, table_name
   `
 
   // For each table, get its columns
   for (const { table_schema, table_name } of allTables) {
     // Skip groups since we handle it separately
-    if (table_name === 'groups') continue
+    if (table_schema === 'members' && table_name === 'groups') continue
 
     // Get columns for this table
     const { rows: columns } = await sql`
@@ -42,7 +42,7 @@ export async function getExportableTables(): Promise<TableInfo[]> {
     `
     
     tables.push({
-      table_name,
+      table_name: `${table_schema}.${table_name}`,
       primary_key: table_name.startsWith('accounts_') ? 'token_id' : columns[0]?.column_name,
       columns: columns.map(col => col.column_name)
     })
@@ -53,28 +53,17 @@ export async function getExportableTables(): Promise<TableInfo[]> {
 
 // Export table data based on selected columns
 export async function exportTableData(table: string, columns: string[]): Promise<any[]> {
-  // Get table info including schema
-  const { rows: tableInfo } = await sql`
-    SELECT table_schema
-    FROM information_schema.tables
-    WHERE table_name = ${table}
-    AND table_schema IN ('members', 'certificates', 'syndicates')
-  `
-  
-  if (tableInfo.length === 0) {
-    throw new Error('Invalid table name')
-  }
-
-  const schema = tableInfo[0].table_schema
+  // Handle schema-qualified table names
+  const [schema, tableName] = table.includes('.') ? table.split('.') : ['members', table]
 
   // Special handling for groups
-  if (table === 'groups') {
+  if (schema === 'members' && tableName === 'groups') {
     return await groups.getAll(true) // Include inactive groups
   }
 
   // For all other tables, use dynamic SQL
   const columnsStr = columns.map(c => `"${c}"`).join(', ')
-  const schemaTable = `"${schema}"."${table}"`
+  const schemaTable = `"${schema}"."${tableName}"`
   
   // Execute the query
   const result = await sql.query(

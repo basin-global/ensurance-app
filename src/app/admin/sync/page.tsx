@@ -1,21 +1,23 @@
 'use client'
 
-import { useState } from 'react'
-import { usePrivy } from '@privy-io/react-auth'
-import type { SyncEntity, SyncOptions, SyncOperationResult } from '@/modules/admin/sync/types'
+export const dynamic = 'force-dynamic'
 
-// Available chains for sync
-const CHAINS = ['base'] as const
+import { useState, useEffect } from 'react'
+import { usePrivy } from '@privy-io/react-auth'
+import { isAppAdmin } from '@/config/admin'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import type { SyncEntity, SyncOperationResult } from '@/modules/admin/sync/types'
 
 export default function SyncPage() {
   const { user } = usePrivy()
   const [syncing, setSyncing] = useState(false)
-  const [selectedEntity, setSelectedEntity] = useState<SyncEntity>('certificates')
-  const [selectedType, setSelectedType] = useState<'general' | 'specific'>('general')
-  const [selectedChain, setSelectedChain] = useState<string>('base')
-  const [singleId, setSingleId] = useState('')
+  const [selectedEntity, setSelectedEntity] = useState<SyncEntity>('groups')
+  const [selectedGroup, setSelectedGroup] = useState<string>('all')
+  const [tokenId, setTokenId] = useState('')
   const [result, setResult] = useState<SyncOperationResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [groups, setGroups] = useState<any[]>([])
+  const [loadingGroups, setLoadingGroups] = useState(false)
 
   const handleSync = async () => {
     if (!user?.wallet?.address) return
@@ -25,19 +27,10 @@ export default function SyncPage() {
     
     try {
       // Build sync options
-      const options: SyncOptions = {
+      const options = {
         entity: selectedEntity,
-        chain: selectedChain
-      }
-
-      // Add type for certificates
-      if (selectedEntity === 'certificates') {
-        options.type = selectedType
-      }
-
-      // Add ID if specified
-      if (singleId) {
-        options.id = singleId
+        ...(selectedGroup !== 'all' && { group_name: selectedGroup }),
+        ...(tokenId && { token_id: parseInt(tokenId) })
       }
 
       const response = await fetch('/api/admin/sync', {
@@ -56,7 +49,7 @@ export default function SyncPage() {
 
       const data = await response.json()
       setResult(data)
-    } catch (err) {
+    } catch (err: any) {
       console.error('Sync error:', err)
       setError(err.message)
     } finally {
@@ -64,71 +57,129 @@ export default function SyncPage() {
     }
   }
 
-  return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Admin Sync</h1>
+  // Fetch active groups from database
+  useEffect(() => {
+    const fetchGroups = async () => {
+      if (!user?.wallet?.address) return
 
+      setLoadingGroups(true)
+      try {
+        const response = await fetch('/api/groups')
+        if (!response.ok) {
+          throw new Error('Failed to fetch groups')
+        }
+
+        const data = await response.json()
+        setGroups(data)
+      } catch (err) {
+        console.error('Error fetching groups:', err)
+      } finally {
+        setLoadingGroups(false)
+      }
+    }
+
+    fetchGroups()
+  }, [user?.wallet?.address])
+
+  // Only show page to admins
+  if (!isAppAdmin(user?.wallet?.address)) {
+    return <div className="p-8">Access denied</div>
+  }
+
+  return (
+    <div className="container mx-auto p-8">
+      <h1 className="text-2xl font-bold mb-6">Admin Sync</h1>
+      
       <div className="space-y-6">
         {/* Entity Selection */}
         <div>
-          <label className="block text-sm font-medium mb-2">Entity Type</label>
-          <select 
+          <label className="block text-sm font-medium mb-2 text-white">Entity Type</label>
+          <Select
             value={selectedEntity}
-            onChange={(e) => setSelectedEntity(e.target.value as SyncEntity)}
-            className="w-full p-2 bg-transparent border border-gray-700 rounded text-gray-200"
+            onValueChange={(value) => {
+              setSelectedEntity(value as SyncEntity)
+              setSelectedGroup('all')
+              setTokenId('')
+            }}
           >
-            <option value="certificates">Certificates</option>
-            <option value="accounts">Accounts</option>
-            <option value="groups">Groups</option>
-            <option value="syndicates">Syndicates</option>
-          </select>
+            <SelectTrigger className="w-full bg-gray-900 text-white border-gray-700">
+              <SelectValue placeholder="Choose an entity..." />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-900 border-gray-700">
+              <SelectItem 
+                value="groups"
+                className="text-white hover:bg-gray-800"
+              >
+                Groups
+              </SelectItem>
+              <SelectItem 
+                value="accounts"
+                className="text-white hover:bg-gray-800"
+              >
+                Accounts
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Certificate Type (only for certificates) */}
-        {selectedEntity === 'certificates' && (
+        {/* Group Selection (only for accounts) */}
+        {selectedEntity === 'accounts' && (
           <div>
-            <label className="block text-sm font-medium mb-2">Certificate Type</label>
-            <select
-              value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value as 'general' | 'specific')}
-              className="w-full p-2 bg-transparent border border-gray-700 rounded text-gray-200"
+            <label className="block text-sm font-medium mb-2 text-white">
+              Group Name (Optional)
+              <span className="text-gray-400 text-xs ml-2">
+                Leave empty to sync all groups
+              </span>
+            </label>
+            <Select
+              value={selectedGroup}
+              onValueChange={setSelectedGroup}
             >
-              <option value="general">General</option>
-              <option value="specific">Specific</option>
-            </select>
+              <SelectTrigger 
+                className="w-full bg-gray-900 text-white border-gray-700"
+                disabled={loadingGroups}
+              >
+                <SelectValue placeholder={loadingGroups ? "Loading groups..." : "Select a group..."} />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-900 border-gray-700">
+                <SelectItem 
+                  value="all"
+                  className="text-white hover:bg-gray-800"
+                >
+                  All Groups
+                </SelectItem>
+                {groups.map(group => (
+                  <SelectItem 
+                    key={group.group_name}
+                    value={group.group_name}
+                    className="text-white hover:bg-gray-800"
+                  >
+                    {group.group_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         )}
 
-        {/* Chain Selection */}
-        <div>
-          <label className="block text-sm font-medium mb-2">Chain</label>
-          <select
-            value={selectedChain}
-            onChange={(e) => setSelectedChain(e.target.value)}
-            className="w-full p-2 bg-transparent border border-gray-700 rounded text-gray-200"
-          >
-            {CHAINS.map(chain => (
-              <option key={chain} value={chain}>{chain}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Single Item ID */}
-        <div>
-          <label className="block text-sm font-medium mb-2">
-            Single Item ID (Optional)
-            <span className="text-gray-400 text-xs ml-2">
-              {selectedEntity === 'certificates' ? 'Contract Address' : 'Item ID'}
-            </span>
-          </label>
-          <input
-            type="text"
-            value={singleId}
-            onChange={(e) => setSingleId(e.target.value)}
-            placeholder={selectedEntity === 'certificates' ? '0x...' : 'ID'}
-            className="w-full p-2 bg-transparent border border-gray-700 rounded text-gray-200 placeholder-gray-500"
-          />
-        </div>
+        {/* Token ID (only for accounts with group selected) */}
+        {selectedEntity === 'accounts' && selectedGroup && (
+          <div>
+            <label className="block text-sm font-medium mb-2 text-white">
+              Token ID (Optional)
+              <span className="text-gray-400 text-xs ml-2">
+                Leave empty to sync all accounts in group
+              </span>
+            </label>
+            <input
+              type="number"
+              value={tokenId}
+              onChange={(e) => setTokenId(e.target.value)}
+              placeholder="e.g. 1"
+              className="w-full p-2 bg-gray-900 text-white border border-gray-700 rounded placeholder-gray-500"
+            />
+          </div>
+        )}
 
         {/* Sync Button */}
         <button

@@ -1,32 +1,35 @@
-import { NextResponse } from 'next/server'
-import { headers } from 'next/headers'
-import { isAppAdmin } from '@/config/admin'
-import { getAddress } from 'viem'
-import { syncService } from '@/modules/admin/sync/service'
-import type { SyncOptions } from '@/modules/admin/sync/types'
+import { NextRequest, NextResponse } from 'next/server';
+import { headers } from 'next/headers';
+import { isAppAdmin } from '@/config/admin';
+import { sync } from '@/modules/admin/sync/service';
+import type { SyncEntity } from '@/modules/admin/sync/types';
 
-export async function POST(request: Request) {
+export const dynamic = 'force-dynamic';
+
+// Sync data from onchain to database
+export async function POST(request: NextRequest) {
   try {
-    // Check admin authorization
-    const headersList = headers()
-    const address = headersList.get('x-address')
-    
-    if (!address || !isAppAdmin(getAddress(address))) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Check admin access
+    const headersList = headers();
+    const address = headersList.get('x-address');
+    if (!isAppAdmin(address)) {
+      return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    // Get sync options from request body
-    const options: SyncOptions = await request.json()
+    // Get request data
+    const body = await request.json();
+    const { entity, group_name, token_id } = body;
 
-    // Perform sync
-    const result = await syncService.sync(options)
+    if (!entity) {
+      return new NextResponse('Invalid request - entity required', { status: 400 });
+    }
 
-    return NextResponse.json(result)
-  } catch (error) {
-    console.error('Sync API error:', error)
-    return NextResponse.json(
-      { error: 'Sync operation failed', details: error.message },
-      { status: 500 }
-    )
+    // Run sync operation
+    const result = await sync(entity as SyncEntity, { group_name, token_id });
+    return NextResponse.json(result);
+
+  } catch (error: any) {
+    console.error('Sync error:', error);
+    return new NextResponse(error.message || 'Sync failed', { status: 500 });
   }
 } 

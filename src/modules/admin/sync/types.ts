@@ -1,36 +1,40 @@
-// Entity types that can be synced
-export type SyncEntity = 'accounts' | 'groups' | 'certificates' | 'syndicates'
+export type SyncEntity = 'groups' | 'accounts';
 
-// Certificate types
-export type CertificateType = 'general' | 'specific'
-
-// Status of a sync operation
-export type SyncStatus = 'pending' | 'success' | 'failed'
-
-// Result of a single item sync
-export interface SyncResult {
-  id: string // contract address, account name, etc
-  status: SyncStatus
-  error?: string
-  data?: any
+export interface GroupData {
+  group_name: string;
+  contract_address: string;
+  total_supply?: number;
 }
 
-// Options for sync operations
+export interface AccountData {
+  token_id: number;
+  account_name: string;
+  full_account_name: string;
+  holder: string;
+  group_name: string;
+  tba_address?: string;
+}
+
 export interface SyncOptions {
-  entity: SyncEntity
-  type?: CertificateType // For certificates only
-  chain?: string // For chain-specific syncs
-  id?: string // For single item syncs
+  entity: SyncEntity;
+  group_name?: string; // For syncing accounts of a specific group
+  token_id?: number; // For syncing a specific account
 }
 
-// Overall sync operation result
+export interface SyncResult {
+  id: string; // contract address for groups, full_account_name for accounts
+  status: 'success' | 'failed';
+  error?: string;
+  data?: GroupData | AccountData;
+}
+
 export interface SyncOperationResult {
-  options: SyncOptions
-  timestamp: number
-  results: SyncResult[]
+  options: SyncOptions;
+  timestamp: number;
+  results: SyncResult[];
   stats: {
-    total: number
-    success: number
-    failed: number
+    total: number;
+    success: number;
+    failed: number;
   }
 } 
