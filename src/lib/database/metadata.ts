@@ -1,6 +1,25 @@
 import { sql } from '@vercel/postgres';
 import { ImageGenerator } from '@/modules/metadata/ImageGenerator';
 import { sync } from '@/modules/admin/sync/service';
+import { createPublicClient, http } from 'viem';
+import { base } from 'viem/chains';
+
+// Initialize Viem client
+const client = createPublicClient({
+    chain: base,
+    transport: http()
+});
+
+// Contract ABI for checking token existence
+const GROUP_ABI = [
+    {
+        "inputs": [{"type": "uint256"}],
+        "name": "domainIdsNames",
+        "outputs": [{"type": "string"}],
+        "stateMutability": "view",
+        "type": "function"
+    }
+] as const;
 
 // Helper to check if image exists
 async function checkImageExists(url: string): Promise<boolean> {
@@ -54,8 +73,53 @@ export const metadata = {
                 throw new Error(`Accounts table for group ${group.group_name} does not exist`);
             }
 
-            // Get account info
-            const accountQuery = await sql.query(
+            // Check if token exists on-chain using domainIdsNames
+            console.log('Checking if token exists on-chain:', tokenId);
+            let accountName;
+            try {
+                accountName = await client.readContract({
+                    address: contract as `0x${string}`,
+                    abi: GROUP_ABI,
+                    functionName: 'domainIdsNames',
+                    args: [BigInt(tokenId)]
+                });
+
+                // If account name is empty or just the group name, token doesn't exist
+                if (!accountName || accountName === group.group_name) {
+                    console.log('Token does not exist on-chain');
+                    
+                    // Clean up any existing row
+                    await sql.query(
+                        `DELETE FROM members.${tableName} WHERE token_id = $1`,
+                        [tokenId]
+                    );
+                    
+                    return {
+                        error: `Token ${tokenId} does not exist on-chain`,
+                        status: 404
+                    };
+                }
+
+                console.log('Token exists on-chain with name:', accountName);
+            } catch (error) {
+                console.error('Error checking token on-chain:', error);
+                return {
+                    error: `Failed to verify token ${tokenId} on chain`,
+                    status: 500
+                };
+            }
+
+            // If we get here, token exists on-chain
+            console.log('Token exists on-chain, proceeding with sync');
+
+            // Sync token data
+            await sync('accounts', { 
+                group_name: group.group_name, 
+                token_id: parseInt(tokenId) 
+            });
+
+            // Get synced account data
+            const { rows: [syncedAccount] } = await sql.query(
                 `SELECT 
                     token_id,
                     account_name,
@@ -67,34 +131,12 @@ export const metadata = {
                 LIMIT 1`,
                 [tokenId]
             );
-            
-            let account = accountQuery.rows[0];
-            if (!account) {
-                throw new Error('Account not found');
-            }
 
-            // If we're missing critical data, trigger a sync for this token
-            if (!account.full_account_name || !account.tba_address) {
-                console.log('Missing data, triggering sync for token:', tokenId);
-                await sync('accounts', { 
-                    group_name: group.group_name, 
-                    token_id: parseInt(tokenId) 
-                });
-                
-                // Get updated account data
-                const { rows: [updatedAccount] } = await sql.query(
-                    `SELECT 
-                        token_id,
-                        account_name,
-                        description,
-                        tba_address,
-                        full_account_name
-                    FROM members.${tableName}
-                    WHERE token_id = $1 
-                    LIMIT 1`,
-                    [tokenId]
-                );
-                account = updatedAccount;
+            if (!syncedAccount) {
+                return {
+                    error: 'Failed to sync token data',
+                    status: 500
+                };
             }
 
             // Get base image URL with fallbacks
@@ -118,24 +160,28 @@ export const metadata = {
             // Generate metadata image with text overlay
             const imageUrl = await ImageGenerator.generate({
                 baseImageUrl,
-                fullAccountName: account.full_account_name,
+                fullAccountName: syncedAccount.full_account_name,
                 groupName: sanitizedGroup,
                 tokenId,
                 contract
             });
 
             return {
-                name: `${account.account_name}${group.group_name}`,
-                description: account.description || '',
+                name: `${syncedAccount.account_name}${group.group_name}`,
+                description: syncedAccount.description || '',
                 animation_url: `https://iframe-tokenbound.vercel.app/${contract}/${tokenId}/8453`,
                 image: imageUrl,
                 group_name: sanitizedGroup,
-                tba_address: account.tba_address,
-                full_account_name: account.full_account_name
+                tba_address: syncedAccount.tba_address,
+                full_account_name: syncedAccount.full_account_name
             };
+
         } catch (error) {
             console.error('Error in getMetadata:', error);
-            throw error;
+            return {
+                error: error.message,
+                status: 500
+            };
         }
     }
 }; 
