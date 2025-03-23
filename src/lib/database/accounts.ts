@@ -129,8 +129,6 @@ export const accounts = {
                 console.log('No group found for:', groupName);
                 return null;
             }
-
-            const contractAddress = groupResult.rows[0].contract_address;
             
             // Query by full_account_name
             const query = `
@@ -156,39 +154,8 @@ export const accounts = {
             }
             
             const row = result.rows[0];
-
-            // If full_account_name is NULL, generate and update it
-            if (!row.full_account_name) {
-                console.log('Generating full_account_name for token_id:', row.token_id);
-                const generatedFullName = `${row.account_name}.${groupName}`;
-                await sql`
-                    UPDATE members.${tableName}
-                    SET full_account_name = ${generatedFullName}
-                    WHERE token_id = ${row.token_id}
-                    RETURNING *
-                `;
-                row.full_account_name = generatedFullName;
-            }
-
-            // If tba_address is NULL, generate and update it
-            if (!row.tba_address) {
-                console.log('Generating tba_address for token_id:', row.token_id);
-                const tokenboundClient = new TokenboundClient(getTokenBoundClientConfig());
-                const tba = await tokenboundClient.getAccount({
-                    tokenContract: contractAddress,
-                    tokenId: row.token_id.toString()
-                });
-                
-                await sql`
-                    UPDATE members.${tableName}
-                    SET tba_address = ${tba}
-                    WHERE token_id = ${row.token_id}
-                    RETURNING *
-                `;
-                row.tba_address = tba;
-            }
             
-            // Log the final return object
+            // Return the account data
             const returnObj = {
                 full_account_name: row.full_account_name,
                 tba_address: row.tba_address,

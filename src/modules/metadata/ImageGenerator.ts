@@ -9,7 +9,7 @@ import path from 'path';
 interface GenerateOptions {
     baseImageUrl: string;
     fullAccountName: string;
-    ogName: string;
+    groupName: string;
     tokenId: string;
     contract?: string;
 }
@@ -37,12 +37,12 @@ export class ImageGenerator {
     static async generate({
         baseImageUrl,
         fullAccountName,
-        ogName,
+        groupName,
         tokenId
     }: GenerateOptions): Promise<string> {
         try {
             // Get font config for this group or use default
-            const fontConfig = FONT_CONFIG[ogName] || FONT_CONFIG.default;
+            const fontConfig = FONT_CONFIG[groupName] || FONT_CONFIG.default;
             
             // Load the font
             const fontPath = path.resolve(fontConfig.path);
@@ -126,7 +126,7 @@ export class ImageGenerator {
             try {
                 // Store in blob storage
                 const { url } = await put(
-                    `${ogName}/generated/${tokenId}.png`,
+                    `${groupName}/generated/${tokenId}.png`,
                     Buffer.from(buffer),
                     { access: 'public', addRandomSuffix: false }
                 );
@@ -135,9 +135,9 @@ export class ImageGenerator {
             } catch (blobError) {
                 console.error(`Failed to store overlay image for ${fullAccountName}:`, {
                     error: blobError.message,
-                    ogName,
+                    groupName,
                     tokenId,
-                    path: `${ogName}/generated/${tokenId}.png`
+                    path: `${groupName}/generated/${tokenId}.png`
                 });
                 throw new Error(`Failed to store overlay image for ${fullAccountName}`);
             }
@@ -145,18 +145,18 @@ export class ImageGenerator {
             // Check for cache size limit error
             if (error.message?.includes('fetch for over 2MB of data can not be cached')) {
                 console.warn(`Cache size limit exceeded for ${fullAccountName} - this is expected for large images and won't affect functionality`, {
-                    ogName,
+                    groupName,
                     tokenId,
                     note: 'This warning can be safely ignored as the image is still generated and stored correctly'
                 });
                 // Don't throw error for cache limit - it's not a functional issue
-                return `${process.env.NEXT_PUBLIC_BLOB_URL}/${ogName}/generated/${tokenId}.png`;
+                return `${process.env.NEXT_PUBLIC_BLOB_URL}/${groupName}/generated/${tokenId}.png`;
             }
 
             // Handle other errors
             console.error(`Image generation failed for ${fullAccountName}:`, {
                 error: error.message,
-                ogName,
+                groupName,
                 tokenId
             });
             throw new Error(`Failed to generate image for ${fullAccountName}`);

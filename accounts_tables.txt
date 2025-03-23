@@ -1,0 +1,29 @@
+     table_name     
+--------------------
+ accounts_tgn
+ accounts_ai
+ accounts_fi
+ accounts_solarpunk
+ accounts_solar
+ accounts_situs
+ accounts_mumbai
+ accounts_bloom
+ accounts_regen
+ accounts_boulder
+ accounts_kokonut
+ accounts_ogallala
+ accounts_ebf
+ accounts_ensurance
+ accounts_refi
+ accounts_sicilia
+ accounts_earth
+ accounts_tokyo
+ accounts_basin
+ accounts_la
+ accounts_greenpill
+ accounts_capital
+ accounts_ents
+ accounts_higher
+ accounts_bioregion
+(25 rows)
+

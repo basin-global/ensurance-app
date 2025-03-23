@@ -6,12 +6,24 @@ export async function GET(
     { params }: { params: { contract: string; tokenId: string } }
 ) {
     try {
+        console.log('Metadata request for:', {
+            contract: params.contract,
+            tokenId: params.tokenId
+        });
+        
         const nftMetadata = await metadata.getByContractAndToken(params.contract, params.tokenId);
+        
+        console.log('Metadata generated:', nftMetadata);
         return NextResponse.json(nftMetadata);
     } catch (error) {
-        console.error('Metadata API error:', error);
+        console.error('Metadata API error:', {
+            contract: params.contract,
+            tokenId: params.tokenId,
+            error: error.message,
+            stack: error.stack
+        });
         return NextResponse.json(
-            { error: 'Failed to get metadata' },
+            { error: error.message || 'Failed to get metadata' },
             { status: 500 }
         );
     }

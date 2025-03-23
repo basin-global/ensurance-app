@@ -216,6 +216,11 @@ async function syncAccounts(group_name?: string, token_id?: number): Promise<Syn
               tokenId: id.toString()
             })
 
+            // Check if TBA is deployed
+            const isDeployed = await tokenboundClient.checkAccountDeployment({
+              accountAddress: tbaAddress
+            })
+
             // Construct full account name
             const fullAccountName = `${accountName}${group.group_name}`
 
@@ -227,9 +232,10 @@ async function syncAccounts(group_name?: string, token_id?: number): Promise<Syn
                 account_name,
                 full_account_name,
                 tba_address,
+                tba_deployed,
                 is_active
               ) VALUES (
-                $1, $2, $3, $4,
+                $1, $2, $3, $4, $5,
                 COALESCE(
                   (SELECT is_active FROM members.${tableName} WHERE token_id = $1),
                   true  -- default to true for new accounts
@@ -238,8 +244,9 @@ async function syncAccounts(group_name?: string, token_id?: number): Promise<Syn
               ON CONFLICT (token_id) DO UPDATE SET
                 account_name = EXCLUDED.account_name,
                 full_account_name = EXCLUDED.full_account_name,
-                tba_address = EXCLUDED.tba_address`,
-              [id, accountName, fullAccountName, tbaAddress]
+                tba_address = EXCLUDED.tba_address,
+                tba_deployed = EXCLUDED.tba_deployed`,
+              [id, accountName, fullAccountName, tbaAddress, isDeployed]
             )
 
             results.push({
@@ -248,7 +255,8 @@ async function syncAccounts(group_name?: string, token_id?: number): Promise<Syn
               status: 'success',
               data: {
                 accountName: fullAccountName,
-                tbaAddress
+                tbaAddress,
+                isDeployed
               }
             })
             success++
