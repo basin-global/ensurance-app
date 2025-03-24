@@ -15,7 +15,7 @@ export default function SyndicatesPage() {
       <div className="container mx-auto px-4 py-8 flex-1">
         <div className="space-y-8">
           <PageHeader
-            title="ensurance syndicate"
+            title="ensurance syndicates"
             showSearch={false}
           />
 

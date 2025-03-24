@@ -29,3 +29,27 @@ These remnants are gradually being cleaned up but don't affect functionality as 
 ### Development Rules
 - Do not open a new terminal tab if `npm run dev` is already running
 - Never expose PostgreSQL connection strings or passwords in chat/composer - use `.env` for current credentials
+
+### UPDATE (March 25, 2024)
+The app is evolving towards a "markets for what matters" approach:
+
+#### Development Strategy
+1. Build and test core components independently:
+   - Certificates (General ERC20, Specific ERC1155)
+   - Syndicates (ERC4626)
+   - Natural Assets (Property/Binder)
+   - Groups, Accounts, etc.
+
+2. Each component maintains:
+   - Its own API routes
+   - Business logic
+   - Basic display/grid
+
+3. Once core components are solid, unify through ensure module:
+   - Powers the "markets for what matters" interface
+   - Single interface for discovering all natural capital opportunities
+   - Users search by what matters (water, soil, air) not by token type
+   - Technical implementation becomes invisible to users
+   - Primary integration point will be `/markets`
+
+This approach ensures robust functionality while simplifying the user experience around natural capital markets.
