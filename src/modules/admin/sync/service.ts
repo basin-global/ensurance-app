@@ -3,7 +3,8 @@ import { base } from 'viem/chains'
 import { sql } from '@vercel/postgres'
 import { TokenboundClient } from "@tokenbound/sdk"
 import { getTokenBoundClientConfig } from '@/config/tokenbound'
-import type { SyncEntity, SyncOperationResult } from './types'
+import type { SyncEntity, SyncOperationResult, GeneralCertificateData } from './types'
+import ZORA_COIN_ABI from '../../../abi/ZoraCoin.json'
 
 // Initialize Viem client
 const client = createPublicClient({
@@ -307,6 +308,133 @@ async function syncAccounts(group_name?: string, token_id?: number): Promise<Syn
   }
 }
 
+// Helper to add delay between batches
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Sync general certificates from chain
+async function syncGeneralCertificates(): Promise<SyncOperationResult> {
+  const startTime = Date.now()
+  const results = []
+  let success = 0
+  let failed = 0
+
+  try {
+    // Get all general certificates from database that need syncing
+    const { rows: certificates } = await sql`
+      SELECT contract_address, chain 
+      FROM certificates.general 
+      WHERE chain = 'base'
+    `
+
+    console.log(`\nStarting general certificates sync for ${certificates.length} contracts...`)
+    let processedCerts = 0
+
+    // Process in batches - since each cert makes 4 RPC calls (name, symbol, tokenUri, poolAddress)
+    // and rate limit is 5 calls/sec, we'll process 1 cert at a time with 800ms delay
+    // This ensures we stay well under the 5 calls/sec limit
+    const BATCH_SIZE = 1;  // Each cert makes 4 RPC calls
+    const BATCH_DELAY = 800; // 800ms delay between certs (4 calls per cert = 5 calls/sec)
+
+    for (let i = 0; i < certificates.length; i += BATCH_SIZE) {
+      const batch = certificates.slice(i, i + BATCH_SIZE);
+      console.log(`\nProcessing certificate ${i + 1}/${certificates.length}...`);
+
+      // Process each certificate in the current batch
+      const batchPromises = batch.map(async (cert) => {
+        try {
+          console.log(`Processing certificate: ${cert.contract_address}`);
+
+          // Get data from chain - these 4 calls will happen in parallel
+          const [name, symbol, tokenUri, poolAddress] = await Promise.all([
+            client.readContract({
+              address: cert.contract_address as `0x${string}`,
+              abi: ZORA_COIN_ABI,
+              functionName: 'name'
+            }) as Promise<string>,
+            client.readContract({
+              address: cert.contract_address as `0x${string}`,
+              abi: ZORA_COIN_ABI,
+              functionName: 'symbol'
+            }) as Promise<string>,
+            client.readContract({
+              address: cert.contract_address as `0x${string}`,
+              abi: ZORA_COIN_ABI,
+              functionName: 'tokenURI'
+            }) as Promise<string>,
+            client.readContract({
+              address: cert.contract_address as `0x${string}`,
+              abi: ZORA_COIN_ABI,
+              functionName: 'poolAddress'
+            }) as Promise<string>
+          ])
+
+          // Update certificate in database
+          await sql`
+            UPDATE certificates.general 
+            SET 
+              name = ${name},
+              symbol = ${symbol},
+              token_uri = ${tokenUri},
+              pool_address = ${poolAddress}
+            WHERE 
+              contract_address = ${cert.contract_address} 
+              AND chain = ${cert.chain}
+          `
+
+          results.push({
+            certificate: cert.contract_address,
+            status: 'success',
+            data: {
+              name,
+              symbol,
+              token_uri: tokenUri,
+              pool_address: poolAddress
+            }
+          })
+          success++
+          processedCerts++
+          console.log(`Updated certificate ${cert.contract_address} with name: ${name}, symbol: ${symbol}`)
+
+        } catch (err: any) {
+          results.push({
+            certificate: cert.contract_address,
+            status: 'failed',
+            error: err.message
+          })
+          failed++
+          processedCerts++
+          console.log(`Failed to sync certificate ${cert.contract_address}: ${err.message}`)
+        }
+      });
+
+      // Wait for current batch to complete
+      await Promise.all(batchPromises);
+      
+      // Log progress after each certificate
+      console.log(`Progress: ${processedCerts}/${certificates.length} certificates (${Math.round(processedCerts/certificates.length * 100)}%)`);
+
+      // Add delay before next certificate (except for the last one)
+      if (i + BATCH_SIZE < certificates.length) {
+        console.log(`Waiting ${BATCH_DELAY}ms before next certificate...`);
+        await sleep(BATCH_DELAY);
+      }
+    }
+
+    console.log(`\nSync completed in ${((Date.now() - startTime)/1000).toFixed(1)}s`)
+    console.log(`Total: ${results.length}, Success: ${success}, Failed: ${failed}`)
+
+  } catch (err: any) {
+    throw new Error(`Failed to sync general certificates: ${err.message}`)
+  }
+
+  return {
+    options: { entity: 'general_certificates' },
+    timestamp: startTime,
+    stats: { total: results.length, success, failed },
+    results
+  }
+}
+
 // Main sync function
 export async function sync(entity: SyncEntity, options: { group_name?: string, token_id?: number } = {}): Promise<SyncOperationResult> {
   switch (entity) {
@@ -314,6 +442,8 @@ export async function sync(entity: SyncEntity, options: { group_name?: string, t
       return syncGroups()
     case 'accounts':
       return syncAccounts(options.group_name, options.token_id)
+    case 'general_certificates':
+      return syncGeneralCertificates()
     default:
       throw new Error(`Unknown entity type: ${entity}`)
   }

@@ -3,7 +3,6 @@
 import ChatTab from '@/modules/tabbed-modules/chat'
 import OverviewTab from '@/modules/tabbed-modules/overview'
 import { useAccount } from '@/modules/accounts/context'
-import CertificatesGrid from '@/modules/certificates/components/CertificatesGrid'
 
 interface AccountPageProps {
   params: {
@@ -51,17 +50,11 @@ export default function AccountPage({ params }: AccountPageProps) {
         />
       </div>
 
-      {/* Full Width Certificates Grid */}
+      {/* Full Width Certificates Section */}
       <div className="lg:col-span-2">
         <div className="bg-gray-900/30 rounded-lg p-3">
           <h3 className="text-lg font-medium text-gray-200 mb-1">Related Certificates</h3>
-          <CertificatesGrid 
-            variant="account-main"
-            maxItems={10}
-            hideSearch={true}
-            searchQuery={keyword}
-            accountName={accountData.full_account_name}
-          />
+          <p className="text-gray-400">Certificate grid functionality is being updated.</p>
         </div>
       </div>
     </div>

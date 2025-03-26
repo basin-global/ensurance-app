@@ -118,6 +118,12 @@ export default function SyncPage() {
               >
                 Accounts
               </SelectItem>
+              <SelectItem 
+                value="general_certificates"
+                className="text-white hover:bg-gray-800"
+              >
+                General Certificates
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>

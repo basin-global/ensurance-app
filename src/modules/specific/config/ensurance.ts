@@ -1,21 +1,22 @@
-export const CHAIN_CONTRACTS = {
-  base: [
-    '0x1f98380fb1b3ae8cd097d5f9d49a7e79cd69a4fb',
-    '0x7dfaa8f8e2aa32b6c2112213b395b4c9889580dd'
-  ],
-  zora: ['0x14b71A8E0C2c4d069cB230CC88a1423736B34096'],
-  arbitrum: ['0x14b71A8E0C2c4d069cB230CC88a1423736B34096']
+// Chain-specific contract addresses
+export const ensuranceContracts = {
+  base: '0x1f98380fb1b3ae8cd097d5f9d49a7e79cd69a4fb',
+  zora: '0x14b71A8E0C2c4d069cB230CC88a1423736B34096',
+  arbitrum: '0xc6e4e6e5a11e70af6334bf3274f4d4c2e0ce3571',
+  optimism: '0x5c738cdf228d8c6e8dc68a94b08be7d8958bcccf'
+} as const;
+
+export const isEnsuranceToken = (chain: string, contract: string): boolean => {
+  // Placeholder - will be implemented later when Ensurance tokens are added
+  if (!chain || !contract) return false;
+  return ensuranceContracts[chain as keyof typeof ensuranceContracts]?.toLowerCase() === contract?.toLowerCase();
 }
 
-// Export the contracts directly for components that need the full list
-export const ensuranceContracts = Object.values(CHAIN_CONTRACTS).flat()
-
-export function getEnsuranceContractForChain(chain: string): string {
-  const contracts = CHAIN_CONTRACTS[chain as keyof typeof CHAIN_CONTRACTS]
-  return contracts ? contracts[0] : CHAIN_CONTRACTS.base[0]
+export const getEnsuranceContractForChain = (chain: string): string | undefined => {
+  return ensuranceContracts[chain as keyof typeof ensuranceContracts];
 }
 
-// Helper to check if a contract address belongs to Ensurance
-export function isEnsuranceToken(contractAddress: string): boolean {
-  return ensuranceContracts.includes(contractAddress.toLowerCase())
+export const getCertificateUsdValue = (chain: string, contract: string, tokenId: string): number => {
+  // Placeholder - will be implemented later when pricing is added
+  return 1.00;
 } 

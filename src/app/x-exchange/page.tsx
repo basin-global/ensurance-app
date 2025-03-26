@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Card } from "@/components/ui/card"
 import ChainDropdown from '@/modules/shared/ChainDropdown'
-import CertificatesGrid from '@/modules/certificates/components/CertificatesGrid'
+// import CertificatesGrid from '@/modules/specific/SpecificGrid'
 import { usePrivy } from '@privy-io/react-auth'
 import { useWallets } from '@privy-io/react-auth'
 import { Asset } from '@/types'

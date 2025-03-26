@@ -3,7 +3,7 @@ import axios from 'axios'
 import AssetCard from './AssetCard'
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ensuranceContracts, isEnsuranceToken } from '@/modules/certificates/specific/config/ensurance'
+import { ensuranceContracts, isEnsuranceToken } from '@/modules/specific/config/ensurance'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { getChainBySimplehashName, getActiveChains } from '@/config/chains';

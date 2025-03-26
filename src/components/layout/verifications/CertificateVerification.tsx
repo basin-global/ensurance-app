@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { baseVerifyLinkStyle } from '../BasedOnchain'
-import { getEnsuranceContractForChain } from '@/modules/certificates/specific/config/ensurance'
+import { getEnsuranceContractForChain } from '@/modules/specific/config/ensurance'
 import NftLinks from './NftLinks'
 
 // Chain-specific configuration

@@ -1,32 +1,14 @@
 'use client'
 
 import { useAccount } from '@/modules/accounts/context'
-import CertificatesGrid from '@/modules/certificates/components/CertificatesGrid'
 
 export default function TendPage() {
   const { accountData } = useAccount()
-  const keyword = accountData?.full_account_name
-    ?.split('.')[0]
-    ?.split('-')
-    ?.filter(Boolean)
-    ?.join(' ') || ''
 
   return (
-    <div className="flex flex-col">
-      <div className="container mx-auto px-4 pt-0 pb-4 flex-1">
-        <div className="bg-[#111] rounded-lg shadow-md p-4 md:p-6">
-          <div className="mb-6">
-            <p className="text-gray-400 text-sm">
-              Purchase these certificates to ensure {accountData.is_agent ? "this agent's work" : accountData.pool_type ? "this pool" : "this account"}
-            </p>
-          </div>
-          <CertificatesGrid
-            searchQuery={keyword}
-            hideSearch={true}
-            variant="tend"
-          />
-        </div>
-      </div>
+    <div className="bg-gray-900/30 rounded-lg p-3">
+      <h3 className="text-lg font-medium text-gray-200 mb-1">Tend Certificates</h3>
+      <p className="text-gray-400">Certificate tending functionality is being updated.</p>
     </div>
   )
 } 

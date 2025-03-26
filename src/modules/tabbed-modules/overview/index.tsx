@@ -1,9 +1,9 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { isEnsuranceToken } from '@/modules/certificates/specific/config/ensurance'
+import { isEnsuranceToken } from '@/modules/specific/config/ensurance'
 import AccountStats from '@/modules/accounts/AccountStats'
-import CertificatesGrid from '@/modules/certificates/components/CertificatesGrid'
+// import SpecificGrid from '@/modules/specific/SpecificGrid'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -88,7 +88,7 @@ export default function OverviewTab({ description, tbaAddress, isOwner }: Overvi
           const quantity = Number(nft.queried_wallet_balances?.[0]?.quantity_string || 1)
           totalCount += quantity
 
-          if (isEnsuranceToken(nft.contract_address)) {
+          if (isEnsuranceToken(nft.chain, nft.contract_address)) {
             ensuredCount++
           } else {
             nonEnsuredCount++
@@ -180,13 +180,9 @@ export default function OverviewTab({ description, tbaAddress, isOwner }: Overvi
       <div className="lg:col-span-2">
         <div className="bg-gray-900/30 rounded-lg p-3">
           <h3 className="text-lg font-medium text-gray-200 mb-1">Related Certificates</h3>
-          <CertificatesGrid 
-            variant="account-main"
-            maxItems={10}
-            hideSearch={true}
-            searchQuery={keyword}
-            accountName={accountName}
-          />
+          <div className="text-sm text-gray-400">
+            Certificate grid coming soon...
+          </div>
         </div>
       </div>
     </div>
