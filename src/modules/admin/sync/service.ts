@@ -3,7 +3,7 @@ import { base } from 'viem/chains'
 import { sql } from '@vercel/postgres'
 import { TokenboundClient } from "@tokenbound/sdk"
 import { getTokenBoundClientConfig } from '@/config/tokenbound'
-import type { SyncEntity, SyncOperationResult, GeneralCertificateData } from './types'
+import type { SyncEntity, SyncOperationResult, GeneralCertificateData, SyncOptions } from './types'
 import ZORA_COIN_ABI from '../../../abi/ZoraCoin.json'
 
 // Initialize Viem client
@@ -312,7 +312,7 @@ async function syncAccounts(group_name?: string, token_id?: number): Promise<Syn
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Sync general certificates from chain
-async function syncGeneralCertificates(): Promise<SyncOperationResult> {
+async function syncGeneralCertificates(empty_only: boolean = false): Promise<SyncOperationResult> {
   const startTime = Date.now()
   const results = []
   let success = 0
@@ -320,13 +320,16 @@ async function syncGeneralCertificates(): Promise<SyncOperationResult> {
 
   try {
     // Get all general certificates from database that need syncing
-    const { rows: certificates } = await sql`
-      SELECT contract_address, chain 
-      FROM certificates.general 
-      WHERE chain = 'base'
-    `
+    const query = empty_only 
+      ? sql`SELECT contract_address, chain FROM certificates.general WHERE chain = 'base' AND (name IS NULL OR symbol IS NULL OR token_uri IS NULL OR pool_address IS NULL)`
+      : sql`SELECT contract_address, chain FROM certificates.general WHERE chain = 'base'`;
+
+    const { rows: certificates } = await query;
 
     console.log(`\nStarting general certificates sync for ${certificates.length} contracts...`)
+    if (empty_only) {
+      console.log('Only syncing certificates with missing data...')
+    }
     let processedCerts = 0
 
     // Process in batches - since each cert makes 4 RPC calls (name, symbol, tokenUri, poolAddress)
@@ -402,21 +405,16 @@ async function syncGeneralCertificates(): Promise<SyncOperationResult> {
             error: err.message
           })
           failed++
-          processedCerts++
           console.log(`Failed to sync certificate ${cert.contract_address}: ${err.message}`)
         }
-      });
+      })
 
-      // Wait for current batch to complete
-      await Promise.all(batchPromises);
-      
-      // Log progress after each certificate
-      console.log(`Progress: ${processedCerts}/${certificates.length} certificates (${Math.round(processedCerts/certificates.length * 100)}%)`);
+      // Wait for all certificates in the batch to complete
+      await Promise.all(batchPromises)
 
-      // Add delay before next certificate (except for the last one)
+      // Add delay between batches
       if (i + BATCH_SIZE < certificates.length) {
-        console.log(`Waiting ${BATCH_DELAY}ms before next certificate...`);
-        await sleep(BATCH_DELAY);
+        await sleep(BATCH_DELAY)
       }
     }
 
@@ -428,7 +426,7 @@ async function syncGeneralCertificates(): Promise<SyncOperationResult> {
   }
 
   return {
-    options: { entity: 'general_certificates' },
+    options: { entity: 'general_certificates', empty_only },
     timestamp: startTime,
     stats: { total: results.length, success, failed },
     results
@@ -436,14 +434,14 @@ async function syncGeneralCertificates(): Promise<SyncOperationResult> {
 }
 
 // Main sync function
-export async function sync(entity: SyncEntity, options: { group_name?: string, token_id?: number } = {}): Promise<SyncOperationResult> {
+export async function sync(entity: SyncEntity, options: Omit<SyncOptions, 'entity'> = {}): Promise<SyncOperationResult> {
   switch (entity) {
     case 'groups':
       return syncGroups()
     case 'accounts':
       return syncAccounts(options.group_name, options.token_id)
     case 'general_certificates':
-      return syncGeneralCertificates()
+      return syncGeneralCertificates(options.empty_only)
     default:
       throw new Error(`Unknown entity type: ${entity}`)
   }

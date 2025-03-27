@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { accounts } from '@/lib/database/accounts';
 
+// Force dynamic route to ensure fresh data
+export const dynamic = 'force-dynamic';
+
 // Cache successful responses for 1 minute
 export const revalidate = 60;
 

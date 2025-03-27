@@ -40,14 +40,14 @@ export interface BaseItem {
   isEnsured?: boolean;  // Whether the item is ensured
   chain?: string;       // Blockchain chain (if applicable)
   tokenId?: string | number; // Token ID for NFTs
-  ogName?: string;      // Original group name
+  groupName?: string;      // Group name
 }
 
 // Group-specific properties
 export interface GroupItem extends BaseItem {
   type: 'group';
   contractAddress: string;
-  ogName: string;
+  groupName: string;
   tagline?: string;
   totalSupply: number;
   isActive: boolean;
@@ -57,7 +57,7 @@ export interface GroupItem extends BaseItem {
 export interface AccountItem extends BaseItem {
   type: 'account';
   tokenId: number;
-  ogName: string;
+  groupName: string;
   tbaAddress?: string;
   isAgent: boolean;
   ownerAddress?: string;
@@ -99,7 +99,7 @@ export interface SyndicateItem extends BaseItem {
 export interface PoolItem extends BaseItem {
   type: 'pool';
   tokenId: number;
-  ogName: string;
+  groupName: string;
   poolType: 'stock' | 'flow';
   totalCurrencyValue?: number;
   totalAssets?: number;

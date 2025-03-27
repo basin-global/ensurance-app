@@ -1,7 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { EnsureItem, EntityType } from '../types'
+import { 
+  EnsureItem, 
+  EntityType, 
+  GeneralCertItem, 
+  AccountItem, 
+  PoolItem 
+} from '../types'
 
 interface UseFetchDataProps {
   fetchGroups?: boolean;
@@ -40,14 +46,14 @@ export function useFetchData({
         if (fetchGroups) {
           const groupsData = await fetch('/api/groups').then(res => res.json());
           const groups = groupsData.map((item: any) => ({
-            id: item.og_name,
+            id: item.group_name,
             type: 'group' as EntityType,
-            name: item.og_name,
+            name: item.group_name,
             description: item.tagline || 'Group',
-            image: `/groups/orbs/${item.og_name.replace(/^\./, '')}-orb.png`,
-            url: `/groups/${item.og_name.replace(/^\./, '')}/all`,
+            image: `/groups/orbs/${item.group_name.replace(/^\./, '')}-orb.png`,
+            url: `/groups/${item.group_name.replace(/^\./, '')}/all`,
             contractAddress: item.contract_address,
-            ogName: item.og_name,
+            groupName: item.group_name,
             totalSupply: item.total_supply,
             isActive: item.is_active
           }));
@@ -58,7 +64,7 @@ export function useFetchData({
         if (fetchAccounts) {
           // Build query params for accounts
           const accountParams = new URLSearchParams();
-          if (groupName) accountParams.append('og_name', groupName);
+          if (groupName) accountParams.append('group_name', groupName);
           if (walletAddress) accountParams.append('owner', walletAddress);
           
           const accountsUrl = `/api/accounts${accountParams.toString() ? `?${accountParams.toString()}` : ''}`;
@@ -66,15 +72,15 @@ export function useFetchData({
           
           const accounts = accountsData
             .filter((item: any) => !item.pool_type) // Filter out pools
-            .map((item: any) => ({
+            .map((item: any): AccountItem => ({
               id: item.full_account_name,
-              type: 'account' as EntityType,
+              type: 'account',
               name: item.display_name || item.full_account_name,
-              description: `${item.og_name} account`,
-              image: `https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com/${item.og_name.replace(/^\./, '')}/${item.token_id}.png`,
+              description: `${item.group_name} account`,
+              image: `https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com/${item.group_name.replace(/^\./, '')}/${item.token_id}.png`,
               url: `/${item.full_account_name}`,
               tokenId: item.token_id,
-              ogName: item.og_name,
+              groupName: item.group_name,
               isAgent: item.is_agent,
               ownerAddress: item.owner_address
             }));
@@ -84,15 +90,15 @@ export function useFetchData({
           if (fetchPools) {
             const pools = accountsData
               .filter((item: any) => item.pool_type)
-              .map((item: any) => ({
+              .map((item: any): PoolItem => ({
                 id: item.full_account_name,
-                type: 'pool' as EntityType,
+                type: 'pool',
                 name: item.display_name || item.full_account_name,
-                description: `${item.pool_type === 'stock' ? 'Stock' : 'Flow'} pool`,
-                image: `https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com/${item.og_name.replace(/^\./, '')}/${item.token_id}.png`,
+                description: `${item.group_name} pool`,
+                image: `https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com/${item.group_name.replace(/^\./, '')}/${item.token_id}.png`,
                 url: `/${item.full_account_name}`,
                 tokenId: item.token_id,
-                ogName: item.og_name,
+                groupName: item.group_name,
                 poolType: item.pool_type === 'stock' ? 'stock' : 'flow',
                 totalCurrencyValue: item.total_currency_value,
                 totalAssets: item.total_assets,
@@ -125,37 +131,22 @@ export function useFetchData({
             const certItems = Array.isArray(certsData) ? certsData : [];
             
             // Process certificates based on their type
-            const certificates = certItems.map((item: any) => {
+            const certificates = certItems.map((item: any): GeneralCertItem => {
               const baseProps = {
                 id: `${item.chain}-${item.contract_address}${item.token_id ? `-${item.token_id}` : ''}`,
+                type: 'generalCert' as const,
+                name: item.name,
+                description: item.description,
+                image: item.image,
+                url: `/certificates/${item.chain}/${item.contract_address}`,
+                symbol: item.symbol,
+                decimals: item.decimals,
                 chain: item.chain,
                 contractAddress: item.contract_address,
-                isEnsured: true
+                tokenId: item.token_id || 0,
+                isEnsured: item.is_ensured
               };
-
-              if (item.cert_type === 'general') {
-                return {
-                  ...baseProps,
-                  type: 'generalCert' as EntityType,
-                  name: item.symbol || 'Untitled Certificate',
-                  description: 'General Certificate',
-                  image: 'https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com/default.png',
-                  url: `/certificates/${item.chain}/${item.contract_address}`,
-                  symbol: item.symbol,
-                  decimals: item.decimals
-                };
-              } else {
-                return {
-                  ...baseProps,
-                  type: 'specificCert' as EntityType,
-                  name: item.name || 'Untitled Certificate',
-                  description: item.description || 'Certificate',
-                  image: item.image_url || 'https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com/default.png',
-                  url: `/certificates/${item.chain}/${item.token_id}`,
-                  tokenId: item.token_id,
-                  metadata: item.metadata
-                };
-              }
+              return baseProps;
             });
             
             allItems.push(...certificates);

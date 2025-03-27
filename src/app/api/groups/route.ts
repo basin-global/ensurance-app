@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { groups } from '@/lib/database/groups';
 
+// Force dynamic route to ensure fresh data
+export const dynamic = 'force-dynamic';
+
 // Cache successful responses for 1 hour
 export const revalidate = 3600;
 

@@ -185,7 +185,7 @@ export interface MetadataResponse {
     animation_url: string;
     image: string;
     tba_address: string;
-    og_name: string;
+    group_name: string;
     full_account_name: string;
     error?: string;
 }

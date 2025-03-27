@@ -66,7 +66,7 @@ export default function Base({
                   src={item.image || ''}
                   entityType={item.type}
                   tokenId={item.tokenId}
-                  groupName={item.ogName}
+                  groupName={item.groupName}
                   alt={item.name}
                   variant="square"
                 />
@@ -130,7 +130,7 @@ export default function Base({
               src={item.image || ''}
               entityType={item.type}
               tokenId={item.tokenId}
-              groupName={item.ogName}
+              groupName={item.groupName}
               alt={item.name}
               variant="square"
               className="w-16 h-16"

@@ -26,7 +26,7 @@ export async function POST(request: Request) {
 
         // Update the stats in the database
         const query = `
-            UPDATE "${tableName}"
+            UPDATE members.accounts_${groupName}
             SET 
                 total_currency_value = $1,
                 total_assets = $2,

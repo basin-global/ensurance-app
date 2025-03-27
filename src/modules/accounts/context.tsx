@@ -7,7 +7,7 @@ interface AccountData {
   full_account_name: string
   token_id: number
   tba_address: string
-  og_name: string
+  group_name: string
   is_agent: boolean
   description?: string
   pool_type?: string | null

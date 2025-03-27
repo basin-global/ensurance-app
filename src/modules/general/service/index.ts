@@ -50,12 +50,18 @@ export const GeneralService = {
       const coin = response.data?.zora20Token
       if (!coin) return null
 
+      // Convert string values to numbers, handling potential decimals
+      const totalVolume = parseFloat(coin.totalVolume || '0')
+      const totalSupply = parseFloat(coin.totalSupply || '0')
+      const volume24h = parseFloat(coin.volume24h || '0')
+
+      // Calculate price, handling division by zero
+      const price = totalSupply > 0 ? (totalVolume / totalSupply).toString() : '0'
+
       return {
-        totalVolume: coin.totalVolume || '0',
-        volume24h: coin.volume24h || '0',
-        price: coin.totalVolume && coin.totalSupply ? 
-          (BigInt(coin.totalVolume) / BigInt(coin.totalSupply)).toString() : 
-          '0'
+        totalVolume: totalVolume.toString(),
+        volume24h: volume24h.toString(),
+        price
       }
     } catch (error) {
       console.error('Failed to fetch trading info:', error)

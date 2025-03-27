@@ -28,6 +28,7 @@ export interface SyncOptions {
   entity: SyncEntity;
   group_name?: string; // For syncing accounts of a specific group
   token_id?: number; // For syncing a specific account
+  empty_only?: boolean; // For syncing only empty general certificates
 }
 
 export interface SyncResult {

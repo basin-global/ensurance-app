@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { metadata } from '@/lib/database/metadata';
 
+// Force dynamic route to ensure fresh data
+export const dynamic = 'force-dynamic';
+
 export async function GET(
     request: Request,
     { params }: { params: { contract: string; tokenId: string } }

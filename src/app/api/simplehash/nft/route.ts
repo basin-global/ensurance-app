@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { fetchNFTsByAddress, fetchNFTDetails, fetchNFTsByContract } from '@/lib/simplehash'
 import { isSpamContract } from '@/config/spamContracts'
 
+// Force dynamic route to ensure fresh data
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const address = searchParams.get('address')

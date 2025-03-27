@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useGeneralService } from './service/hooks'
 import type { CoinDetails, TradingInfo } from './service/types'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 
 const FALLBACK_IMAGE = '/assets/no-image-found.png'
 
@@ -31,6 +32,8 @@ export default function Details({
   const [metadata, setMetadata] = useState<any>(null)
   const [coinDetails, setCoinDetails] = useState<CoinDetails | null>(null)
   const [tradingInfo, setTradingInfo] = useState<TradingInfo | null>(null)
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
+  const [poolDetails, setPoolDetails] = useState<any>(null)
   const { getCoinDetails, getTradingInfo, getBuyConfig, getSellConfig, isAuthenticated } = useGeneralService()
 
   // Fetch real-time data
@@ -42,6 +45,17 @@ export default function Details({
       ])
       setCoinDetails(details)
       setTradingInfo(trading)
+
+      // Fetch pool details from database
+      try {
+        const response = await fetch(`/api/pools/${contractAddress}`)
+        if (response.ok) {
+          const data = await response.json()
+          setPoolDetails(data)
+        }
+      } catch (error) {
+        console.error('Failed to fetch pool details:', error)
+      }
     }
     fetchData()
   }, [contractAddress, getCoinDetails, getTradingInfo])
@@ -64,6 +78,41 @@ export default function Details({
 
   const imageUrl = convertIpfsUrl(metadata?.image) || FALLBACK_IMAGE
   const videoUrl = metadata?.animation_url ? convertIpfsUrl(metadata.animation_url) : null
+
+  const renderDescription = (description: string) => {
+    if (!description) return null
+    
+    const maxLength = 150
+    const shouldTruncate = description.length > maxLength
+    
+    if (!shouldTruncate) {
+      return <p className="whitespace-pre-wrap">{description}</p>
+    }
+
+    const displayText = isDescriptionExpanded 
+      ? description 
+      : `${description.slice(0, maxLength)}...`
+
+    return (
+      <div className="space-y-2">
+        <p className="whitespace-pre-wrap">{displayText}</p>
+        <button
+          onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+          className="text-sm text-primary hover:text-primary/80 flex items-center gap-1"
+        >
+          {isDescriptionExpanded ? (
+            <>
+              Show less <ChevronUp className="w-4 h-4" />
+            </>
+          ) : (
+            <>
+              Show more <ChevronDown className="w-4 h-4" />
+            </>
+          )}
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -103,8 +152,8 @@ export default function Details({
         <h1 className="text-3xl font-bold">{name}</h1>
         
         {metadata?.description && (
-          <div className="prose dark:prose-invert">
-            <p>{metadata.description}</p>
+          <div className="prose dark:prose-invert max-w-none">
+            <p className="text-base leading-relaxed text-gray-200">{renderDescription(metadata.description)}</p>
           </div>
         )}
 
@@ -115,18 +164,18 @@ export default function Details({
                 <h3 className="text-sm text-gray-500">Symbol</h3>
                 <p className="text-lg">{coinDetails.symbol}</p>
               </div>
-              <div>
-                <h3 className="text-sm text-gray-500">Total Supply</h3>
-                <p className="text-lg">{coinDetails.totalSupply}</p>
-              </div>
-              <div>
-                <h3 className="text-sm text-gray-500">Volume (24h)</h3>
-                <p className="text-lg">{tradingInfo?.volume24h || '0'} ETH</p>
-              </div>
-              <div>
-                <h3 className="text-sm text-gray-500">Creator</h3>
-                <p className="text-lg truncate">{coinDetails.creatorAddress}</p>
-              </div>
+              {poolDetails && (
+                <>
+                  <div>
+                    <h3 className="text-sm text-gray-500">Price</h3>
+                    <p className="text-lg">$ {Number(poolDetails.price).toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm text-gray-500">Market Cap</h3>
+                    <p className="text-lg">$ {Number(poolDetails.marketCap).toLocaleString()}</p>
+                  </div>
+                </>
+              )}
             </div>
 
             {tradingInfo && (

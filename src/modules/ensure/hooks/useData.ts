@@ -126,14 +126,14 @@ export function useData({
     switch (type) {
       case 'group':
         return items.map((item: any): GroupItem => ({
-          id: item.og_name,
+          id: item.group_name,
           type: 'group',
-          name: item.og_name,
+          name: item.group_name,
           description: item.description,
-          image: `/groups/orbs/${item.og_name.replace(/^\./, '')}-orb.png`,
-          url: `/groups/${item.og_name.replace(/^\./, '')}/all`,
+          image: `/groups/orbs/${item.group_name.replace(/^\./, '')}-orb.png`,
+          url: `/groups/${item.group_name.replace(/^\./, '')}/all`,
           contractAddress: item.contract_address,
-          ogName: item.og_name,
+          groupName: item.group_name,
           tagline: item.tagline,
           totalSupply: item.total_supply,
           isActive: item.is_active
@@ -148,7 +148,7 @@ export function useData({
           image: `/api/accounts/${item.full_account_name}/image`,
           url: `/${item.full_account_name}`,
           tokenId: item.token_id,
-          ogName: item.og_name,
+          groupName: item.group_name,
           tbaAddress: item.tba_address,
           isAgent: item.is_agent,
           ownerAddress: item.owner_of
@@ -217,7 +217,7 @@ export function useData({
           image: `/api/accounts/${item.full_account_name}/image`,
           url: `/${item.full_account_name}`,
           tokenId: item.token_id,
-          ogName: item.og_name,
+          groupName: item.group_name,
           poolType: item.pool_type === 'stock' ? 'stock' : 'flow',
           totalCurrencyValue: item.total_currency_value,
           totalAssets: item.total_assets,

@@ -26,8 +26,8 @@ export function GroupInfo({ groupName }: { groupName: string }) {
         async function fetchGroupData() {
             try {
                 console.log('Fetching group data for:', groupName)
-                const ogName = groupName.startsWith('.') ? groupName : `.${groupName}`
-                const response = await fetch(`/api/groups?group_name=${encodeURIComponent(ogName)}`)
+                const formattedGroupName = groupName.startsWith('.') ? groupName : `.${groupName}`
+                const response = await fetch(`/api/groups?group_name=${encodeURIComponent(formattedGroupName)}`)
                 if (!response.ok) throw new Error('Failed to fetch group')
                 const data = await response.json()
                 console.log('Received group data:', data)

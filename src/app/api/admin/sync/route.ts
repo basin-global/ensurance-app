@@ -13,23 +13,23 @@ export async function POST(request: NextRequest) {
     const headersList = headers();
     const address = headersList.get('x-address');
     if (!isAppAdmin(address)) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Get request data
     const body = await request.json();
-    const { entity, group_name, token_id } = body;
+    const { entity, group_name, token_id, empty_only } = body;
 
     if (!entity) {
-      return new NextResponse('Invalid request - entity required', { status: 400 });
+      return NextResponse.json({ error: 'Invalid request - entity required' }, { status: 400 });
     }
 
     // Run sync operation
-    const result = await sync(entity as SyncEntity, { group_name, token_id });
+    const result = await sync(entity as SyncEntity, { group_name, token_id, empty_only });
     return NextResponse.json(result);
 
   } catch (error: any) {
     console.error('Sync error:', error);
-    return new NextResponse(error.message || 'Sync failed', { status: 500 });
+    return NextResponse.json({ error: error.message || 'Sync failed' }, { status: 500 });
   }
 } 

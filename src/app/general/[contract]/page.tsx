@@ -10,7 +10,7 @@ export default async function GeneralCertificateDetails({
   // Get immutable data from DB
   const dbResult = await sql`
     SELECT name, token_uri, contract_address
-    FROM general_certificates 
+    FROM certificates.general 
     WHERE contract_address = ${params.contract}
   `
   const certificate = dbResult.rows[0]

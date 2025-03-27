@@ -14,6 +14,7 @@ export default function SyncPage() {
   const [selectedEntity, setSelectedEntity] = useState<SyncEntity>('groups')
   const [selectedGroup, setSelectedGroup] = useState<string>('all')
   const [tokenId, setTokenId] = useState('')
+  const [emptyOnly, setEmptyOnly] = useState(false)
   const [result, setResult] = useState<SyncOperationResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [groups, setGroups] = useState<any[]>([])
@@ -30,7 +31,8 @@ export default function SyncPage() {
       const options = {
         entity: selectedEntity,
         ...(selectedGroup !== 'all' && { group_name: selectedGroup }),
-        ...(tokenId && { token_id: parseInt(tokenId) })
+        ...(tokenId && { token_id: parseInt(tokenId) }),
+        ...(selectedEntity === 'general_certificates' && { empty_only: emptyOnly })
       }
 
       const response = await fetch('/api/admin/sync', {
@@ -100,66 +102,38 @@ export default function SyncPage() {
               setSelectedEntity(value as SyncEntity)
               setSelectedGroup('all')
               setTokenId('')
+              setEmptyOnly(false)
             }}
           >
             <SelectTrigger className="w-full bg-gray-900 text-white border-gray-700">
-              <SelectValue placeholder="Choose an entity..." />
+              <SelectValue placeholder="Select entity type" />
             </SelectTrigger>
             <SelectContent className="bg-gray-900 border-gray-700">
-              <SelectItem 
-                value="groups"
-                className="text-white hover:bg-gray-800"
-              >
-                Groups
-              </SelectItem>
-              <SelectItem 
-                value="accounts"
-                className="text-white hover:bg-gray-800"
-              >
-                Accounts
-              </SelectItem>
-              <SelectItem 
-                value="general_certificates"
-                className="text-white hover:bg-gray-800"
-              >
-                General Certificates
-              </SelectItem>
+              <SelectItem value="groups">Groups</SelectItem>
+              <SelectItem value="accounts">Accounts</SelectItem>
+              <SelectItem value="general_certificates">General Certificates</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        {/* Group Selection (only for accounts) */}
+        {/* Group Selection - only show for accounts */}
         {selectedEntity === 'accounts' && (
           <div>
-            <label className="block text-sm font-medium mb-2 text-white">
-              Group Name (Optional)
-              <span className="text-gray-400 text-xs ml-2">
-                Leave empty to sync all groups
-              </span>
-            </label>
+            <label className="block text-sm font-medium mb-2 text-white">Group</label>
             <Select
               value={selectedGroup}
               onValueChange={setSelectedGroup}
+              disabled={loadingGroups}
             >
               <SelectTrigger 
                 className="w-full bg-gray-900 text-white border-gray-700"
-                disabled={loadingGroups}
               >
-                <SelectValue placeholder={loadingGroups ? "Loading groups..." : "Select a group..."} />
+                <SelectValue placeholder="Select group" />
               </SelectTrigger>
               <SelectContent className="bg-gray-900 border-gray-700">
-                <SelectItem 
-                  value="all"
-                  className="text-white hover:bg-gray-800"
-                >
-                  All Groups
-                </SelectItem>
-                {groups.map(group => (
-                  <SelectItem 
-                    key={group.group_name}
-                    value={group.group_name}
-                    className="text-white hover:bg-gray-800"
-                  >
+                <SelectItem value="all">All Groups</SelectItem>
+                {groups.map((group) => (
+                  <SelectItem key={group.group_name} value={group.group_name}>
                     {group.group_name}
                   </SelectItem>
                 ))}
@@ -168,22 +142,33 @@ export default function SyncPage() {
           </div>
         )}
 
-        {/* Token ID (only for accounts with group selected) */}
-        {selectedEntity === 'accounts' && selectedGroup && (
+        {/* Token ID Input - only show for accounts */}
+        {selectedEntity === 'accounts' && (
           <div>
-            <label className="block text-sm font-medium mb-2 text-white">
-              Token ID (Optional)
-              <span className="text-gray-400 text-xs ml-2">
-                Leave empty to sync all accounts in group
-              </span>
-            </label>
+            <label className="block text-sm font-medium mb-2 text-white">Token ID (Optional)</label>
             <input
               type="number"
               value={tokenId}
               onChange={(e) => setTokenId(e.target.value)}
-              placeholder="e.g. 1"
-              className="w-full p-2 bg-gray-900 text-white border border-gray-700 rounded placeholder-gray-500"
+              className="w-full p-2 rounded bg-gray-800 text-white border border-gray-700"
+              placeholder="Enter token ID"
             />
+          </div>
+        )}
+
+        {/* Empty Only Checkbox - only show for general certificates */}
+        {selectedEntity === 'general_certificates' && (
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="emptyOnly"
+              checked={emptyOnly}
+              onChange={(e) => setEmptyOnly(e.target.checked)}
+              className="rounded border-gray-700"
+            />
+            <label htmlFor="emptyOnly" className="text-sm font-medium text-white">
+              Only sync certificates with missing data
+            </label>
           </div>
         )}
 

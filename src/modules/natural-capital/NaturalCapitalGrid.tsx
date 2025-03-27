@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation'
 interface Account {
     full_account_name: string;
     token_id: number;
-    og_name: string;
+    group_name: string;
     is_agent: boolean;
     stock_or_flow: string | null;
     display_name: string | null;
@@ -20,6 +20,15 @@ interface Account {
     total_assets: number;
     ensured_assets: number;
     stats_last_updated?: string;
+}
+
+interface NaturalCapitalItem {
+    id: string;
+    name: string;
+    description?: string;
+    image?: string;
+    url: string;
+    group_name: string;
 }
 
 interface NaturalCapitalGridProps {
