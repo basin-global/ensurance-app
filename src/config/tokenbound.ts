@@ -1,10 +1,9 @@
 import { supportedChains, getActiveChains } from './chains'
-import { type WalletClient } from 'viem'
-import { type Signer } from 'ethers'
+import { type WalletClient, type Account } from 'viem'
 
 // @keep TokenBound requires either a signer or walletClient for initialization
 interface TokenBoundWalletConfig {
-  signer?: Signer;
+  signer?: Account;
   walletClient?: WalletClient;
 }
 
