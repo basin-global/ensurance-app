@@ -69,8 +69,8 @@ importers:
         specifier: ^0.6.0
         version: 0.6.0
       '@zoralabs/coins-sdk':
-        specifier: ^0.0.2-sdkalpha.6
-        version: 0.0.2-sdkalpha.8(abitype@1.0.8(typescript@5.7.3)(zod@3.24.1))(viem@2.24.1(bufferutil@4.0.9)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.24.1))
+        specifier: 0.0.2-sdkalpha.7
+        version: 0.0.2-sdkalpha.7(abitype@1.0.8(typescript@5.7.3)(zod@3.24.1))(viem@2.24.1(bufferutil@4.0.9)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.24.1))
       '@zoralabs/protocol-deployments':
         specifier: ^0.5.1
         version: 0.5.1
@@ -2347,11 +2347,14 @@ packages:
   '@walletconnect/window-metadata@1.0.1':
     resolution: {integrity: sha512-9koTqyGrM2cqFRW517BPY/iEtUDx2r1+Pwwu5m7sJ7ka79wi3EyqhqcICk/yDmv6jAS1rjKgTKXlEhanYjijcA==}
 
-  '@zoralabs/coins-sdk@0.0.2-sdkalpha.8':
-    resolution: {integrity: sha512-uKE6lrGmy3UrL63Jj6lF7oSSwcBg+WrrLQpLQj8zlhDj2IEmH2ycWaPruq3ul/yiQoUKdlSys7TLoqJZww2p/g==}
+  '@zoralabs/coins-sdk@0.0.2-sdkalpha.7':
+    resolution: {integrity: sha512-Njhcfn1iSa2asckOue7SyiGl/Invb6TOAixO3WnXi4+S55J0rpTmDjQNu/L4mq1geuyQfb+A+8/xqpTfYjNS+g==}
     peerDependencies:
       abitype: ^1.0.8
       viem: ^2.21.55
+
+  '@zoralabs/coins@0.5.1-sdkalpha.0':
+    resolution: {integrity: sha512-APEzAzA+q7w1r9KPcmmAPWQLai20dEo+iEqBBwi3UnyIOd0CxJKVnD2ily8j8PXlapE1r0NRuFtrJVOzXQyMNQ==}
 
   '@zoralabs/coins@0.6.0':
     resolution: {integrity: sha512-raDbm/bW7goPPmElnyu+GYyNwPmiQlTHqm6AtiWL3NLEeIH/woa7r0Oa2alR71W14DDjY2OqeoBBmyycbN5SkQ==}
@@ -9037,12 +9040,17 @@ snapshots:
       '@walletconnect/window-getters': 1.0.1
       tslib: 1.14.1
 
-  '@zoralabs/coins-sdk@0.0.2-sdkalpha.8(abitype@1.0.8(typescript@5.7.3)(zod@3.24.1))(viem@2.24.1(bufferutil@4.0.9)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.24.1))':
+  '@zoralabs/coins-sdk@0.0.2-sdkalpha.7(abitype@1.0.8(typescript@5.7.3)(zod@3.24.1))(viem@2.24.1(bufferutil@4.0.9)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.24.1))':
     dependencies:
       '@hey-api/client-fetch': 0.8.4
-      '@zoralabs/coins': 0.6.0
+      '@zoralabs/coins': 0.5.1-sdkalpha.0
       abitype: 1.0.8(typescript@5.7.3)(zod@3.24.1)
       viem: 2.24.1(bufferutil@4.0.9)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.24.1)
+
+  '@zoralabs/coins@0.5.1-sdkalpha.0':
+    dependencies:
+      '@openzeppelin/contracts': 5.2.0
+      '@openzeppelin/contracts-upgradeable': 5.2.0(@openzeppelin/contracts@5.2.0)
 
   '@zoralabs/coins@0.6.0':
     dependencies:
