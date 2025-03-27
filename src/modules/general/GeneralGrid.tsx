@@ -6,17 +6,26 @@ import { Skeleton } from "@/components/ui/skeleton"
 import Link from 'next/link'
 import Image from 'next/image'
 
+interface CreatorEarning {
+  amountUsd: string
+  // Add other fields if needed
+}
+
 interface GeneralCertificate {
   contract_address: string
   name: string
   token_uri: string
   image_url?: string
   video_url?: string
+  total_volume?: string
+  market_cap?: string
+  creator_earnings?: CreatorEarning[]
 }
 
 interface GeneralGridProps {
   searchQuery?: string
   urlPrefix?: string
+  onDataChange?: (data: GeneralCertificate[]) => void
 }
 
 const FALLBACK_IMAGE = '/assets/no-image-found.png'
@@ -29,9 +38,19 @@ const convertIpfsUrl = (url: string) => {
   return url
 }
 
+// Format number with appropriate decimals
+const formatNumber = (value: string | undefined) => {
+  const num = Number(value || '0')
+  return num.toLocaleString(undefined, {
+    minimumFractionDigits: num < 10 ? 2 : 0,
+    maximumFractionDigits: num < 10 ? 2 : 0
+  })
+}
+
 export default function GeneralGrid({ 
   searchQuery = '',
-  urlPrefix = ''
+  urlPrefix = '',
+  onDataChange = () => {}
 }: GeneralGridProps) {
   const [certificates, setCertificates] = useState<GeneralCertificate[]>([])
   const [loading, setLoading] = useState(true)
@@ -84,13 +103,15 @@ export default function GeneralGrid({
       )
       
       setCertificates(certificatesWithMetadata)
+      onDataChange(certificatesWithMetadata)
     } catch (error) {
       console.error('Error fetching certificates:', error)
       setCertificates([])
+      onDataChange([])
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [onDataChange])
 
   useEffect(() => {
     fetchCertificates()
@@ -100,6 +121,13 @@ export default function GeneralGrid({
   const filteredCertificates = certificates.filter(cert => {
     const searchLower = (searchQuery || '').toLowerCase()
     return !searchQuery || cert.name?.toLowerCase().includes(searchLower)
+  })
+  .sort((a, b) => {
+    // Convert volume strings to numbers, defaulting to 0 if undefined
+    const volumeA = Number(a.total_volume || '0')
+    const volumeB = Number(b.total_volume || '0')
+    // Sort in descending order (highest volume first)
+    return volumeB - volumeA
   })
 
   if (loading) {
@@ -155,6 +183,16 @@ export default function GeneralGrid({
                 </div>
                 <div className="text-lg font-semibold text-white text-center">
                   {cert.name || 'Unnamed Certificate'}
+                </div>
+                <div className="flex justify-between text-sm text-gray-400 px-2">
+                  <div>Vol: ${Number(cert.total_volume || '0').toLocaleString(undefined, { 
+                    minimumFractionDigits: Number(cert.total_volume || '0') < 10 ? 2 : 0,
+                    maximumFractionDigits: Number(cert.total_volume || '0') < 10 ? 2 : 0
+                  })}</div>
+                  <div>MC: ${Number(cert.market_cap || '0').toLocaleString(undefined, { 
+                    minimumFractionDigits: Number(cert.market_cap || '0') < 10 ? 2 : 0,
+                    maximumFractionDigits: Number(cert.market_cap || '0') < 10 ? 2 : 0
+                  })}</div>
                 </div>
               </div>
             </CardContent>

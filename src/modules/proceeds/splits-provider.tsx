@@ -1,20 +1,25 @@
 'use client';
 
 import { createPublicClient, http } from 'viem'
-import { mainnet } from 'viem/chains'
+import { base } from 'viem/chains'
 import { SplitsProvider } from '@0xsplits/splits-sdk-react'
 import { type SplitsClientConfig } from '@0xsplits/splits-sdk'
 import { ReactNode } from 'react'
 
-// Create public client
+// Create public client for Base
 const publicClient = createPublicClient({
-  chain: mainnet,
+  chain: base,
   transport: http()
-})
+}) as any
 
 // Config using their recommended structure
 const splitsConfig: SplitsClientConfig = {
-  chainId: mainnet.id
+  chainId: base.id,
+  publicClient,
+  includeEnsNames: false,
+  apiConfig: {
+    apiKey: process.env.NEXT_PUBLIC_SPLITS_API_KEY || ''
+  }
 }
 
 interface SplitsWrapperProps {

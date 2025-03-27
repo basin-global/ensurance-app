@@ -18,14 +18,21 @@ export async function POST(request: NextRequest) {
 
     // Get request data
     const body = await request.json();
-    const { entity, group_name, token_id, empty_only } = body;
+    const { entity, group_name, token_id, empty_only, market_data } = body;
 
     if (!entity) {
       return NextResponse.json({ error: 'Invalid request - entity required' }, { status: 400 });
     }
 
+    console.log('Sync request:', { entity, group_name, token_id, empty_only, market_data });
+
     // Run sync operation
-    const result = await sync(entity as SyncEntity, { group_name, token_id, empty_only });
+    const result = await sync(entity as SyncEntity, { 
+      group_name, 
+      token_id, 
+      empty_only,
+      market_data 
+    });
     return NextResponse.json(result);
 
   } catch (error: any) {

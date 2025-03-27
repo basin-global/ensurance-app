@@ -13,6 +13,10 @@ export interface GeneralCertificateData {
   symbol: string;
   token_uri: string;
   pool_address: string;
+  total_volume?: string;
+  volume_24h?: string;
+  market_cap?: string;
+  creator_earnings?: any[];
 }
 
 export interface AccountData {
@@ -29,13 +33,14 @@ export interface SyncOptions {
   group_name?: string; // For syncing accounts of a specific group
   token_id?: number; // For syncing a specific account
   empty_only?: boolean; // For syncing only empty general certificates
+  market_data?: boolean; // For syncing market data for general certificates
 }
 
 export interface SyncResult {
-  id: string; // contract address for groups, full_account_name for accounts
+  id: string; // contract address for groups/certificates, full_account_name for accounts
   status: 'success' | 'failed';
   error?: string;
-  data?: GroupData | AccountData;
+  data?: GroupData | AccountData | GeneralCertificateData;
 }
 
 export interface SyncOperationResult {

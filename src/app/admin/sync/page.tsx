@@ -20,7 +20,7 @@ export default function SyncPage() {
   const [groups, setGroups] = useState<any[]>([])
   const [loadingGroups, setLoadingGroups] = useState(false)
 
-  const handleSync = async () => {
+  const handleSync = async (marketData: boolean = false) => {
     if (!user?.wallet?.address) return
     
     setError(null)
@@ -32,7 +32,10 @@ export default function SyncPage() {
         entity: selectedEntity,
         ...(selectedGroup !== 'all' && { group_name: selectedGroup }),
         ...(tokenId && { token_id: parseInt(tokenId) }),
-        ...(selectedEntity === 'general_certificates' && { empty_only: emptyOnly })
+        ...(selectedEntity === 'general_certificates' && { 
+          empty_only: emptyOnly,
+          market_data: marketData 
+        })
       }
 
       const response = await fetch('/api/admin/sync', {
@@ -172,14 +175,35 @@ export default function SyncPage() {
           </div>
         )}
 
-        {/* Sync Button */}
-        <button
-          onClick={handleSync}
-          disabled={syncing || !user?.wallet?.address}
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:bg-gray-700 disabled:text-gray-400 transition-colors"
-        >
-          {syncing ? 'Syncing...' : 'Start Sync'}
-        </button>
+        {/* Sync Buttons */}
+        <div className="space-y-4">
+          {selectedEntity === 'general_certificates' ? (
+            <>
+              <button
+                onClick={() => handleSync(false)}
+                disabled={syncing || !user?.wallet?.address}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:bg-gray-700 disabled:text-gray-400 transition-colors"
+              >
+                {syncing ? 'Syncing...' : 'Sync Contract Data'}
+              </button>
+              <button
+                onClick={() => handleSync(true)}
+                disabled={syncing || !user?.wallet?.address}
+                className="w-full bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700 disabled:bg-gray-700 disabled:text-gray-400 transition-colors"
+              >
+                {syncing ? 'Syncing...' : 'Sync Market Data'}
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => handleSync(false)}
+              disabled={syncing || !user?.wallet?.address}
+              className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:bg-gray-700 disabled:text-gray-400 transition-colors"
+            >
+              {syncing ? 'Syncing...' : 'Start Sync'}
+            </button>
+          )}
+        </div>
 
         {/* Error Display */}
         {error && (
