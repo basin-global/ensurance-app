@@ -6,6 +6,9 @@ import AccountsGrid from '@/modules/accounts/AccountsGrid'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { GroupInfo } from '@/modules/groups/GroupInfo'
 
+// Tell Next.js this is a dynamic route
+export const dynamic = 'force-dynamic'
+
 export default function GroupMinePage({ params }: { params: { group: string } }) {
   const [searchQuery, setSearchQuery] = useState('')
   const { user, ready, authenticated } = usePrivy()

@@ -8,9 +8,12 @@ importers:
 
   .:
     dependencies:
+      '@0xsplits/splits-sdk':
+        specifier: ^4.1.0
+        version: 4.1.3(viem@2.24.1(bufferutil@4.0.9)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.24.1))
       '@0xsplits/splits-sdk-react':
         specifier: ^2.1.0
-        version: 2.1.3(react@18.2.0)(viem@2.24.1(bufferutil@4.0.9)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.24.1))
+        version: 2.1.0(react@18.2.0)(viem@2.24.1(bufferutil@4.0.9)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.24.1))
       '@headlessui/react':
         specifier: ^2.2.0
         version: 2.2.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
@@ -182,8 +185,8 @@ packages:
       graphql:
         optional: true
 
-  '@0xsplits/splits-sdk-react@2.1.3':
-    resolution: {integrity: sha512-A3BujfAWVfFubCC5OZsDnl+CUobUML7cpqbe/xDYaL8t0ef2noD1938Lz01KiOcYmcxfqyiU0igbkrgFIrOpFQ==}
+  '@0xsplits/splits-sdk-react@2.1.0':
+    resolution: {integrity: sha512-1eMHt35oeZZvDTezHqbUEMrENpPazDMG+gqlBdgMFusRDkZbF+XCV3t0e36aZhVUmZELL99vd8eex8XGhV52TA==}
     peerDependencies:
       react: 17.x.x || 18.x.x
       viem: ^1.0.0 || ^2.0.0
@@ -5846,7 +5849,7 @@ snapshots:
     optionalDependencies:
       graphql: 16.10.0
 
-  '@0xsplits/splits-sdk-react@2.1.3(react@18.2.0)(viem@2.24.1(bufferutil@4.0.9)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.24.1))':
+  '@0xsplits/splits-sdk-react@2.1.0(react@18.2.0)(viem@2.24.1(bufferutil@4.0.9)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.24.1))':
     dependencies:
       '@0xsplits/splits-sdk': 4.1.3(viem@2.24.1(bufferutil@4.0.9)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.24.1))
       react: 18.2.0
@@ -12260,7 +12263,7 @@ snapshots:
       buffer: 6.0.3
       eventemitter3: 5.0.1
       uuid: 8.3.2
-      ws: 8.18.0(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+      ws: 8.18.1(bufferutil@4.0.9)(utf-8-validate@5.0.10)
     optionalDependencies:
       bufferutil: 4.0.9
       utf-8-validate: 5.0.10

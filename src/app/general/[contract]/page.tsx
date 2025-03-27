@@ -2,6 +2,9 @@ import { sql } from '@vercel/postgres'
 import { notFound } from 'next/navigation'
 import Details from '@/modules/general/Details'
 
+// Tell Next.js this is a dynamic route
+export const dynamic = 'force-dynamic'
+
 export default async function GeneralCertificateDetails({ 
   params 
 }: { 
