@@ -2,7 +2,7 @@
 import { TokenboundClient } from "@tokenbound/sdk";
 import { getTokenBoundClientConfig } from '@/config/tokenbound';
 import { getChainBySimplehashName } from '@/config/chains';
-import type { Asset } from '@/modules/assets';
+import type { Asset } from '@/types/index';
 
 export interface TokenboundActions {
   transferNFT: (asset: Asset, toAddress: `0x${string}`, amount?: number) => Promise<{ hash: string; isCrossChain?: boolean }>;

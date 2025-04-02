@@ -11,33 +11,7 @@ import { TokenboundClient } from "@tokenbound/sdk";
 import { getTokenBoundClientConfig } from '@/config/tokenbound';
 import { createTokenboundActions } from '@/lib/tokenbound';
 import { fetchNFTsByContract } from '@/lib/simplehash';
-import { BaseModuleProps } from '@/types/index';
-
-// Export the existing Asset interface
-export interface Asset {
-  nft_id: string;
-  name: string;
-  image_url: string;
-  video_url?: string;
-  audio_url?: string;
-  collection: {
-    name: string;
-  };
-  contract_address: string;
-  token_id: string;
-  chain: string;
-  contract: {
-    type: string;
-  };
-  queried_wallet_balances: Array<{
-    address: string;
-    first_acquired_date: string;
-    last_acquired_date: string;
-    quantity: number;
-    quantity_string: string;
-  }>;
-  description?: string;
-}
+import { BaseModuleProps, Asset } from '@/types/index';
 
 // Update TokenboundActions interface
 export interface TokenboundActions {
@@ -51,13 +25,21 @@ interface AssetsModuleProps extends BaseModuleProps {
   currentGroup?: string;
 }
 
+interface APIResponse {
+  nfts: Asset[];
+  next?: string;
+  previous?: string;
+  message?: string;
+}
+
 // Add new fetch function alongside existing ones
-const fetchEnsuranceFromDB = async (chain: string) => {
+const fetchEnsuranceFromDB = async (chain: string): Promise<Asset[]> => {
   const response = await fetch(`/api/getEnsurance?chain=${chain}`);
   if (!response.ok) {
     throw new Error('Failed to fetch ensurance');
   }
-  return response.json();
+  const data: APIResponse = await response.json();
+  return data.nfts || [];
 };
 
 export default function AssetsModule({ 
@@ -76,7 +58,7 @@ export default function AssetsModule({
   const [loading, setLoading] = useState(true);
   const [allChainsData, setAllChainsData] = useState<Record<string, Asset[]>>({});
   const [displayedChains, setDisplayedChains] = useState<string[]>([]);
-  const [ownedNFTs, setOwnedNFTs] = useState<any[]>([]);
+  const [ownedNFTs, setOwnedNFTs] = useState<Asset[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const CHAINS_PER_LOAD = 2;
   const [page, setPage] = useState(1);
@@ -108,83 +90,41 @@ export default function AssetsModule({
     try {
       if (selectedChain === 'all') {
         if (isEnsuranceTab) {
-          // Fetch all ensurance contracts data first
-          const ensuranceResults = await Promise.all(
-            Object.entries(ensuranceContracts).map(async ([chain, contractAddress]) => {
-              const nfts = await fetchNFTsByContract(chain, contractAddress);
-              return { chain, nfts };
-            })
-          );
-
-          // Get ownership data once
-          const ownedResponse = await axios.get(`/api/simplehash/nft?address=${address}&fetchAll=true`);
-          setOwnedNFTs(ownedResponse.data.nfts || []);
-
-          // Store data by chain
-          const chainData: Record<string, Asset[]> = {};
-          ensuranceResults.forEach(({ chain, nfts }) => {
-            chainData[chain] = nfts;
-          });
-
-          setAllChainsData(chainData);
-          // Start with first chain
-          setDisplayedChains([Object.keys(chainData)[0]]);
+          // During API migration, return empty arrays
+          setAllChainsData({});
+          setDisplayedChains([]);
+          setOwnedNFTs([]);
         } else {
-          // For assets tab: Get all owned NFTs in one call
-          const response = await axios.get(`/api/simplehash/nft?address=${address}&fetchAll=true`);
-          const nfts = response.data.nfts || [];
-          setCursor(response.data.next);
-
-          // Group by chain
-          const chainData: Record<string, Asset[]> = {};
-          nfts.forEach((nft: Asset) => {
-            if (!chainData[nft.chain]) chainData[nft.chain] = [];
-            chainData[nft.chain].push(nft);
-          });
-
-          setAllChainsData(chainData);
-          // Start with first chain
-          setDisplayedChains([Object.keys(chainData)[0]]);
+          // During API migration, return empty arrays
+          setAllChainsData({});
+          setDisplayedChains([]);
         }
       } else {
         // Single chain fetch with pagination
         if (isEnsuranceTab) {
           if (address && window.location.pathname.includes('/mine')) {
-            const response = await axios.get(`/api/simplehash/nft`, {
-              params: { 
-                address,
-                chain: selectedChain,
-                page: pageNum,
-                limit: ITEMS_PER_PAGE
-              }
-            });
-            
-            const ensuranceNFTs = response.data.nfts?.filter((nft: Asset) => 
-              isEnsuranceToken(nft.chain, nft.contract_address)
-            ) || [];
-
-            setAssets(prev => pageNum === 1 ? ensuranceNFTs : [...prev, ...ensuranceNFTs]);
-            setHasMore(ensuranceNFTs.length === ITEMS_PER_PAGE);
+            // During API migration, return empty array
+            setAssets([]);
+            setHasMore(false);
           } else {
-            const assets = await fetchEnsuranceFromDB(selectedChain);
-            setAssets(prev => pageNum === 1 ? assets : [...prev, ...assets]);
+            // During API migration, return empty array
+            setAssets([]);
             setHasMore(false);
           }
         } else {
-          const response = await axios.get(`/api/simplehash/nft`, {
-            params: {
-              address,
-              chain: selectedChain,
-              page: pageNum,
-              limit: ITEMS_PER_PAGE
-            }
-          });
-          setAssets(prev => pageNum === 1 ? response.data.nfts : [...prev, ...response.data.nfts]);
-          setHasMore(response.data.nfts?.length === ITEMS_PER_PAGE);
+          // During API migration, return empty array
+          setAssets([]);
+          setHasMore(false);
         }
       }
     } catch (error) {
       console.error(`Error in fetchAssets:`, error);
+      // During error, clear arrays
+      setAssets([]);
+      setAllChainsData({});
+      setDisplayedChains([]);
+      setOwnedNFTs([]);
+      setHasMore(false);
     } finally {
       setLoading(false);
     }

@@ -26,14 +26,12 @@ export default function HoldPage({ params }: HoldPageProps) {
     {
       value: 'assets',
       label: 'Assets',
-      component: AssetsTab,
-      showChainDropdown: true
+      component: AssetsTab
     },
     {
       value: 'currency',
       label: 'Currency',
-      component: CurrencyTab,
-      showChainDropdown: true
+      component: CurrencyTab
     }
   ]
 

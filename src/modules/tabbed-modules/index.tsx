@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import * as Tooltip from '@radix-ui/react-tooltip'
-import ChainDropdown from '@/modules/shared/ChainDropdown'
 
 // Export tab components so pages can import what they need
 export { default as AssetsTab } from './assets'
@@ -16,14 +15,12 @@ export interface TabData {
   value: string
   label: string
   component: React.ComponentType<any>
-  showChainDropdown: boolean
 }
 
 interface TabbedModulesProps {
   address: string
   isOwner: boolean
   initialModule?: string | null
-  initialChain?: string | null
   tabs: TabData[]
   label?: string
 }
@@ -32,7 +29,6 @@ export default function TabbedModules({
   address, 
   isOwner = false,
   initialModule,
-  initialChain,
   tabs = [],
   label
 }: TabbedModulesProps) {
@@ -51,7 +47,7 @@ export default function TabbedModules({
   // Initialize state from URL or defaults
   const defaultTab = initialModule || tabs[0]?.value
   const [activeTab, setActiveTab] = useState(searchParams.get('module') || defaultTab)
-  const [selectedChain, setSelectedChain] = useState(searchParams.get('chain') || initialChain || 'base')
+  const selectedChain = 'base'  // Hardcoded to base chain
 
   // Ensure activeTab is valid
   useEffect(() => {
@@ -61,7 +57,7 @@ export default function TabbedModules({
     }
   }, [activeTab, tabs])
 
-  const updateUrl = (tab: string, chain: string) => {
+  const updateUrl = (tab: string) => {
     const params = new URLSearchParams(Array.from(searchParams.entries()))
     
     // Only update if values are different
@@ -69,14 +65,8 @@ export default function TabbedModules({
       params.set('module', tab)
     }
     
-    const activeTab = tabs.find(t => t.value === tab)
-    if (activeTab?.showChainDropdown && chain !== 'all') {
-      if (params.get('chain') !== chain) {
-        params.set('chain', chain)
-      }
-    } else {
-      params.delete('chain')
-    }
+    // Remove chain param if it exists
+    params.delete('chain')
 
     // Use shallow routing to prevent full page reload
     router.push(`?${params.toString()}`, { scroll: false })
@@ -84,12 +74,7 @@ export default function TabbedModules({
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab)
-    updateUrl(tab, selectedChain)
-  }
-
-  const handleChainChange = (chain: string) => {
-    setSelectedChain(chain)
-    updateUrl(activeTab, chain)
+    updateUrl(tab)
   }
 
   const getTabStyle = (tabValue: string) => {
@@ -132,7 +117,7 @@ export default function TabbedModules({
           </div>
         )}
 
-        {/* Tabs and Chain Dropdown */}
+        {/* Tabs */}
         <div className="flex items-center justify-between w-full px-0 md:px-4">
           <div className="flex items-center gap-0.5 md:gap-2 overflow-x-auto no-scrollbar py-2 px-1 md:px-0">
             {tabs.map((tab) => (
@@ -150,16 +135,6 @@ export default function TabbedModules({
               </Tooltip.Provider>
             ))}
           </div>
-
-          {activeTabData?.showChainDropdown && (
-            <div className="flex-shrink-0">
-              <ChainDropdown
-                selectedChain={selectedChain}
-                onChange={handleChainChange}
-                className="px-1.5 md:px-4 py-1.5 md:py-2 rounded-t-lg transition-all duration-200 text-gray-300 hover:bg-black/20 text-xs md:text-base font-sans bg-transparent border-0"
-              />
-            </div>
-          )}
         </div>
       </div>
 
