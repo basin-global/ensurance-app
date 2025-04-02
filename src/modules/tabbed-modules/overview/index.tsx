@@ -175,16 +175,6 @@ export default function OverviewTab({ description, tbaAddress, isOwner }: Overvi
         loading={loading}
         className="mb-1"
       />
-
-      {/* Full Width Certificates Grid */}
-      <div className="lg:col-span-2">
-        <div className="bg-gray-900/30 rounded-lg p-3">
-          <h3 className="text-lg font-medium text-gray-200 mb-1">Related Certificates</h3>
-          <div className="text-sm text-gray-400">
-            Certificate grid coming soon...
-          </div>
-        </div>
-      </div>
     </div>
   )
 }

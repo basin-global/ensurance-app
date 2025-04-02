@@ -26,6 +26,7 @@ export default function CurrencyTab({ address, selectedChain, isOwner = false }:
   const [groupedBalances, setGroupedBalances] = useState<GroupedBalances>({})
   const [ethPrice, setEthPrice] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
+  const [message, setMessage] = useState<string | null>(null)
 
   const fetchBalances = useCallback(async () => {
     setLoading(true)
@@ -37,13 +38,17 @@ export default function CurrencyTab({ address, selectedChain, isOwner = false }:
       }
       const data = await response.json()
       console.log('Raw API response:', JSON.stringify(data, null, 2))
-      const fetchedBalances = data.groupedBalances
-      setEthPrice(data.ethPrice)
-      console.log('Chains in fetched balances:', Object.keys(fetchedBalances))
       
-      setGroupedBalances(fetchedBalances)
+      if (data.message) {
+        setMessage(data.message)
+      } else {
+        setMessage(null)
+        setGroupedBalances(data.groupedBalances || {})
+        setEthPrice(data.ethPrice)
+      }
     } catch (error) {
       console.error('Error fetching balances:', error)
+      setMessage("Failed to load balances")
     } finally {
       setLoading(false)
     }
@@ -65,8 +70,20 @@ export default function CurrencyTab({ address, selectedChain, isOwner = false }:
     return <div>Loading...</div>
   }
 
+  if (message) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500">{message}</p>
+      </div>
+    )
+  }
+
   if (sortedChains.length === 0) {
-    return <div>No currency balances found</div>
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500">No currency balances found</p>
+      </div>
+    )
   }
 
   return (

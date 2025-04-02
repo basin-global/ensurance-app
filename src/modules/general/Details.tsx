@@ -4,9 +4,8 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { useGeneralService } from './service/hooks'
-import type { CoinDetails, TradingInfo } from './service/types'
 import { ChevronDown, ChevronUp } from 'lucide-react'
+import { EnsureButtons } from '@/components/layout/EnsureButtons'
 
 const FALLBACK_IMAGE = '/assets/no-image-found.png'
 
@@ -16,6 +15,15 @@ const convertIpfsUrl = (url: string) => {
     return url.replace('ipfs://', 'https://magic.decentralized-content.com/ipfs/')
   }
   return url
+}
+
+interface CertificateData {
+  name: string
+  symbol: string
+  total_volume: string
+  market_cap: string
+  token_uri: string
+  contract_address: string
 }
 
 interface DetailsProps {
@@ -30,35 +38,26 @@ export default function Details({
   tokenUri
 }: DetailsProps) {
   const [metadata, setMetadata] = useState<any>(null)
-  const [coinDetails, setCoinDetails] = useState<CoinDetails | null>(null)
-  const [tradingInfo, setTradingInfo] = useState<TradingInfo | null>(null)
+  const [certificateData, setCertificateData] = useState<CertificateData | null>(null)
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
-  const [poolDetails, setPoolDetails] = useState<any>(null)
-  const { getCoinDetails, getTradingInfo, getBuyConfig, getSellConfig, isAuthenticated } = useGeneralService()
 
-  // Fetch real-time data
+  // Fetch data from DB
   useEffect(() => {
     const fetchData = async () => {
-      const [details, trading] = await Promise.all([
-        getCoinDetails(contractAddress),
-        getTradingInfo(contractAddress)
-      ])
-      setCoinDetails(details)
-      setTradingInfo(trading)
-
-      // Fetch pool details from database
       try {
-        const response = await fetch(`/api/pools/${contractAddress}`)
-        if (response.ok) {
-          const data = await response.json()
-          setPoolDetails(data)
+        const response = await fetch('/api/general')
+        if (!response.ok) throw new Error('Failed to fetch data')
+        const data = await response.json()
+        const certificate = data.find((cert: CertificateData) => cert.contract_address === contractAddress)
+        if (certificate) {
+          setCertificateData(certificate)
         }
       } catch (error) {
-        console.error('Failed to fetch pool details:', error)
+        console.error('Error fetching certificate data:', error)
       }
     }
     fetchData()
-  }, [contractAddress, getCoinDetails, getTradingInfo])
+  }, [contractAddress])
 
   // Fetch metadata
   useEffect(() => {
@@ -117,7 +116,7 @@ export default function Details({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
       {/* Media Display */}
-      <Card className="bg-primary-dark border-gray-800">
+      <Card className="bg-primary-dark border-0">
         <CardContent className="p-4">
           <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-black/20">
             {videoUrl ? (
@@ -149,63 +148,46 @@ export default function Details({
 
       {/* Details */}
       <div className="space-y-6">
+        {/* Header */}
         <h1 className="text-3xl font-bold">{name}</h1>
         
+        {/* Description */}
         {metadata?.description && (
           <div className="prose dark:prose-invert max-w-none">
             <p className="text-base leading-relaxed text-gray-200">{renderDescription(metadata.description)}</p>
           </div>
         )}
 
-        {coinDetails && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h3 className="text-sm text-gray-500">Symbol</h3>
-                <p className="text-lg">{coinDetails.symbol}</p>
-              </div>
-              {poolDetails && (
-                <>
+        {certificateData && (
+          <>
+            {/* Metrics Card */}
+            <Card className="bg-primary-dark/50 border-gray-800">
+              <CardContent className="p-6">
+                <div className="grid grid-cols-2 gap-6">
                   <div>
-                    <h3 className="text-sm text-gray-500">Price</h3>
-                    <p className="text-lg">$ {Number(poolDetails.price).toFixed(2)}</p>
+                    <h3 className="text-sm text-gray-400 mb-1">Market Cap</h3>
+                    <p className="text-xl font-semibold">${Number(certificateData.market_cap || '0').toLocaleString(undefined, { 
+                      minimumFractionDigits: Number(certificateData.market_cap || '0') < 10 ? 2 : 0,
+                      maximumFractionDigits: Number(certificateData.market_cap || '0') < 10 ? 2 : 0
+                    })}</p>
                   </div>
                   <div>
-                    <h3 className="text-sm text-gray-500">Market Cap</h3>
-                    <p className="text-lg">$ {Number(poolDetails.marketCap).toLocaleString()}</p>
+                    <h3 className="text-sm text-gray-400 mb-1">Volume</h3>
+                    <p className="text-xl font-semibold">${Number(certificateData.total_volume || '0').toLocaleString(undefined, { 
+                      minimumFractionDigits: Number(certificateData.total_volume || '0') < 10 ? 2 : 0,
+                      maximumFractionDigits: Number(certificateData.total_volume || '0') < 10 ? 2 : 0
+                    })}</p>
                   </div>
-                </>
-              )}
-            </div>
-
-            {tradingInfo && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold">Trading</h2>
-                <div className="grid grid-cols-2 gap-4">
-                  <Button 
-                    variant="default" 
-                    size="lg"
-                    disabled={!isAuthenticated}
-                  >
-                    Buy
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="lg"
-                    disabled={!isAuthenticated}
-                  >
-                    Sell
-                  </Button>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              </CardContent>
+            </Card>
 
-        <div className="pt-4">
-          <h3 className="text-sm text-gray-500">Contract Address</h3>
-          <p className="text-lg font-mono break-all">{contractAddress}</p>
-        </div>
+            {/* Ensure Buttons */}
+            <div className="flex justify-center pt-2">
+              <EnsureButtons />
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { baseVerifyLinkStyle } from '../BasedOnchain'
 
 interface Props {
   contractAddress: string
@@ -17,7 +16,7 @@ export default function NftLinks({ contractAddress, tokenId, chain = 'base', sho
         href={`https://opensea.io/assets/${chain}/${contractAddress}/${tokenId}`}
         target="_blank"
         rel="noopener noreferrer"
-        className={baseVerifyLinkStyle}
+        className="text-gray-400 hover:text-white transition-colors"
       >
         opensea
       </Link>
@@ -26,7 +25,7 @@ export default function NftLinks({ contractAddress, tokenId, chain = 'base', sho
         href={`https://rarible.com/token/${chain}/${contractAddress}:${tokenId}`}
         target="_blank"
         rel="noopener noreferrer"
-        className={baseVerifyLinkStyle}
+        className="text-gray-400 hover:text-white transition-colors"
       >
         rarible
       </Link>
@@ -36,7 +35,7 @@ export default function NftLinks({ contractAddress, tokenId, chain = 'base', sho
           href={`https://tokenbound.org/assets/${chain}/${contractAddress}/${tokenId}`}
           target="_blank"
           rel="noopener noreferrer"
-          className={baseVerifyLinkStyle}
+          className="text-gray-400 hover:text-white transition-colors"
         >
           tokenbound
         </Link>

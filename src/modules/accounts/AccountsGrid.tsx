@@ -247,16 +247,22 @@ export default function AccountsGrid({
         return (
             <div className="text-center py-8">
                 <p className="text-lg text-gray-600 dark:text-gray-400">
-                    No{groupName ? ` .${groupName}` : ''} accounts found{searchQuery ? ' matching your search' : ''}.
-                    {!searchQuery && (
+                    {walletAddress ? (
+                        "API migration in progress - NFT functionality will be restored soon"
+                    ) : (
                         <>
-                            {' '}You can create one{' '}
-                            <Link 
-                                href={`${getPathPrefix()}/create`}
-                                className="text-blue-400 hover:text-blue-300 transition-colors"
-                            >
-                                here
-                            </Link>.
+                            No{groupName ? ` .${groupName}` : ''} accounts found{searchQuery ? ' matching your search' : ''}.
+                            {!searchQuery && (
+                                <>
+                                    {' '}You can create one{' '}
+                                    <Link 
+                                        href={`${getPathPrefix()}/create`}
+                                        className="text-blue-400 hover:text-blue-300 transition-colors"
+                                    >
+                                        here
+                                    </Link>.
+                                </>
+                            )}
                         </>
                     )}
                 </p>

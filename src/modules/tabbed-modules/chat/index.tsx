@@ -11,7 +11,7 @@ interface ChatTabProps {
 
 export default function ChatTab({ address, isAgent = false }: ChatTabProps) {
   return (
-    <div className="relative h-[600px]">
+    <div className="relative min-h-[300px]">
       <div className={`space-y-4 ${!isAgent ? 'blur-[2px]' : ''}`}>
         {/* Chat messages */}
         <div className="space-y-4">

@@ -21,18 +21,18 @@ export function PrivyProviderWrapper({ children }: { children: React.ReactNode }
     <PrivyProvider
       appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID!}
       config={{
+        loginMethods: ['wallet'],
         defaultChain: baseChain,
         supportedChains: activeChains,
         appearance: {
           theme: 'dark',
           accentColor: '#22c55e', // Green-500 to match your UI
           showWalletLoginFirst: true,
-          walletList: ['metamask', 'coinbase_wallet', 'wallet_connect', 'detected_wallets'],
+          walletList: ['metamask', 'coinbase_wallet', 'wallet_connect'],
           logo: '/groups/orbs/ensurance-orb.png',
           landingHeader: 'connect',
           loginMessage: 'ensurance.app'
-        },
-        loginMethods: ['wallet']
+        }
       }}
     >
       {children}

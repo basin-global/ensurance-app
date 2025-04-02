@@ -2,15 +2,17 @@
 
 import GroupVerification from './GroupVerification'
 import AccountVerification from './AccountVerification'
+import GeneralCertificateVerification from './GeneralCertificateVerification'
 import { ShieldCheck } from 'lucide-react'
 
 interface Props {
-  type: 'group' | 'account'
+  type: 'group' | 'account' | 'general'
   name: string
   group?: string
+  contractAddress?: string
 }
 
-export default function VerificationSection({ type, name, group }: Props) {
+export default function VerificationSection({ type, name, group, contractAddress }: Props) {
   return (
     <div className="w-full border-t border-gray-800 py-4">
       <div className="container mx-auto px-4">
@@ -24,8 +26,10 @@ export default function VerificationSection({ type, name, group }: Props) {
             <div className="text-[12px]">
               {type === 'group' ? (
                 <GroupVerification name={name} />
-              ) : (
+              ) : type === 'account' ? (
                 <AccountVerification name={name} group={group!} />
+              ) : (
+                <GeneralCertificateVerification contractAddress={contractAddress!} />
               )}
             </div>
           </div>

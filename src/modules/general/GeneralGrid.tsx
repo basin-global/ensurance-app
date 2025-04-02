@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import Link from 'next/link'
 import Image from 'next/image'
+import { EnsureButtons } from '@/components/layout/EnsureButtons'
 
 interface CreatorEarning {
   amountUsd: string
@@ -148,11 +149,8 @@ export default function GeneralGrid({
   return filteredCertificates.length > 0 ? (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
       {filteredCertificates.map((cert) => (
-        <Link 
-          key={cert.contract_address}
-          href={`${urlPrefix}/general/${cert.contract_address}`}
-        >
-          <Card className="bg-primary-dark border-gray-800 hover:border-gray-700 transition-colors cursor-pointer">
+        <Card key={cert.contract_address} className="bg-primary-dark border-gray-800 hover:border-gray-700 transition-colors">
+          <Link href={`${urlPrefix}/general/${cert.contract_address}`}>
             <CardContent className="p-4">
               <div className="flex flex-col gap-4">
                 <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-black/20">
@@ -184,20 +182,25 @@ export default function GeneralGrid({
                 <div className="text-lg font-semibold text-white text-center">
                   {cert.name || 'Unnamed Certificate'}
                 </div>
-                <div className="flex justify-between text-sm text-gray-400 px-2">
-                  <div>Vol: ${Number(cert.total_volume || '0').toLocaleString(undefined, { 
-                    minimumFractionDigits: Number(cert.total_volume || '0') < 10 ? 2 : 0,
-                    maximumFractionDigits: Number(cert.total_volume || '0') < 10 ? 2 : 0
-                  })}</div>
-                  <div>MC: ${Number(cert.market_cap || '0').toLocaleString(undefined, { 
-                    minimumFractionDigits: Number(cert.market_cap || '0') < 10 ? 2 : 0,
-                    maximumFractionDigits: Number(cert.market_cap || '0') < 10 ? 2 : 0
-                  })}</div>
+                <div className="flex items-center justify-between text-sm text-gray-400 px-2">
+                  <div className="flex gap-4">
+                    <div>MC: ${Number(cert.market_cap || '0').toLocaleString(undefined, { 
+                      minimumFractionDigits: Number(cert.market_cap || '0') < 10 ? 2 : 0,
+                      maximumFractionDigits: Number(cert.market_cap || '0') < 10 ? 2 : 0
+                    })}</div>
+                    <div>Vol: ${Number(cert.total_volume || '0').toLocaleString(undefined, { 
+                      minimumFractionDigits: Number(cert.total_volume || '0') < 10 ? 2 : 0,
+                      maximumFractionDigits: Number(cert.total_volume || '0') < 10 ? 2 : 0
+                    })}</div>
+                  </div>
+                  <div onClick={(e) => e.preventDefault()}>
+                    <EnsureButtons showMinus={false} size="sm" />
+                  </div>
                 </div>
               </div>
             </CardContent>
-          </Card>
-        </Link>
+          </Link>
+        </Card>
       ))}
     </div>
   ) : (

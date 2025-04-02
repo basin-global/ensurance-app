@@ -2,15 +2,13 @@
 
 import Link from 'next/link'
 import useSWR from 'swr'
-import NftLinks from './NftLinks'
-import { baseVerifyLinkStyle } from '../BasedOnchain'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
 
 interface Props {
   name: string
   group: string
 }
+
+const fetcher = (url: string) => fetch(url).then(r => r.json())
 
 export default function AccountVerification({ name, group }: Props) {
   const { data: groupData } = useSWR(
@@ -35,14 +33,15 @@ export default function AccountVerification({ name, group }: Props) {
 
   if (!groupData?.contract_address || !accountData?.token_id) return null
 
+  // TODO(TMO): Fix spacing issue between verification section and gradient line in account page layout
   return (
-    <>
-      <div className="flex justify-center gap-2">
+    <div className="text-[12px] flex flex-col items-center gap-2">
+      <div className="flex gap-2">
         <Link
           href={`https://basescan.org/token/${groupData.contract_address}#code`}
           target="_blank"
           rel="noopener noreferrer"
-          className={baseVerifyLinkStyle}
+          className="text-gray-400 hover:text-white transition-colors"
         >
           group
         </Link>
@@ -50,19 +49,37 @@ export default function AccountVerification({ name, group }: Props) {
           href={`https://basescan.org/nft/${groupData.contract_address}/${accountData.token_id}`}
           target="_blank"
           rel="noopener noreferrer"
-          className={baseVerifyLinkStyle}
+          className="text-gray-400 hover:text-white transition-colors"
         >
           account
         </Link>
       </div>
-
-      <div className="mt-1">
-        <NftLinks 
-          contractAddress={groupData.contract_address}
-          tokenId={accountData.token_id}
-          showTokenbound={true}
-        />
+      <div className="flex gap-2">
+        <Link
+          href={`https://opensea.io/assets/base/${groupData.contract_address}/${accountData.token_id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-gray-400 hover:text-white transition-colors"
+        >
+          opensea
+        </Link>
+        <Link
+          href={`https://rarible.com/token/base/${groupData.contract_address}:${accountData.token_id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-gray-400 hover:text-white transition-colors"
+        >
+          rarible
+        </Link>
+        <Link
+          href={`https://tokenbound.org/assets/base/${groupData.contract_address}/${accountData.token_id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-gray-400 hover:text-white transition-colors"
+        >
+          tokenbound
+        </Link>
       </div>
-    </>
+    </div>
   )
 } 

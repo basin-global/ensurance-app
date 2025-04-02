@@ -4,6 +4,7 @@ import { PrivyProviderWrapper } from '@/providers/privy-provider'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import WebAnalytics from '@/components/analytics/WebAnalytics'
+import AnnouncementBanner from '@/components/layout/AnnouncementBanner'
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify'
 import { Metadata } from 'next'
@@ -35,6 +36,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased min-h-screen flex flex-col font-grotesk bg-black text-white">
         <PrivyProviderWrapper>
+          <AnnouncementBanner />
           <Header />
           <ToastContainer 
             theme="dark"

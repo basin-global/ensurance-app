@@ -26,6 +26,7 @@ export default function AssetGrid({
 }: AssetGridProps) {
   const [assets, setAssets] = useState<Asset[]>([])
   const [loading, setLoading] = useState(true)
+  const [message, setMessage] = useState<string | null>(null)
 
   const getPathPrefix = () => {
     return urlPrefix || '';
@@ -40,9 +41,16 @@ export default function AssetGrid({
       }`)
       if (!response.ok) throw new Error('Failed to fetch assets')
       const data = await response.json()
-      setAssets(data.nfts || [])
+      
+      if (data.message) {
+        setMessage(data.message)
+      } else {
+        setMessage(null)
+        setAssets(data.nfts || [])
+      }
     } catch (error) {
       console.error('Error fetching assets:', error)
+      setMessage("Failed to load assets")
       setAssets([])
     } finally {
       setLoading(false)
@@ -77,6 +85,14 @@ export default function AssetGrid({
             </CardContent>
           </Card>
         ))}
+      </div>
+    )
+  }
+
+  if (message) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500">{message}</p>
       </div>
     )
   }

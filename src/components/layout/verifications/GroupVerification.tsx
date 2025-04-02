@@ -2,13 +2,12 @@
 
 import Link from 'next/link'
 import useSWR from 'swr'
-import { baseVerifyLinkStyle } from '../BasedOnchain'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
 
 interface Props {
   name: string
 }
+
+const fetcher = (url: string) => fetch(url).then(r => r.json())
 
 export default function GroupVerification({ name }: Props) {
   const { data: groupData } = useSWR(
@@ -28,7 +27,7 @@ export default function GroupVerification({ name }: Props) {
       href={`https://basescan.org/token/${groupData.contract_address}#readContract`}
       target="_blank"
       rel="noopener noreferrer"
-      className={baseVerifyLinkStyle}
+      className="text-gray-400 hover:text-white transition-colors"
     >
       group
     </Link>

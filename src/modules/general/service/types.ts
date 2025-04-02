@@ -13,4 +13,5 @@ export interface TradingInfo {
   totalVolume: string
   volume24h: string
   price: string
+  marketCap: string
 } 

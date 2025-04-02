@@ -20,43 +20,37 @@ export default function AccountPage({ params }: AccountPageProps) {
     ?.join(' ') || ''
 
   return (
-    <>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-1">
-        {/* Left Column - Chat */}
-        <div className="bg-gray-900/30 rounded-lg p-3">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="text-xs uppercase tracking-wider text-gray-400 font-medium">
-              Chat With Agent
-            </div>
-            <div className="w-2 h-2 rounded-full bg-green-500/50 animate-pulse" />
-          </div>
-          <ChatTab 
-            address={accountData.tba_address}
-            isOwner={isOwner}
-            isAgent={accountData.is_agent}
-          />
-        </div>
-
-        {/* Right Column - Overview */}
-        <div className="bg-gray-900/30 rounded-lg p-3">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="text-xs uppercase tracking-wider text-gray-400 font-medium">
-              Account Overview
-            </div>
-            <div className="flex-1 h-[1px] bg-gradient-to-r from-gray-800 to-transparent" />
-          </div>
-          <OverviewTab
-            description={accountData.description}
-            tbaAddress={accountData.tba_address}
-            isOwner={isOwner}
-          />
-        </div>
-
-        {/* Full Width Certificates Section */}
-        <div className="lg:col-span-2">
+    <div className="min-h-screen flex flex-col">
+      <div className="flex-1 mb-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-1">
+          {/* Left Column - Chat */}
           <div className="bg-gray-900/30 rounded-lg p-3">
-            <h3 className="text-lg font-medium text-gray-200 mb-1">Related Certificates</h3>
-            <p className="text-gray-400">Certificate grid functionality is being updated.</p>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="text-xs uppercase tracking-wider text-gray-400 font-medium">
+                Chat With Agent
+              </div>
+              <div className="w-2 h-2 rounded-full bg-green-500/50 animate-pulse" />
+            </div>
+            <ChatTab 
+              address={accountData.tba_address}
+              isOwner={isOwner}
+              isAgent={accountData.is_agent}
+            />
+          </div>
+
+          {/* Right Column - Overview */}
+          <div className="bg-gray-900/30 rounded-lg p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="text-xs uppercase tracking-wider text-gray-400 font-medium">
+                Account Overview
+              </div>
+              <div className="flex-1 h-[1px] bg-gradient-to-r from-gray-800 to-transparent" />
+            </div>
+            <OverviewTab
+              description={accountData.description}
+              tbaAddress={accountData.tba_address}
+              isOwner={isOwner}
+            />
           </div>
         </div>
       </div>
@@ -65,6 +59,6 @@ export default function AccountPage({ params }: AccountPageProps) {
         name={params.account} 
         group={params.account.split('.')[1]} 
       />
-    </>
+    </div>
   )
 } 

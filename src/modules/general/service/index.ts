@@ -54,6 +54,7 @@ export const GeneralService = {
       const totalVolume = parseFloat(coin.totalVolume || '0')
       const totalSupply = parseFloat(coin.totalSupply || '0')
       const volume24h = parseFloat(coin.volume24h || '0')
+      const marketCap = parseFloat(coin.marketCap || '0')
 
       // Calculate price, handling division by zero
       const price = totalSupply > 0 ? (totalVolume / totalSupply).toString() : '0'
@@ -61,7 +62,8 @@ export const GeneralService = {
       return {
         totalVolume: totalVolume.toString(),
         volume24h: volume24h.toString(),
-        price
+        price,
+        marketCap: marketCap.toString()
       }
     } catch (error) {
       console.error('Failed to fetch trading info:', error)
