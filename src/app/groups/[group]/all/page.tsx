@@ -4,6 +4,7 @@ import { useState } from 'react'
 import AccountsGrid from '@/modules/accounts/AccountsGrid'
 import { AssetSearch } from '@/modules/assets/AssetSearch'
 import { GroupInfo } from '@/modules/groups/GroupInfo'
+import VerificationSection from '@/components/layout/verifications/VerificationSection'
 
 export default function GroupAllPage({ params }: { params: { group: string } }) {
   const [searchQuery, setSearchQuery] = useState('')
@@ -26,6 +27,7 @@ export default function GroupAllPage({ params }: { params: { group: string } }) 
         </div>
       </div>
       <GroupInfo groupName={params.group} />
+      <VerificationSection type="group" name={params.group} />
     </div>
   )
 } 

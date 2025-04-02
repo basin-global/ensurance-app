@@ -36,8 +36,7 @@ export default function AccountVerification({ name, group }: Props) {
   if (!groupData?.contract_address || !accountData?.token_id) return null
 
   return (
-    <div className="flex flex-col gap-1.5">
-      {/* Group and Account line */}
+    <>
       <div className="flex justify-center gap-2">
         <Link
           href={`https://basescan.org/token/${groupData.contract_address}#code`}
@@ -57,12 +56,13 @@ export default function AccountVerification({ name, group }: Props) {
         </Link>
       </div>
 
-      {/* NFT marketplaces line */}
-      <NftLinks 
-        contractAddress={groupData.contract_address}
-        tokenId={accountData.token_id}
-        showTokenbound={true}
-      />
-    </div>
+      <div className="mt-1">
+        <NftLinks 
+          contractAddress={groupData.contract_address}
+          tokenId={accountData.token_id}
+          showTokenbound={true}
+        />
+      </div>
+    </>
   )
 } 

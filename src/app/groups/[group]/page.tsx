@@ -2,6 +2,7 @@ import { groups } from '@/lib/database/groups'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
+import VerificationSection from '@/components/layout/verifications/VerificationSection'
 
 export default async function GroupPage({ params }: { params: { group: string } }) {
     const groupData = await groups.getByName(`.${params.group}`)
@@ -138,6 +139,7 @@ export default async function GroupPage({ params }: { params: { group: string } 
                     </div>
                 </div>
             </div>
+            <VerificationSection type="group" name={params.group} />
         </div>
     )
 } 
