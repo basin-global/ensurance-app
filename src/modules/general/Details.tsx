@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { EnsureButtons } from '@/components/layout/EnsureButtons'
+import { Proceeds } from '@/modules/proceeds/components/Proceeds'
 
 const FALLBACK_IMAGE = '/assets/no-image-found.png'
 
@@ -31,12 +32,16 @@ interface DetailsProps {
   contractAddress: string
   name: string
   tokenUri: string
+  payout_recipient?: string
+  provenance?: string
 }
 
 export default function Details({ 
   contractAddress,
   name,
-  tokenUri
+  tokenUri,
+  payout_recipient,
+  provenance
 }: DetailsProps) {
   const [metadata, setMetadata] = useState<any>(null)
   const [certificateData, setCertificateData] = useState<CertificateData | null>(null)
@@ -191,6 +196,16 @@ export default function Details({
             <div className="flex justify-center pt-2">
               <EnsureButtons />
             </div>
+
+            {/* Proceeds Section */}
+            {(payout_recipient || provenance) && (
+              <div className="pt-6">
+                <Proceeds 
+                  payout_recipient={payout_recipient}
+                  provenance={provenance}
+                />
+              </div>
+            )}
           </>
         )}
       </div>

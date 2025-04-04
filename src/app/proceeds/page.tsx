@@ -1,7 +1,7 @@
 'use client';
 
-import { FlowViewer } from '@/modules/proceeds/flows/FlowViewer';
-import { SplitsWrapper } from '@/modules/proceeds/splits-provider';
+import { FlowViewer } from '@/modules/proceeds/components/viewer/ProceedsViewer';
+import { SplitsWrapper } from '@/providers/splits-provider';
 import { PageHeader } from '@/components/layout/PageHeader';
 
 export default function ProceedsPage() {

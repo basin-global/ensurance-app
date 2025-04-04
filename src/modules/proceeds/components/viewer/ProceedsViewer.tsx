@@ -7,8 +7,8 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useSplitMetadata, useSplitsClient } from '@0xsplits/splits-sdk-react';
-import { FlowNode } from '../components/FlowNode';
-import { SplitLevel } from '../components/SplitLevel';
+import { FlowNode } from './ProceedsNode';
+import { SplitLevel } from './ProcceedsLevel';
 
 interface FlowViewerProps {
   address: string;

@@ -5,6 +5,7 @@ import { ArrowLeft } from 'lucide-react'
 import Details from '@/modules/general/Details'
 import { PageHeader } from '@/components/layout/PageHeader'
 import VerificationSection from '@/components/layout/verifications/VerificationSection'
+import { SplitsWrapper } from '@/providers/splits-provider'
 
 // Tell Next.js this is a dynamic route
 export const dynamic = 'force-dynamic'
@@ -16,7 +17,7 @@ export default async function GeneralCertificateDetails({
 }) {
   // Get immutable data from DB
   const dbResult = await sql`
-    SELECT name, token_uri, contract_address
+    SELECT name, token_uri, contract_address, payout_recipient, provenance
     FROM certificates.general 
     WHERE contract_address = ${params.contract}
   `
@@ -38,12 +39,17 @@ export default async function GeneralCertificateDetails({
       </Link>
       
       <div className="container mx-auto px-4 flex-1">
-        <Details
-          contractAddress={certificate.contract_address}
-          name={certificate.name}
-          tokenUri={certificate.token_uri}
-        />
+        <SplitsWrapper>
+          <Details
+            contractAddress={certificate.contract_address}
+            name={certificate.name}
+            tokenUri={certificate.token_uri}
+            payout_recipient={certificate.payout_recipient}
+            provenance={certificate.provenance}
+          />
+        </SplitsWrapper>
       </div>
+
       <VerificationSection 
         type="general"
         name={certificate.name}

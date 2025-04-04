@@ -2,8 +2,10 @@
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useMemo } from 'react';
+import { useSplitMetadata } from '@0xsplits/splits-sdk-react';
+import { base } from 'viem/chains';
 
-interface Recipient {
+interface ProceedsRecipient {
   percentAllocation: number;
   recipient: {
     address: string;
@@ -11,38 +13,50 @@ interface Recipient {
   };
 }
 
-interface SplitsBarProps {
-  recipients: Recipient[];
+interface ProceedsBarProps {
+  recipients: ProceedsRecipient[];
   isFlowView?: boolean;
 }
 
-export function SplitsBar({ recipients, isFlowView = false }: SplitsBarProps) {
-  const TOOLTIP_THRESHOLD = 20;
+export function ProceedsBar({ recipients, isFlowView = false }: ProceedsBarProps) {
+  // Get split metadata if the address is a split contract
+  const { splitMetadata } = useSplitMetadata(
+    base.id, 
+    recipients[0]?.recipient.address
+  );
+
+  // Use split metadata if available, otherwise use passed recipients
+  const displayRecipients = useMemo(() => {
+    if (splitMetadata?.recipients) {
+      return splitMetadata.recipients;
+    }
+    return recipients;
+  }, [splitMetadata, recipients]);
 
   const data = useMemo(() => {
     return [{
       name: "Allocations",
-      ...recipients.reduce((acc, recipient) => ({
+      ...displayRecipients.reduce((acc, recipient) => ({
         ...acc,
         [recipient.recipient.address]: recipient.percentAllocation / 100
       }), {})
     }];
-  }, [recipients]);
+  }, [displayRecipients]);
 
   const colors = useMemo(() => {
-    return recipients.map((_, index) => {
+    return displayRecipients.map((_, index) => {
       const hue = (index * 137.508) % 360;
       const saturation = '70%';
       const lightness = '65%';
       return `hsl(${hue}, ${saturation}, ${lightness})`;
     });
-  }, [recipients]);
+  }, [displayRecipients]);
 
   return (
     <div className={`flex flex-col gap-2 ${!isFlowView && 'cursor-pointer hover:opacity-90 transition-opacity'}`}>
       {!isFlowView && (
         <h3 className="text-sm font-medium text-gray-400 flex items-center gap-2">
-          {recipients.length} {recipients.length === 1 ? 'Beneficiary' : 'Beneficiaries'}
+          {displayRecipients.length} {displayRecipients.length === 1 ? 'Beneficiary' : 'Beneficiaries'}
           <span className="text-xs text-gray-500">(click to view)</span>
         </h3>
       )}
@@ -68,7 +82,7 @@ export function SplitsBar({ recipients, isFlowView = false }: SplitsBarProps) {
                   return (
                     <div className="bg-gray-900 px-3 py-1.5 rounded-lg border border-gray-700 shadow-lg">
                       <p className="text-gray-400 text-sm">
-                        {recipients.length} {recipients.length === 1 ? 'Beneficiary' : 'Beneficiaries'}
+                        {displayRecipients.length} {displayRecipients.length === 1 ? 'Beneficiary' : 'Beneficiaries'}
                       </p>
                     </div>
                   );
@@ -76,7 +90,7 @@ export function SplitsBar({ recipients, isFlowView = false }: SplitsBarProps) {
                 return null;
               }}
             />
-            {recipients.map((recipient, index) => (
+            {displayRecipients.map((recipient, index) => (
               <Bar
                 key={recipient.recipient.address}
                 dataKey={recipient.recipient.address}

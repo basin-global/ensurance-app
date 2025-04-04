@@ -2,7 +2,7 @@
 
 import { Handle, Position } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { SplitsBar } from './SplitsBar';
+import { ProceedsBar } from './ProceedsBar';
 
 interface FlowNodeProps {
   data: {
@@ -60,10 +60,10 @@ export function FlowNode({ data }: FlowNodeProps) {
         </div>
       </div>
       
-      {/* Show SplitsBar only for splits */}
+      {/* Show ProceedsBar only for splits */}
       {data.isSplit && data.recipients && (
         <div className="mb-2">
-          <SplitsBar 
+          <ProceedsBar 
             recipients={data.recipients} 
             isFlowView={true}
           />
