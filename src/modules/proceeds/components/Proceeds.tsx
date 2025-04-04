@@ -14,7 +14,7 @@ export function Proceeds({ payout_recipient, provenance }: ProceedsProps) {
       <TotalProceedsBar 
         address={payout_recipient}
         title="FUNDING WHAT MATTERS"
-        description="ensurance proceeds funds what matters. all proceeds fund these recipients"
+        description="ensurance proceeds fund these recipients"
       />
 
       {/* Provenance Section - Only show if provenance exists */}
