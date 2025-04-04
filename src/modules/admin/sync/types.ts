@@ -17,6 +17,8 @@ export interface GeneralCertificateData {
   volume_24h?: string;
   market_cap?: string;
   creator_earnings?: any[];
+  unique_holders?: number;
+  payout_recipient?: string;
 }
 
 export interface AccountData {

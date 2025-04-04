@@ -365,9 +365,9 @@ async function syncGeneralCertificatesMarketData(): Promise<SyncOperationResult>
     console.log(`Found ${certificates.length} certificates to sync`);
     
     // Process in smaller batches to avoid rate limits
-    const BATCH_SIZE = 5;
-    const BATCH_DELAY = 1000; // 1 second between batches
-    const CALL_DELAY = 200;   // 200ms between API calls
+    const BATCH_SIZE = 3;  // 3 coins per batch
+    const BATCH_DELAY = 3000; // 3 seconds between batches
+    const CALL_DELAY = 1000;   // 1 second between API calls
 
     for (let i = 0; i < certificates.length; i += BATCH_SIZE) {
       const batch = certificates.slice(i, i + BATCH_SIZE);
@@ -388,8 +388,16 @@ async function syncGeneralCertificatesMarketData(): Promise<SyncOperationResult>
             chain: 8453
           });
           
+          // Debug logging
+          console.log('Full Zora API response:', JSON.stringify(response, null, 2));
+          
           if (!response?.data?.zora20Token) {
             console.log(`❌ No market data available for ${cert.contract_address}`);
+            console.log('Response structure:', {
+              hasResponse: !!response,
+              hasData: !!response?.data,
+              hasZora20Token: !!response?.data?.zora20Token
+            });
             results.push({
               id: cert.contract_address,
               status: 'failed',
@@ -406,7 +414,8 @@ async function syncGeneralCertificatesMarketData(): Promise<SyncOperationResult>
             totalVolume: coinData.totalVolume,
             volume24h: coinData.volume24h,
             marketCap: coinData.marketCap,
-            creatorEarnings: coinData.creatorEarnings
+            creatorEarnings: coinData.creatorEarnings,
+            uniqueHolders: coinData.uniqueHolders
           });
 
           // Update market data in database
@@ -414,7 +423,8 @@ async function syncGeneralCertificatesMarketData(): Promise<SyncOperationResult>
             total_volume: coinData.totalVolume || '0',
             volume_24h: coinData.volume24h || '0',
             market_cap: coinData.marketCap || '0',
-            creator_earnings: coinData.creatorEarnings || []
+            creator_earnings: coinData.creatorEarnings || [],
+            unique_holders: coinData.uniqueHolders || 0
           });
 
           console.log(`✓ Updated ${cert.contract_address}`);
@@ -431,7 +441,8 @@ async function syncGeneralCertificatesMarketData(): Promise<SyncOperationResult>
               total_volume: coinData.totalVolume || '0',
               volume_24h: coinData.volume24h || '0',
               market_cap: coinData.marketCap || '0',
-              creator_earnings: coinData.creatorEarnings || []
+              creator_earnings: coinData.creatorEarnings || [],
+              unique_holders: coinData.uniqueHolders || 0
             }
           });
           success++;
@@ -452,7 +463,7 @@ async function syncGeneralCertificatesMarketData(): Promise<SyncOperationResult>
 
       // Add delay between batches
       if (i + BATCH_SIZE < certificates.length) {
-        console.log(`\nWaiting ${BATCH_DELAY}ms before next batch...`);
+        console.log(`\nWaiting ${BATCH_DELAY/1000} seconds before next batch...`);
         await sleep(BATCH_DELAY);
       }
 

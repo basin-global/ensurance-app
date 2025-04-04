@@ -16,7 +16,17 @@ interface GeneralCertificate {
   volume_24h?: string;
   market_cap?: string;
   creator_earnings?: any[];
+  unique_holders?: number;
   last_market_update?: string;
+  payout_recipient?: string;
+}
+
+interface UpdateFromChainData {
+  name: string;
+  symbol: string;
+  token_uri: string;
+  pool_address: string;
+  payout_recipient: string;
 }
 
 export const generalCertificates = {
@@ -25,7 +35,7 @@ export const generalCertificates = {
    */
   async getCertificatesForSync(empty_only: boolean = false): Promise<GeneralCertificate[]> {
     const query = empty_only 
-      ? sql`SELECT * FROM certificates.general WHERE chain = 'base' AND (name IS NULL OR symbol IS NULL OR token_uri IS NULL OR pool_address IS NULL)`
+      ? sql`SELECT * FROM certificates.general WHERE chain = 'base' AND (name IS NULL OR symbol IS NULL OR token_uri IS NULL OR pool_address IS NULL OR payout_recipient IS NULL)`
       : sql`SELECT * FROM certificates.general WHERE chain = 'base'`;
 
     const { rows } = await query;
@@ -35,19 +45,15 @@ export const generalCertificates = {
   /**
    * Update certificate with on-chain data
    */
-  async updateFromChain(cert: GeneralCertificate, data: {
-    name: string;
-    symbol: string;
-    token_uri: string;
-    pool_address: string;
-  }): Promise<void> {
+  async updateFromChain(cert: GeneralCertificate, data: UpdateFromChainData): Promise<void> {
     await sql`
       UPDATE certificates.general 
       SET 
         name = ${data.name},
         symbol = ${data.symbol},
         token_uri = ${data.token_uri},
-        pool_address = ${data.pool_address}
+        pool_address = ${data.pool_address},
+        payout_recipient = ${data.payout_recipient}
       WHERE 
         contract_address = ${cert.contract_address} 
         AND chain = ${cert.chain}
@@ -62,6 +68,7 @@ export const generalCertificates = {
     volume_24h: string;
     market_cap: string;
     creator_earnings: any[];
+    unique_holders: number;
   }): Promise<void> {
     await sql`
       UPDATE certificates.general 
@@ -70,6 +77,7 @@ export const generalCertificates = {
         volume_24h = ${data.volume_24h},
         market_cap = ${data.market_cap},
         creator_earnings = ${JSON.stringify(data.creator_earnings)},
+        unique_holders = ${data.unique_holders},
         last_market_update = NOW()
       WHERE 
         contract_address = ${cert.contract_address} 
@@ -102,7 +110,7 @@ export const generalCertificates = {
   async syncFromChain(cert: GeneralCertificate): Promise<SyncResult> {
     try {
       // Get data from chain
-      const [name, symbol, tokenUri, poolAddress] = await Promise.all([
+      const [name, symbol, tokenUri, poolAddress, payoutRecipient] = await Promise.all([
         client.readContract({
           address: cert.contract_address as `0x${string}`,
           abi: ZORA_COIN_ABI,
@@ -122,6 +130,11 @@ export const generalCertificates = {
           address: cert.contract_address as `0x${string}`,
           abi: ZORA_COIN_ABI,
           functionName: 'poolAddress'
+        }) as Promise<string>,
+        client.readContract({
+          address: cert.contract_address as `0x${string}`,
+          abi: ZORA_COIN_ABI,
+          functionName: 'payoutRecipient'
         }) as Promise<string>
       ]);
 
@@ -130,7 +143,8 @@ export const generalCertificates = {
         name,
         symbol,
         token_uri: tokenUri,
-        pool_address: poolAddress
+        pool_address: poolAddress,
+        payout_recipient: payoutRecipient
       });
 
       const data: GeneralCertificateData = {
@@ -139,7 +153,8 @@ export const generalCertificates = {
         name,
         symbol,
         token_uri: tokenUri,
-        pool_address: poolAddress
+        pool_address: poolAddress,
+        payout_recipient: payoutRecipient
       };
 
       return {

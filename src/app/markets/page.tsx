@@ -1,29 +1,33 @@
 'use client'
 
+import { useState } from 'react'
 import { PageHeader } from '@/components/layout/PageHeader'
+import GeneralGrid from '@/modules/general/GeneralGrid'
 
 export default function MarketsPage() {
+  const [marketData, setMarketData] = useState([])
+  const [searchQuery, setSearchQuery] = useState('')
+
   return (
     <div className="min-h-screen flex flex-col">
       <div className="container mx-auto px-4 py-8 flex-1">
-        <div className="space-y-4">
+        <div className="space-y-8">
           <PageHeader
             title="ensurance markets"
-            description="swap, trade & exchange natural capital assets"
-            showSearch={false}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            searchPlaceholder="what do you want to ensure?"
+            showSearch={true}
           />
-          <div className="flex flex-col items-center justify-start text-center">
-            <p className="mb-4">Currently, you can find General Ensurance on</p>
-            <a 
-              href="https://zora.co/@ensurance" 
-              className="text-blue-500 hover:text-blue-700 underline"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Zora
-            </a>
-            <p className="mt-4">Stay tuned for our integrated marketplace!</p>
+          <div className="flex flex-col items-center justify-start text-center space-y-2 mb-8">
+            <p className="text-lg font-medium">general ensurance values what matters - available now 👇</p>
+            <p className="text-lg text-gray-500">specific ensurance protects what matters - coming soon 🚀</p>
           </div>
+          <GeneralGrid 
+            urlPrefix=""
+            searchQuery={searchQuery}
+            onDataChange={setMarketData}
+          />
         </div>
       </div>
     </div>

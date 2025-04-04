@@ -98,9 +98,12 @@ export default function GeneralGrid({
       if (!response.ok) throw new Error('Failed to fetch certificates')
       const data = await response.json()
       
-      // Fetch metadata for each certificate
+      // Filter out any certificates that failed to fetch market data
+      const validCertificates = (data || []).filter(cert => cert && cert.contract_address)
+      
+      // Fetch metadata for each valid certificate
       const certificatesWithMetadata = await Promise.all(
-        (data || []).map(fetchMetadata)
+        validCertificates.map(fetchMetadata)
       )
       
       setCertificates(certificatesWithMetadata)

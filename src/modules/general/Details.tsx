@@ -24,6 +24,7 @@ interface CertificateData {
   market_cap: string
   token_uri: string
   contract_address: string
+  unique_holders: string
 }
 
 interface DetailsProps {
@@ -101,11 +102,11 @@ export default function Details({
         >
           {isDescriptionExpanded ? (
             <>
-              Show less <ChevronUp className="w-4 h-4" />
+              show less <ChevronUp className="w-4 h-4" />
             </>
           ) : (
             <>
-              Show more <ChevronDown className="w-4 h-4" />
+              show more <ChevronDown className="w-4 h-4" />
             </>
           )}
         </button>
@@ -163,20 +164,24 @@ export default function Details({
             {/* Metrics Card */}
             <Card className="bg-primary-dark/50 border-gray-800">
               <CardContent className="p-6">
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-3 gap-6">
                   <div>
-                    <h3 className="text-sm text-gray-400 mb-1">Market Cap</h3>
+                    <h3 className="text-sm text-gray-400 mb-1">market cap</h3>
                     <p className="text-xl font-semibold">${Number(certificateData.market_cap || '0').toLocaleString(undefined, { 
                       minimumFractionDigits: Number(certificateData.market_cap || '0') < 10 ? 2 : 0,
                       maximumFractionDigits: Number(certificateData.market_cap || '0') < 10 ? 2 : 0
                     })}</p>
                   </div>
                   <div>
-                    <h3 className="text-sm text-gray-400 mb-1">Volume</h3>
+                    <h3 className="text-sm text-gray-400 mb-1">volume</h3>
                     <p className="text-xl font-semibold">${Number(certificateData.total_volume || '0').toLocaleString(undefined, { 
                       minimumFractionDigits: Number(certificateData.total_volume || '0') < 10 ? 2 : 0,
                       maximumFractionDigits: Number(certificateData.total_volume || '0') < 10 ? 2 : 0
                     })}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm text-gray-400 mb-1">ensurers</h3>
+                    <p className="text-xl font-semibold">{Number(certificateData.unique_holders || '0').toLocaleString()}</p>
                   </div>
                 </div>
               </CardContent>
