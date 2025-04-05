@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { useSplitMetadata } from '@0xsplits/splits-sdk-react';
+import { SplitsClient } from '@0xsplits/splits-sdk';
 import { base } from 'viem/chains';
 import { useRouter } from 'next/navigation';
 
@@ -20,55 +20,163 @@ interface TotalProceedsBarProps {
   onClick?: () => void;
 }
 
+const MAX_DEPTH = 3; // Maximum depth to traverse split relationships
+
 export function TotalProceedsBar({ address, title, description, onClick }: TotalProceedsBarProps) {
   const router = useRouter();
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // Get split metadata if the address is a split contract
-  const { splitMetadata } = useSplitMetadata(base.id, address);
 
-  // Fetch recipient data
-  useEffect(() => {
-    const fetchRecipientType = async () => {
-      try {
-        const response = await fetch('/api/proceeds/recipients?address=' + address);
-        if (!response.ok) throw new Error('Failed to fetch recipient type');
-        const data = await response.json();
-        
-        // If it's a split and we have metadata, show all recipients
-        if (data?.type === 'split' && splitMetadata?.recipients) {
-          setRecipients(splitMetadata.recipients.map(r => ({
-            address: r.recipient.address,
-            type: 'account', // We'll determine nested types later
-            percentage: r.percentAllocation
-          })));
-        } else if (data?.type) {
-          // Otherwise show as single recipient with name if available
-          setRecipients([{
-            address,
-            type: data.type,
-            name: data.name,
-            percentage: 100
-          }]);
+  // Initialize splits client
+  const splitsClient = useMemo(() => new SplitsClient({
+    chainId: base.id,
+    includeEnsNames: false,
+    apiConfig: {
+      apiKey: process.env.NEXT_PUBLIC_SPLITS_API_KEY
+    }
+  }).dataClient, []);
+
+  // Helper function to get all recipients recursively
+  const getAllRecipients = async (
+    splitAddress: string,
+    parentPercentage: number = 100,
+    depth: number = 0,
+    processedAddresses: Set<string> = new Set(),
+    allRecipients: Recipient[] = []
+  ): Promise<Recipient[]> => {
+    const normalizedAddress = splitAddress.toLowerCase();
+    
+    // If we've seen this address before or hit max depth, stop recursion
+    if (processedAddresses.has(normalizedAddress) || depth >= MAX_DEPTH) {
+      return allRecipients;
+    }
+
+    // Track that we've processed this address
+    processedAddresses.add(normalizedAddress);
+    
+    try {
+      const splitMetadata = await splitsClient.getSplitMetadata({
+        chainId: base.id,
+        splitAddress
+      });
+
+      // If not a split or no recipients, add as single recipient
+      if (!splitMetadata?.recipients?.length) {
+        allRecipients.push({
+          address: normalizedAddress,
+          type: 'account' as const,
+          percentage: parentPercentage
+        });
+        return allRecipients;
+      }
+
+      // Process each recipient sequentially
+      for (const recipient of splitMetadata.recipients) {
+        const recipientAddress = recipient.recipient.address.toLowerCase();
+        const adjustedPercentage = (recipient.percentAllocation * parentPercentage) / 100;
+
+        if (!processedAddresses.has(recipientAddress) && depth < MAX_DEPTH) {
+          // Recursively process this recipient
+          await getAllRecipients(
+            recipientAddress,
+            adjustedPercentage,
+            depth + 1,
+            processedAddresses,
+            allRecipients
+          );
         } else {
-          // Default to account type if no type found
+          // Add as direct recipient if already seen or at max depth
+          allRecipients.push({
+            address: recipientAddress,
+            type: 'account' as const,
+            percentage: adjustedPercentage
+          });
+        }
+      }
+
+      return allRecipients;
+    } catch (err: any) {
+      // If not a split, add as single recipient
+      if (err.message?.includes('No split found at address')) {
+        allRecipients.push({
+          address: normalizedAddress,
+          type: 'account' as const,
+          percentage: parentPercentage
+        });
+        return allRecipients;
+      }
+      console.warn(`Error processing split ${splitAddress} at depth ${depth}:`, err);
+      return allRecipients;
+    }
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchSplitsData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Get all recipients recursively with a fresh processedAddresses set
+        const allRecipients = await getAllRecipients(address, 100, 0, new Set());
+
+        if (!isMounted) return;
+
+        // Debug logging
+        console.log(`[${title || address}] All recipients before combining:`, allRecipients.map(r => ({
+          address: r.address.slice(-4),
+          percentage: r.percentage.toFixed(2)
+        })));
+
+        // Combine duplicate recipients
+        const combinedRecipients = allRecipients.reduce((acc, curr) => {
+          const existing = acc.find(r => r.address === curr.address);
+          if (existing) {
+            console.log(`[${title || address}] Combining ${curr.address.slice(-4)}: ${existing.percentage.toFixed(2)}% + ${curr.percentage.toFixed(2)}%`);
+            existing.percentage += curr.percentage;
+          } else {
+            acc.push({ ...curr });
+          }
+          return acc;
+        }, [] as Recipient[]);
+
+        // Debug logging
+        console.log(`[${title || address}] Final combined recipients:`, combinedRecipients.map(r => ({
+          address: r.address.slice(-4),
+          percentage: r.percentage.toFixed(2)
+        })));
+
+        // Set final state
+        setRecipients(combinedRecipients.length > 0 ? combinedRecipients : [{
+          address,
+          type: 'account' as const,
+          percentage: 100
+        }]);
+      } catch (err) {
+        console.error(`[${title || address}] Error fetching splits:`, err);
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : 'Failed to load recipient data');
           setRecipients([{
             address,
-            type: 'account',
+            type: 'account' as const,
             percentage: 100
           }]);
         }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load recipient data');
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
-    fetchRecipientType();
-  }, [address, splitMetadata]);
+    fetchSplitsData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [address, splitsClient, title]);
 
   // Generate colors based on recipient type and index
   const colors = recipients.map((_, index) => {
@@ -85,15 +193,6 @@ export function TotalProceedsBar({ address, title, description, onClick }: Total
     }), {})
   }];
 
-  const handleClick = () => {
-    if (onClick) {
-      onClick();
-    } else {
-      // Default behavior: navigate to proceeds view
-      router.push(`/proceeds?address=${address}`);
-    }
-  };
-
   if (loading) {
     return <div className="h-12 bg-gray-800 rounded-full animate-pulse" />;
   }
@@ -103,10 +202,7 @@ export function TotalProceedsBar({ address, title, description, onClick }: Total
   }
 
   return (
-    <div 
-      className="flex flex-col gap-2 cursor-pointer hover:opacity-90 transition-opacity"
-      onClick={handleClick}
-    >
+    <div className="flex flex-col gap-2 group-hover:opacity-95 transition-all">
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           {title && <h3 className="text-lg font-semibold text-gray-200">{title}</h3>}
@@ -117,7 +213,7 @@ export function TotalProceedsBar({ address, title, description, onClick }: Total
         {description && <p className="text-sm text-gray-400">{description}</p>}
       </div>
 
-      <div className="w-full h-12 rounded-full overflow-hidden bg-transparent">
+      <div className="w-full h-12 rounded-full overflow-hidden bg-transparent group-hover:ring-1 group-hover:ring-gray-500 transition-all">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             layout="vertical"
@@ -131,18 +227,21 @@ export function TotalProceedsBar({ address, title, description, onClick }: Total
             <Tooltip
               wrapperStyle={{ 
                 zIndex: 9999,
-                pointerEvents: 'none'
+                pointerEvents: 'none',
+                cursor: 'inherit'
               }}
-              cursor={{ fill: 'rgba(255,255,255,0.1)' }}
+              cursor={false}
               content={({ active, payload }) => {
                 if (active && payload?.length) {
                   const recipient = recipients.find(r => r.address === payload[0].dataKey);
+                  const shortAddress = recipient?.address ? 
+                    `...${recipient.address.slice(-4)}` : '';
                   return (
                     <div className="bg-gray-900 px-3 py-1.5 rounded-lg border border-gray-700 shadow-lg">
-                      <p className="text-gray-400 text-sm">
-                        {recipient?.name || recipient?.type.charAt(0).toUpperCase() + recipient?.type.slice(1)}:{' '}
-                        {recipient?.percentage}%
-                      </p>
+                      <span className="text-gray-400 text-sm">
+                        {recipient?.type.charAt(0).toUpperCase() + recipient?.type.slice(1)} {shortAddress}:{' '}
+                        {recipient?.percentage.toFixed(2)}%
+                      </span>
                     </div>
                   );
                 }

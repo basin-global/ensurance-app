@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { useDebounce } from '@/hooks/useDebounce'
 import { createPortal } from 'react-dom'
+import { TypewriterEffect } from '@/components/ui/typewriter-effect'
 
 interface SearchResult {
   name: string
@@ -224,7 +225,12 @@ export function HeaderSearch() {
     })
   }, [results])
 
-  const searchPlaceholder = "search all"
+  const searchPlaceholderWords = [
+    { text: "what do you want to ensure?" },
+    { text: "ensure natural capital" },
+    { text: "markets for what matters" },
+    { text: "invest in natural assets" }
+  ]
 
   const modalContent = isOpen && (
     <>
@@ -242,8 +248,10 @@ export function HeaderSearch() {
             <AssetSearch
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
-              placeholder={searchPlaceholder}
+              placeholder={searchQuery ? "what do you want to ensure?" : undefined}
               autoFocus={isOpen}
+              typewriterWords={!searchQuery ? searchPlaceholderWords : undefined}
+              className="[&_.motion-span]:!text-sm"
             />
           </div>
           
@@ -266,22 +274,38 @@ export function HeaderSearch() {
                   rel={result.path.includes('coinbase.com') || result.path.includes('binder.ensurance.app') ? 'noopener noreferrer' : undefined}
                   className={cn(
                     "block px-4 py-2 hover:bg-[rgba(var(--foreground-rgb),0.1)]",
-                    "text-[rgb(var(--foreground-rgb))] rounded-lg",
+                    "text-[rgba(var(--foreground-rgb),0.7)] rounded-lg",
                     "transition-colors duration-200",
                     "flex items-center justify-between",
                     "text-lg font-grotesk",
                     i === selectedIndex && "bg-[rgba(var(--foreground-rgb),0.1)]"
                   )}
                 >
-                  <span className={result.type === 'nav' ? 'font-bold' : ''}>
-                    {result.name}
-                  </span>
                   <div className="flex items-center gap-2">
-                    {result.type === 'nav' ? (
+                    <span className={cn(
+                      result.type === 'nav' ? 'font-bold' : '',
+                      'text-[rgba(var(--foreground-rgb),0.8)]'
+                    )}>
+                      {result.name}
+                    </span>
+                    {result.type === 'nav' && Object.entries(shortcuts).map(([key, path]) => {
+                      if (path === result.path) {
+                        return (
+                          <span key={key} className="text-xs px-2 py-1 rounded bg-[rgba(var(--foreground-rgb),0.05)] text-[rgba(var(--foreground-rgb),0.5)]">
+                            g {key}
+                          </span>
+                        )
+                      }
+                      return null
+                    })}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {result.type === 'nav' && (
                       <span className="text-xs px-2 py-1 rounded bg-[rgba(var(--foreground-rgb),0.1)] text-[rgba(var(--foreground-rgb),0.7)]">
                         NAV
                       </span>
-                    ) : result.type === 'group' && (
+                    )}
+                    {result.type === 'group' && (
                       <span className="text-xs px-2 py-1 rounded bg-[rgba(var(--foreground-rgb),0.1)] text-[rgba(var(--foreground-rgb),0.7)]">
                         GROUP
                       </span>

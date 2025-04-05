@@ -17,7 +17,7 @@ export default async function GeneralCertificateDetails({
 }) {
   // Get immutable data from DB
   const dbResult = await sql`
-    SELECT name, token_uri, contract_address, payout_recipient, provenance
+    SELECT name, token_uri, contract_address, payout_recipient, provenance, initial_supply
     FROM certificates.general 
     WHERE contract_address = ${params.contract}
   `
@@ -46,6 +46,7 @@ export default async function GeneralCertificateDetails({
             tokenUri={certificate.token_uri}
             payout_recipient={certificate.payout_recipient}
             provenance={certificate.provenance}
+            initial_supply={certificate.initial_supply}
           />
         </SplitsWrapper>
       </div>

@@ -2,7 +2,7 @@
 
 import { Handle, Position } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { ProceedsBar } from './ProceedsBar';
+import { ProceedsBubbles } from './ProceedsBubbles';
 
 interface FlowNodeProps {
   data: {
@@ -29,53 +29,65 @@ export function FlowNode({ data }: FlowNodeProps) {
   return (
     <div className={`
       relative p-4
+      rounded-full
+      w-[240px] aspect-square
+      flex flex-col items-center justify-center
       ${data.isSource 
-        ? 'border-2 border-yellow-500'
-        : 'border border-gray-700'
+        ? 'ring-2 ring-yellow-500 ring-opacity-50'
+        : ''
       }
       ${nodeType === 'account' 
-        ? 'bg-gray-700 rounded-full border-gray-600 min-w-[200px]' 
-        : nodeType === 'single-split'
-          ? 'bg-gray-800 rounded-lg border-blue-700 min-w-[300px]'
-          : 'bg-gray-800 rounded-lg min-w-[300px]'
+        ? 'bg-gray-700/80 backdrop-blur-sm' 
+        : 'bg-gray-800/80 backdrop-blur-sm'
       }
+      transition-all duration-300 ease-in-out
+      group
     `}>
-      {/* Always show handles for all nodes */}
+      {/* Top handle with glow effect */}
       <Handle 
         type="target" 
         position={Position.Top} 
-        className="bg-blue-500" 
-        id="target"
+        className="w-3 h-3 !bg-blue-500/80 !border-2 !border-blue-300/30"
+        style={{ top: '-6px' }}
       />
       
-      <div className="flex items-center gap-2">
+      <div className="flex flex-col items-center w-full h-full">
+        {/* Status indicator */}
         {data.isReoccurring && (
-          <div className="w-2 h-2 rounded-full bg-green-500" />
+          <div className="absolute top-4 left-4 w-2 h-2 rounded-full bg-green-500" />
         )}
-        <div className={`
-          text-gray-200 font-mono mb-2
-          ${nodeType === 'account' ? 'text-center' : ''}
-        `}>
+
+        {/* Address label */}
+        <div className="text-gray-200 font-mono text-sm text-center break-all px-2">
           {data.label}
         </div>
+        
+        {/* Show ProceedsBubbles only for splits */}
+        {data.isSplit && data.recipients && (
+          <div className="w-full h-full flex-1">
+            <ProceedsBubbles 
+              recipients={data.recipients} 
+              isFlowView={true}
+            />
+          </div>
+        )}
       </div>
-      
-      {/* Show ProceedsBar only for splits */}
-      {data.isSplit && data.recipients && (
-        <div className="mb-2">
-          <ProceedsBar 
-            recipients={data.recipients} 
-            isFlowView={true}
-          />
-        </div>
-      )}
 
+      {/* Bottom handle */}
       <Handle 
         type="source" 
         position={Position.Bottom} 
-        className="bg-blue-500" 
-        id="source"
+        className="w-3 h-3 !bg-blue-500/80 !border-2 !border-blue-300/30"
+        style={{ bottom: '-6px' }}
       />
+
+      {/* Static ring */}
+      <div className="
+        absolute inset-0 rounded-full
+        ring-2 ring-blue-500/20
+        group-hover:ring-blue-500/30
+        transition-all duration-300
+      "/>
     </div>
   );
 } 

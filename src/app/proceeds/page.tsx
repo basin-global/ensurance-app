@@ -2,7 +2,6 @@
 
 import { FlowViewer } from '@/modules/proceeds/components/viewer/ProceedsViewer';
 import { SplitsWrapper } from '@/providers/splits-provider';
-import { PageHeader } from '@/components/layout/PageHeader';
 
 export default function ProceedsPage() {
   const defaultAddress = '0xa187F8CBdd36D63967c33f5BD4dD4B9ECA51270e';
@@ -11,18 +10,11 @@ export default function ProceedsPage() {
   return (
     <SplitsWrapper>
       <div className="min-h-screen flex flex-col">
-        <div className="container mx-auto px-4 py-8 flex-1">
-          <div className="space-y-4">
-            <PageHeader
-              title="ensurance proceeds"
-              description="perpetual funding for natural capital & the people who steward it"
-              showSearch={false}
-            />
-            <FlowViewer 
-              address={defaultAddress}
-              chainId={chainId}
-            />
-          </div>
+        <div className="flex-1">
+          <FlowViewer 
+            address={defaultAddress}
+            chainId={chainId}
+          />
         </div>
       </div>
     </SplitsWrapper>

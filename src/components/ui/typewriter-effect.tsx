@@ -40,7 +40,7 @@ export function TypewriterEffect({ words, className }: TypewriterEffectProps) {
               duration: 0.4,
               ease: [0.4, 0, 0.2, 1]
             }}
-            className="text-2xl md:text-3xl tracking-wide text-white/80"
+            className={cn("text-2xl md:text-3xl tracking-wide text-white/80 motion-span")}
           >
             {words[currentIndex].text}
           </motion.span>

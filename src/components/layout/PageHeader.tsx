@@ -17,6 +17,7 @@ interface PageHeaderProps {
   tabs?: Tab[]
   activeTab?: string
   onTabChange?: (value: string) => void
+  variant?: 'default' | 'compact'
 }
 
 export function PageHeader({ 
@@ -28,8 +29,20 @@ export function PageHeader({
   showSearch = true,
   tabs,
   activeTab,
-  onTabChange
+  onTabChange,
+  variant = 'default'
 }: PageHeaderProps) {
+  if (variant === 'compact') {
+    return (
+      <div className="flex items-center justify-center gap-8 mb-2">
+        <h1 className="text-2xl font-bold text-right min-w-[200px]">{title}</h1>
+        {description && (
+          <p className="text-gray-400 text-left max-w-xl min-w-[200px]">{description}</p>
+        )}
+      </div>
+    )
+  }
+
   return (
     <>
       <h1 className="text-4xl font-bold text-center mb-4">{title}</h1>

@@ -171,8 +171,9 @@ export default function GeneralGrid({
                       src={cert.image_url || FALLBACK_IMAGE}
                       alt={cert.name || 'Certificate'}
                       fill
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      priority
+                      sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                      priority={false}
+                      loading="lazy"
                       className="object-cover"
                       unoptimized={cert.image_url?.toLowerCase?.()?.endsWith('.gif') || false}
                       onError={(e) => {

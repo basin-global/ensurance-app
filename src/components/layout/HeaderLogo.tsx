@@ -34,12 +34,20 @@ export function HeaderLogo() {
       ? `/groups/orbs/${groupName.replace(/^\./, '')}-orb.png`
       : "/groups/orbs/ensurance-orb.png"
 
-  // Determine header text
-  const headerText = isNaturalCapital
-    ? 'natural capital ensurance'
-    : groupName 
-      ? `${groupName} ensurance agents`
-      : 'natural capital ensurance'
+  // Get header text and tagline based on path
+  let headerText = 'ensurance'
+  let tagline = 'markets for what matters'
+
+  if (isNaturalCapital) {
+    headerText = 'natural capital ensurance'
+    tagline = ''
+  } else if (pathname.includes('/proceeds')) {
+    headerText = 'ensurance proceeds'
+    tagline = 'perpetual funding for natural capital & the people who steward it'
+  } else if (groupName) {
+    headerText = `${groupName} ensurance agents`
+    tagline = ''
+  }
 
   // Determine URLs
   const homeUrl = '/'
@@ -53,22 +61,29 @@ export function HeaderLogo() {
         <Image 
           src={logoSrc}
           alt="Logo"
-          width={28}
-          height={28}
+          width={32}
+          height={32}
         />
       </Link>
-      {groupName || isNaturalCapital ? (
-        <Link href={groupUrl} className={cn(
-          "hover:opacity-80 transition-opacity",
-          isNaturalCapital && "bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-yellow-500 to-amber-600"
-        )}>
-          {headerText}
-        </Link>
-      ) : (
-        <Link href={homeUrl} className="hover:opacity-80 transition-opacity">
-          {headerText}
-        </Link>
-      )}
+      <div>
+        {groupName || isNaturalCapital ? (
+          <Link href={groupUrl} className={cn(
+            "hover:opacity-80 transition-opacity",
+            isNaturalCapital && "bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-yellow-500 to-amber-600"
+          )}>
+            {headerText}
+          </Link>
+        ) : (
+          <>
+            <Link href={homeUrl} className="hover:opacity-80 transition-opacity">
+              {headerText}
+              {tagline && (
+                <div className="text-xs opacity-70">{tagline}</div>
+              )}
+            </Link>
+          </>
+        )}
+      </div>
     </div>
   )
 } 

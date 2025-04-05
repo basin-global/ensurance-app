@@ -34,6 +34,7 @@ interface DetailsProps {
   tokenUri: string
   payout_recipient?: string
   provenance?: string
+  initial_supply?: string
 }
 
 export default function Details({ 
@@ -41,7 +42,8 @@ export default function Details({
   name,
   tokenUri,
   payout_recipient,
-  provenance
+  provenance,
+  initial_supply
 }: DetailsProps) {
   const [metadata, setMetadata] = useState<any>(null)
   const [certificateData, setCertificateData] = useState<CertificateData | null>(null)
@@ -128,9 +130,9 @@ export default function Details({
             {videoUrl ? (
               <video
                 src={videoUrl}
-                autoPlay
+                poster={imageUrl}
                 loop
-                muted
+                controls
                 playsInline
                 className="absolute inset-0 w-full h-full object-cover"
               />
@@ -198,11 +200,12 @@ export default function Details({
             </div>
 
             {/* Proceeds Section */}
-            {(payout_recipient || provenance) && (
+            {(payout_recipient || provenance || initial_supply) && (
               <div className="pt-6">
                 <Proceeds 
                   payout_recipient={payout_recipient}
                   provenance={provenance}
+                  initial_supply={initial_supply}
                 />
               </div>
             )}
