@@ -1,7 +1,8 @@
 import { createPublicClient, http } from 'viem'
 import { base } from 'viem/chains'
-import { getCoin, tradeCoinCall } from '@zoralabs/coins-sdk'
-import type { CoinDetails, TradingInfo } from './types'
+import { getCoin, tradeCoin } from '@zoralabs/coins-sdk'
+import type { CoinDetails, TradingInfo, TradeConfig, ZoraTradeConfig } from './types'
+import ZORA_COIN_ABI from '@/abi/ZoraCoin.json'
 
 // Initialize viem client for Base network
 const publicClient = createPublicClient({
@@ -9,14 +10,46 @@ const publicClient = createPublicClient({
   transport: http('https://mainnet.base.org')
 })
 
+export const TRADE_REFERRER = '0x7EdDce062a290c59feb95E2Bd7611eeE24610A6b' as `0x${string}`
+
 export const GeneralService = {
+  /**
+   * Get ETH balance for an address
+   */
+  async getEthBalance(address: `0x${string}`): Promise<bigint> {
+    try {
+      return await publicClient.getBalance({ address })
+    } catch (error) {
+      console.error('Failed to fetch ETH balance:', error)
+      return BigInt(0)
+    }
+  },
+
+  /**
+   * Get token balance for an address
+   */
+  async getTokenBalance(tokenAddress: `0x${string}`, address: `0x${string}`): Promise<bigint> {
+    try {
+      return await publicClient.readContract({
+        address: tokenAddress,
+        abi: ZORA_COIN_ABI,
+        functionName: 'balanceOf',
+        args: [address]
+      }) as bigint
+    } catch (error) {
+      console.error('Failed to fetch token balance:', error)
+      return BigInt(0)
+    }
+  },
+
   /**
    * Get coin details from Zora API
    */
   async getCoinDetails(contractAddress: string): Promise<CoinDetails | null> {
     try {
       const response = await getCoin({
-        address: contractAddress
+        address: contractAddress,
+        chain: 8453 // Base chain ID
       })
       
       const coin = response.data?.zora20Token
@@ -30,7 +63,9 @@ export const GeneralService = {
         volume24h: coin.volume24h || '0',
         createdAt: coin.createdAt || '',
         creatorAddress: coin.creatorAddress as `0x${string}` || '0x0000000000000000000000000000000000000000',
-        description: coin.description || ''
+        description: coin.description || '',
+        marketCap: coin.marketCap || '0',
+        uniqueHolders: coin.uniqueHolders || 0
       }
     } catch (error) {
       console.error('Failed to fetch coin details:', error)
@@ -44,26 +79,20 @@ export const GeneralService = {
   async getTradingInfo(contractAddress: string): Promise<TradingInfo | null> {
     try {
       const response = await getCoin({
-        address: contractAddress
+        address: contractAddress,
+        chain: 8453 // Base chain ID
       })
       
       const coin = response.data?.zora20Token
       if (!coin) return null
 
-      // Convert string values to numbers, handling potential decimals
-      const totalVolume = parseFloat(coin.totalVolume || '0')
-      const totalSupply = parseFloat(coin.totalSupply || '0')
-      const volume24h = parseFloat(coin.volume24h || '0')
-      const marketCap = parseFloat(coin.marketCap || '0')
-
-      // Calculate price, handling division by zero
-      const price = totalSupply > 0 ? (totalVolume / totalSupply).toString() : '0'
-
       return {
-        totalVolume: totalVolume.toString(),
-        volume24h: volume24h.toString(),
-        price,
-        marketCap: marketCap.toString()
+        totalVolume: coin.totalVolume || '0',
+        volume24h: coin.volume24h || '0',
+        price: coin.marketCap && coin.totalSupply ? 
+          (Number(coin.marketCap) / Number(coin.totalSupply)).toString() : 
+          '0',
+        marketCap: coin.marketCap || '0'
       }
     } catch (error) {
       console.error('Failed to fetch trading info:', error)
@@ -72,30 +101,32 @@ export const GeneralService = {
   },
 
   /**
-   * Get transaction config for buying coins - to be used with wagmi's useContractWrite
+   * Get transaction config for buying coins
    */
-  getBuyConfig(contractAddress: `0x${string}`, amount: bigint, recipient: `0x${string}`) {
-    return tradeCoinCall({
+  getBuyConfig(contractAddress: `0x${string}`, amount: bigint, recipient: `0x${string}`): ZoraTradeConfig {
+    return {
       direction: 'buy',
       target: contractAddress,
       args: {
         recipient,
-        orderSize: amount
+        orderSize: amount, // For buys, this is ETH amount
+        tradeReferrer: TRADE_REFERRER
       }
-    })
+    }
   },
 
   /**
-   * Get transaction config for selling coins - to be used with wagmi's useContractWrite
+   * Get transaction config for selling coins
    */
-  getSellConfig(contractAddress: `0x${string}`, amount: bigint, recipient: `0x${string}`) {
-    return tradeCoinCall({
+  getSellConfig(contractAddress: `0x${string}`, amount: bigint, recipient: `0x${string}`): ZoraTradeConfig {
+    return {
       direction: 'sell',
       target: contractAddress,
       args: {
         recipient,
-        orderSize: amount
+        orderSize: amount, // For sells, this is token amount
+        tradeReferrer: TRADE_REFERRER
       }
-    })
+    }
   }
 } 

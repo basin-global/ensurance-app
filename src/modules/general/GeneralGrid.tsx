@@ -198,7 +198,12 @@ export default function GeneralGrid({
                     })}</div>
                   </div>
                   <div onClick={(e) => e.preventDefault()}>
-                    <EnsureButtons showMinus={false} size="sm" />
+                    <EnsureButtons 
+                      contractAddress={cert.contract_address as `0x${string}`}
+                      showMinus={false} 
+                      size="sm"
+                      imageUrl={cert.image_url}
+                    />
                   </div>
                 </div>
               </div>

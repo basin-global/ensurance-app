@@ -29,9 +29,9 @@ interface CertificateData {
 }
 
 interface DetailsProps {
-  contractAddress: string
-  name: string
-  tokenUri: string
+  contractAddress: `0x${string}`
+  name?: string
+  tokenUri?: string
   payout_recipient?: string
   provenance?: string
   initial_supply?: string
@@ -87,22 +87,22 @@ export default function Details({
   const videoUrl = metadata?.animation_url ? convertIpfsUrl(metadata.animation_url) : null
 
   const renderDescription = (description: string) => {
-    if (!description) return null
+    if (!description) return null;
     
-    const maxLength = 150
-    const shouldTruncate = description.length > maxLength
+    const maxLength = 150;
+    const shouldTruncate = description.length > maxLength;
     
     if (!shouldTruncate) {
-      return <p className="whitespace-pre-wrap">{description}</p>
+      return <span className="whitespace-pre-wrap">{description}</span>;
     }
 
     const displayText = isDescriptionExpanded 
       ? description 
-      : `${description.slice(0, maxLength)}...`
+      : `${description.slice(0, maxLength)}...`;
 
     return (
       <div className="space-y-2">
-        <p className="whitespace-pre-wrap">{displayText}</p>
+        <span className="whitespace-pre-wrap">{displayText}</span>
         <button
           onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
           className="text-sm text-primary hover:text-primary/80 flex items-center gap-1"
@@ -118,8 +118,8 @@ export default function Details({
           )}
         </button>
       </div>
-    )
-  }
+    );
+  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -162,7 +162,9 @@ export default function Details({
         {/* Description */}
         {metadata?.description && (
           <div className="prose dark:prose-invert max-w-none">
-            <p className="text-base leading-relaxed text-gray-200">{renderDescription(metadata.description)}</p>
+            <div className="text-base leading-relaxed text-gray-200">
+              {renderDescription(metadata.description)}
+            </div>
           </div>
         )}
 
@@ -196,7 +198,10 @@ export default function Details({
 
             {/* Ensure Buttons */}
             <div className="flex justify-center pt-2">
-              <EnsureButtons />
+              <EnsureButtons 
+                contractAddress={contractAddress} 
+                imageUrl={convertIpfsUrl(metadata?.image) || FALLBACK_IMAGE}
+              />
             </div>
 
             {/* Proceeds Section */}
