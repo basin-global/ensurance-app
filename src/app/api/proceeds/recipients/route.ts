@@ -2,6 +2,8 @@ import { sql } from '@vercel/postgres';
 import { NextResponse } from 'next/server';
 import { base } from 'viem/chains';
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
