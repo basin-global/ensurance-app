@@ -14,6 +14,9 @@ importers:
       '@0xsplits/splits-sdk-react':
         specifier: ^2.1.0
         version: 2.1.0(react@18.2.0)(viem@2.24.1(bufferutil@4.0.9)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.24.1))
+      '@farcaster/frame-sdk':
+        specifier: ^0.0.32
+        version: 0.0.32(typescript@5.7.3)(zod@3.24.1)
       '@headlessui/react':
         specifier: ^1.7.18
         version: 1.7.18(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
@@ -72,8 +75,8 @@ importers:
         specifier: ^0.6.0
         version: 0.6.0
       '@zoralabs/coins-sdk':
-        specifier: 0.0.2-sdkalpha.7
-        version: 0.0.2-sdkalpha.7(abitype@1.0.8(typescript@5.7.3)(zod@3.24.1))(viem@2.24.1(bufferutil@4.0.9)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.24.1))
+        specifier: 0.0.4
+        version: 0.0.4(abitype@1.0.8(typescript@5.7.3)(zod@3.24.1))(viem@2.24.1(bufferutil@4.0.9)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.24.1))
       '@zoralabs/protocol-deployments':
         specifier: ^0.5.1
         version: 0.5.1
@@ -968,6 +971,12 @@ packages:
 
   '@ethersproject/web@5.7.1':
     resolution: {integrity: sha512-Gueu8lSvyjBWL4cYsWsjh6MtMwM0+H4HvqFPZfB6dV8ctbP9zFAO73VG1cMWae0FLPCtz0peKPpZY8/ugJJX2w==}
+
+  '@farcaster/frame-core@0.0.29':
+    resolution: {integrity: sha512-+iQjOS4OE0YCeW7hhBOg0QK8Pch7/C3mlkfD0OLey0Thnj4Uab4tWmvmfKxnsJNSYnESx9BT+Sw/pn9cueCl1Q==}
+
+  '@farcaster/frame-sdk@0.0.32':
+    resolution: {integrity: sha512-vfofct3kBvSvkGs/644MN0X5HPI0TQfUbEbVR9ARr7vyuWOyosmIlYoONPJaa527DufWPE0lY3iy2XI1uTdA1w==}
 
   '@fastify/busboy@2.1.1':
     resolution: {integrity: sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA==}
@@ -2341,17 +2350,17 @@ packages:
   '@walletconnect/window-metadata@1.0.1':
     resolution: {integrity: sha512-9koTqyGrM2cqFRW517BPY/iEtUDx2r1+Pwwu5m7sJ7ka79wi3EyqhqcICk/yDmv6jAS1rjKgTKXlEhanYjijcA==}
 
-  '@zoralabs/coins-sdk@0.0.2-sdkalpha.7':
-    resolution: {integrity: sha512-Njhcfn1iSa2asckOue7SyiGl/Invb6TOAixO3WnXi4+S55J0rpTmDjQNu/L4mq1geuyQfb+A+8/xqpTfYjNS+g==}
+  '@zoralabs/coins-sdk@0.0.4':
+    resolution: {integrity: sha512-zOKze2e/z/V/nidaANw+dSD4rgbYEFoWwHRUQNHdn6w9LcXLRj+41Ya/uxh9ZFjHGGO6oRGfAIJH9FGmH/6dcA==}
     peerDependencies:
       abitype: ^1.0.8
       viem: ^2.21.55
 
-  '@zoralabs/coins@0.5.1-sdkalpha.0':
-    resolution: {integrity: sha512-APEzAzA+q7w1r9KPcmmAPWQLai20dEo+iEqBBwi3UnyIOd0CxJKVnD2ily8j8PXlapE1r0NRuFtrJVOzXQyMNQ==}
-
   '@zoralabs/coins@0.6.0':
     resolution: {integrity: sha512-raDbm/bW7goPPmElnyu+GYyNwPmiQlTHqm6AtiWL3NLEeIH/woa7r0Oa2alR71W14DDjY2OqeoBBmyycbN5SkQ==}
+
+  '@zoralabs/coins@0.6.1':
+    resolution: {integrity: sha512-5ecTLf/fmzKP1KjXkTMjTBSH3KOMz+2EoO6moTP1CvQmvHqmOELTZiPFAUMkxstvgoXUQ1Wpo+/rbmFsbfuwiw==}
 
   '@zoralabs/protocol-deployments@0.5.1':
     resolution: {integrity: sha512-D7xmVV4TbuDDsiieXd7EGxHQCPPHvqTG8xutRRFEZbj+IQpHuZdZgfwDJ9DAV6320Wh9lhDFuGaYyAiR4z+fWw==}
@@ -2744,6 +2753,9 @@ packages:
   combined-stream@1.0.8:
     resolution: {integrity: sha512-FQN4MRfuJeHf7cBbBMJFXhKSDq+2kAArBlmRBvcvFE5BB1HZKXtSFASDhdlz9zOYwxh8lDdnvmMOe/+5cdoEdg==}
     engines: {node: '>= 0.8'}
+
+  comlink@4.4.2:
+    resolution: {integrity: sha512-OxGdvBmJuNKSCMO4NTl1L47VRp6xn2wG4F/2hYzB6tiCb709otOxtEYCSvK80PtjODfXXZu8ds+Nw5kVCjqd2g==}
 
   comma-separated-tokens@2.0.3:
     resolution: {integrity: sha512-Fu4hJdvzeylCfQPp9SGWidpzrMs7tTrlu6Vb8XGaRGck8QSNZJJp538Wrb60Lax4fPwR64ViY468OIUTbRlGZg==}
@@ -4198,6 +4210,14 @@ packages:
   ora@6.3.1:
     resolution: {integrity: sha512-ERAyNnZOfqM+Ao3RAvIXkYh5joP220yf59gVe2X/cI6SiCxIdi4c9HZKZD8R6q/RDXEje1THBju6iExiSsgJaQ==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
+
+  ox@0.4.4:
+    resolution: {integrity: sha512-oJPEeCDs9iNiPs6J0rTx+Y0KGeCGyCAA3zo94yZhm8G5WpOxrwUtn2Ie/Y8IyARSqqY/j9JTKA3Fc1xs1DvFnw==}
+    peerDependencies:
+      typescript: '>=5.4.0'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
 
   ox@0.6.9:
     resolution: {integrity: sha512-wi5ShvzE4eOcTwQVsIPdFr+8ycyX+5le/96iAJutaZAvCes1J0+RvpEPg5QDPDiaR0XQQAvZVl7AwqQcINuUug==}
@@ -6646,6 +6666,23 @@ snapshots:
       '@ethersproject/properties': 5.7.0
       '@ethersproject/strings': 5.7.0
 
+  '@farcaster/frame-core@0.0.29(typescript@5.7.3)':
+    dependencies:
+      ox: 0.4.4(typescript@5.7.3)(zod@3.24.1)
+      zod: 3.24.1
+    transitivePeerDependencies:
+      - typescript
+
+  '@farcaster/frame-sdk@0.0.32(typescript@5.7.3)(zod@3.24.1)':
+    dependencies:
+      '@farcaster/frame-core': 0.0.29(typescript@5.7.3)
+      comlink: 4.4.2
+      eventemitter3: 5.0.1
+      ox: 0.4.4(typescript@5.7.3)(zod@3.24.1)
+    transitivePeerDependencies:
+      - typescript
+      - zod
+
   '@fastify/busboy@2.1.1': {}
 
   '@floating-ui/core@1.6.9':
@@ -8699,19 +8736,19 @@ snapshots:
       '@walletconnect/window-getters': 1.0.1
       tslib: 1.14.1
 
-  '@zoralabs/coins-sdk@0.0.2-sdkalpha.7(abitype@1.0.8(typescript@5.7.3)(zod@3.24.1))(viem@2.24.1(bufferutil@4.0.9)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.24.1))':
+  '@zoralabs/coins-sdk@0.0.4(abitype@1.0.8(typescript@5.7.3)(zod@3.24.1))(viem@2.24.1(bufferutil@4.0.9)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.24.1))':
     dependencies:
       '@hey-api/client-fetch': 0.8.4
-      '@zoralabs/coins': 0.5.1-sdkalpha.0
+      '@zoralabs/coins': 0.6.1
       abitype: 1.0.8(typescript@5.7.3)(zod@3.24.1)
       viem: 2.24.1(bufferutil@4.0.9)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.24.1)
 
-  '@zoralabs/coins@0.5.1-sdkalpha.0':
+  '@zoralabs/coins@0.6.0':
     dependencies:
       '@openzeppelin/contracts': 5.2.0
       '@openzeppelin/contracts-upgradeable': 5.2.0(@openzeppelin/contracts@5.2.0)
 
-  '@zoralabs/coins@0.6.0':
+  '@zoralabs/coins@0.6.1':
     dependencies:
       '@openzeppelin/contracts': 5.2.0
       '@openzeppelin/contracts-upgradeable': 5.2.0(@openzeppelin/contracts@5.2.0)
@@ -9132,6 +9169,8 @@ snapshots:
   combined-stream@1.0.8:
     dependencies:
       delayed-stream: 1.0.0
+
+  comlink@4.4.2: {}
 
   comma-separated-tokens@2.0.3: {}
 
@@ -10969,6 +11008,20 @@ snapshots:
       stdin-discarder: 0.1.0
       strip-ansi: 7.1.0
       wcwidth: 1.0.1
+
+  ox@0.4.4(typescript@5.7.3)(zod@3.24.1):
+    dependencies:
+      '@adraffy/ens-normalize': 1.11.0
+      '@noble/curves': 1.8.1
+      '@noble/hashes': 1.7.1
+      '@scure/bip32': 1.6.2
+      '@scure/bip39': 1.5.4
+      abitype: 1.0.8(typescript@5.7.3)(zod@3.24.1)
+      eventemitter3: 5.0.1
+    optionalDependencies:
+      typescript: 5.7.3
+    transitivePeerDependencies:
+      - zod
 
   ox@0.6.9(typescript@5.7.3)(zod@3.24.1):
     dependencies:

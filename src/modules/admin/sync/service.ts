@@ -384,8 +384,8 @@ async function syncGeneralCertificatesMarketData(): Promise<SyncOperationResult>
           // Get market data from Zora
           console.log('Calling Zora API...');
           const response = await getCoin({ 
-            address: cert.contract_address,
-            chain: 8453
+            address: cert.contract_address as `0x${string}`,
+            chain: base.id
           });
           
           // Debug logging
@@ -493,6 +493,140 @@ async function syncGeneralCertificatesMarketData(): Promise<SyncOperationResult>
   }
 }
 
+// Sync market data for general certificates using getCoins
+async function syncGeneralCertificatesMarketDataBatch(): Promise<SyncOperationResult> {
+  console.log('\n=== Starting Batch Market Data Sync ===');
+  const startTime = Date.now();
+  const results: SyncResult[] = [];
+  let success = 0;
+  let failed = 0;
+
+  try {
+    // Get all certificates
+    console.log('Fetching certificates from database...');
+    const certificates = await generalCertificates.getAll();
+    console.log(`Found ${certificates.length} certificates to sync`);
+    
+    // Process in batches of 20 (Zora API limit)
+    const BATCH_SIZE = 20;
+    const BATCH_DELAY = 3000; // 3 seconds between batches
+
+    for (let i = 0; i < certificates.length; i += BATCH_SIZE) {
+      const batch = certificates.slice(i, i + BATCH_SIZE);
+      const addresses = batch.map(cert => cert.contract_address);
+      
+      console.log('\n-------------------');
+      console.log(`Processing Batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(certificates.length/BATCH_SIZE)}`);
+      console.log('Addresses:', addresses.join(', '));
+
+      try {
+        // Get market data for this batch
+        console.log('Calling Zora API...');
+        const response = await getCoins({ 
+          coins: addresses.map(address => ({
+            chainId: base.id,
+            collectionAddress: address
+          }))
+        });
+        
+        // Debug logging
+        console.log('Full Zora API response:', JSON.stringify(response, null, 2));
+        
+        if (!response?.data?.zora20Tokens) {
+          console.log(`❌ No market data available for batch`);
+          console.log('Response structure:', {
+            hasResponse: !!response,
+            hasData: !!response?.data,
+            hasZora20Tokens: !!response?.data?.zora20Tokens
+          });
+          failed += addresses.length;
+        } else {
+          // Process each token's data
+          for (const tokenData of response.data.zora20Tokens) {
+            try {
+              const cert = certificates.find(c => c.contract_address === tokenData.address);
+              if (!cert) {
+                console.log(`❌ Certificate not found for address ${tokenData.address}`);
+                failed++;
+                continue;
+              }
+
+              // Update market data in database
+              await generalCertificates.updateMarketData(cert, {
+                total_volume: tokenData.totalVolume || '0',
+                volume_24h: tokenData.volume24h || '0',
+                market_cap: tokenData.marketCap || '0',
+                creator_earnings: tokenData.creatorEarnings || [],
+                unique_holders: tokenData.uniqueHolders || 0
+              });
+
+              console.log(`✓ Updated ${cert.contract_address}`);
+              results.push({
+                id: cert.contract_address,
+                status: 'success',
+                data: {
+                  contract_address: cert.contract_address,
+                  chain: cert.chain,
+                  name: cert.name || '',
+                  symbol: cert.symbol || '',
+                  token_uri: cert.token_uri || '',
+                  pool_address: cert.pool_address || '',
+                  total_volume: tokenData.totalVolume || '0',
+                  volume_24h: tokenData.volume24h || '0',
+                  market_cap: tokenData.marketCap || '0',
+                  creator_earnings: tokenData.creatorEarnings || [],
+                  unique_holders: tokenData.uniqueHolders || 0
+                }
+              });
+              success++;
+            } catch (err: any) {
+              console.error(`❌ Failed to process ${tokenData.address}:`, err);
+              results.push({
+                id: tokenData.address,
+                status: 'failed',
+                error: err.message
+              });
+              failed++;
+            }
+          }
+        }
+      } catch (err: any) {
+        console.error('❌ Batch API call failed:', err);
+        failed += addresses.length;
+      }
+
+      // Add delay between batches
+      if (i + BATCH_SIZE < certificates.length) {
+        console.log(`\nWaiting ${BATCH_DELAY/1000} seconds before next batch...`);
+        await sleep(BATCH_DELAY);
+      }
+
+      // Log progress
+      const progress = Math.min(i + BATCH_SIZE, certificates.length);
+      const percentage = ((progress / certificates.length) * 100).toFixed(1);
+      console.log('\n-------------------');
+      console.log(`Progress: ${progress}/${certificates.length} (${percentage}%)`);
+      console.log(`Success: ${success}, Failed: ${failed}`);
+    }
+
+    const duration = ((Date.now() - startTime)/1000).toFixed(1);
+    console.log('\n=== Batch Market Data Sync Complete ===');
+    console.log(`Duration: ${duration}s`);
+    console.log(`Final Stats - Total: ${results.length}, Success: ${success}, Failed: ${failed}`);
+
+    return {
+      options: { entity: 'general_certificates', market_data: true, batch_process: true },
+      timestamp: startTime,
+      stats: { total: results.length, success, failed },
+      results
+    };
+
+  } catch (err: any) {
+    console.error('❌ Fatal error:', err);
+    throw new Error(`Batch market data sync failed: ${err.message}`);
+  }
+}
+
 // Main sync function
 export async function sync(entity: SyncEntity, options: Omit<SyncOptions, 'entity'> = {}): Promise<SyncOperationResult> {
   console.log('Starting sync operation:', { entity, options });
@@ -504,8 +638,13 @@ export async function sync(entity: SyncEntity, options: Omit<SyncOptions, 'entit
       return syncAccounts(options.group_name, options.token_id)
     case 'general_certificates':
       if (options.market_data) {
-        console.log('Starting market data sync...');
-        return syncGeneralCertificatesMarketData();
+        if (options.batch_process) {
+          console.log('Starting batch market data sync...');
+          return syncGeneralCertificatesMarketDataBatch();
+        } else {
+          console.log('Starting individual market data sync...');
+          return syncGeneralCertificatesMarketData();
+        }
       } else {
         console.log('Starting regular sync...');
         return syncGeneralCertificates(options.empty_only);

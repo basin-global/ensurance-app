@@ -27,6 +27,7 @@ interface GeneralGridProps {
   searchQuery?: string
   urlPrefix?: string
   onDataChange?: (data: GeneralCertificate[]) => void
+  isMiniApp?: boolean
 }
 
 const FALLBACK_IMAGE = '/assets/no-image-found.png'
@@ -51,7 +52,8 @@ const formatNumber = (value: string | undefined) => {
 export default function GeneralGrid({ 
   searchQuery = '',
   urlPrefix = '',
-  onDataChange = () => {}
+  onDataChange = () => {},
+  isMiniApp = false
 }: GeneralGridProps) {
   const [certificates, setCertificates] = useState<GeneralCertificate[]>([])
   const [loading, setLoading] = useState(true)
@@ -153,7 +155,7 @@ export default function GeneralGrid({
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
       {filteredCertificates.map((cert) => (
         <Card key={cert.contract_address} className="bg-primary-dark border-gray-800 hover:border-gray-700 transition-colors">
-          <Link href={`${urlPrefix}/general/${cert.contract_address}`}>
+          <Link href={`${urlPrefix}${isMiniApp ? '/mini-app' : ''}/general/${cert.contract_address}`}>
             <CardContent className="p-4">
               <div className="flex flex-col gap-4">
                 <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-black/20">

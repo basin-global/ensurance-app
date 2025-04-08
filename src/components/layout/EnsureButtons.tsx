@@ -29,7 +29,7 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip"
 import ZORA_COIN_ABI from '@/abi/ZoraCoin.json'
-import { tradeCoin, getTradeFromLogs } from '@zoralabs/coins-sdk'
+import { tradeCoin, tradeCoinCall, getTradeFromLogs } from '@zoralabs/coins-sdk'
 import { TRADE_REFERRER } from '@/modules/general/service'
 import { toast } from 'react-toastify'
 import Image from 'next/image'
@@ -158,15 +158,14 @@ export function EnsureButtons({
 
       const provider = await activeWallet.getEthereumProvider()
       
-      // Create clients according to SDK docs
+      // Create public client for reading
       const publicClient = createPublicClient({
         chain: base,
         transport: http('https://mainnet.base.org')
       })
 
-      // Create wallet client following SDK example
+      // Create wallet client
       const walletClient = createWalletClient({
-        account: userAddress as `0x${string}`,
         chain: base,
         transport: custom(provider)
       })
@@ -187,19 +186,22 @@ export function EnsureButtons({
         }
       }
 
-      // Create trade parameters according to SDK docs
+      // Create trade parameters with new type structure
       const tradeParams = {
         direction: tradeType,
-        target: contractAddress,
+        target: contractAddress as `0x${string}`,
         args: {
           recipient: userAddress as `0x${string}`,
           orderSize: tradeType === 'buy' ? 
-            ethAmountInWei : // For buy: use ETH amount in wei
-            parseEther(estimatedTokens), // For sell: scale tokens by 10^18 like Zora UI
+            ethAmountInWei : 
+            parseEther(estimatedTokens),
           minAmountOut: BigInt(0),
-          tradeReferrer: TRADE_REFERRER
+          tradeReferrer: TRADE_REFERRER as `0x${string}`
         }
       }
+
+      // Get contract call configuration
+      const contractCallParams = tradeCoinCall(tradeParams)
 
       console.log('Trade params:', {
         type: tradeType,
@@ -207,16 +209,22 @@ export function EnsureButtons({
         amount: tradeType === 'buy' ? 
           `${ethAmount} ETH (${ethAmountInWei.toString(16)} hex)` : 
           `${estimatedTokens} tokens (${parseEther(estimatedTokens).toString(16)} hex)`,
-        params: tradeParams
+        params: contractCallParams
       })
 
-      const pendingToast = toast.loading(`${tradeType === 'buy' ? 'ensuring natural capital' : 'un-ensuring natural capital'}...`)
+      const pendingToast = toast.loading(`${tradeType === 'buy' ? 'ensuring what matters' : 'un-ensuring what matters'}...`)
       
       try {
-        const result = await tradeCoin(tradeParams, walletClient, publicClient)
+        // Execute the trade using writeContract
+        const hash = await walletClient.writeContract({
+          ...contractCallParams,
+          value: tradeType === 'buy' ? ethAmountInWei : BigInt(0),
+          chain: base,
+          account: userAddress as `0x${string}`
+        })
         
         // Wait for transaction receipt
-        const receipt = await publicClient.waitForTransactionReceipt({ hash: result.hash })
+        const receipt = await publicClient.waitForTransactionReceipt({ hash })
         
         // Get trade details from logs
         const tradeEvent = getTradeFromLogs(receipt, tradeType)
@@ -226,10 +234,11 @@ export function EnsureButtons({
             (tradeEvent as any).coinsPurchased : 
             (tradeEvent as any).amountSold
           toast.update(pendingToast, {
-            render: `successfully ${tradeType === 'buy' ? 'ensured' : 'un-ensured'} natural capital`,
+            render: `you have ${tradeType === 'buy' ? 'ensured' : 'un-ensured'} what matters`,
             type: 'success',
             isLoading: false,
-            autoClose: 5000
+            autoClose: 5000,
+            className: tradeType === 'buy' ? '' : '!bg-red-500/20 !text-red-200 !border-red-500/30'
           })
         } else {
           toast.update(pendingToast, {

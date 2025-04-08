@@ -301,7 +301,7 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
   if (loading) {
     return (
       <div className="w-full h-[calc(100vh-8rem)] flex items-center justify-center bg-gray-900">
-        <div className="text-gray-200">Loading split data...</div>
+        <div className="text-gray-200">loading proceeds data...</div>
       </div>
     );
   }

@@ -10,6 +10,7 @@ import { ToastContainer } from 'react-toastify'
 import { Metadata } from 'next'
 import { generateShare } from '@/lib/share'
 import { headers } from 'next/headers'
+import '@/config/zora'
 
 export async function generateMetadata({ params }: { params: any }): Promise<Metadata> {
   const headersList = headers()

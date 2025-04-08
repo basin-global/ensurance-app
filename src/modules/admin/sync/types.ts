@@ -16,7 +16,14 @@ export interface GeneralCertificateData {
   total_volume?: string;
   volume_24h?: string;
   market_cap?: string;
-  creator_earnings?: any[];
+  creator_earnings?: {
+    amount: {
+      currencyAddress: string;
+      amountRaw: string;
+      amountDecimal: number;
+    };
+    amountUsd?: string;
+  }[];
   unique_holders?: number;
   payout_recipient?: string;
 }
@@ -36,6 +43,7 @@ export interface SyncOptions {
   token_id?: number; // For syncing a specific account
   empty_only?: boolean; // For syncing only empty general certificates
   market_data?: boolean; // For syncing market data for general certificates
+  batch_process?: boolean; // For using getCoins instead of getCoin
 }
 
 export interface SyncResult {

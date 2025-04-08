@@ -6,9 +6,26 @@ import Details from '@/modules/general/Details'
 import { PageHeader } from '@/components/layout/PageHeader'
 import VerificationSection from '@/components/layout/verifications/VerificationSection'
 import { SplitsWrapper } from '@/providers/splits-provider'
+import { Metadata } from 'next'
 
 // Tell Next.js this is a dynamic route
 export const dynamic = 'force-dynamic'
+
+// Generate metadata for the page
+export async function generateMetadata({ params }: { params: { contract: string } }): Promise<Metadata> {
+  const dbResult = await sql`
+    SELECT name, token_uri, contract_address
+    FROM certificates.general 
+    WHERE contract_address = ${params.contract}
+  `
+  const certificate = dbResult.rows[0]
+  if (!certificate) return {}
+  
+  return {
+    title: `${certificate.name} | Ensurance`,
+    description: `View and trade ${certificate.name} certificate on Ensurance`,
+  }
+}
 
 export default async function GeneralCertificateDetails({ 
   params 

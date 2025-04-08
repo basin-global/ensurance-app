@@ -15,12 +15,13 @@ export default function SyncPage() {
   const [selectedGroup, setSelectedGroup] = useState<string>('all')
   const [tokenId, setTokenId] = useState('')
   const [emptyOnly, setEmptyOnly] = useState(false)
+  const [batchProcess, setBatchProcess] = useState(false)
   const [result, setResult] = useState<SyncOperationResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [groups, setGroups] = useState<any[]>([])
   const [loadingGroups, setLoadingGroups] = useState(false)
 
-  const handleSync = async (marketData: boolean = false) => {
+  const handleSync = async (marketData: boolean = false, batchProcess: boolean = false) => {
     if (!user?.wallet?.address) return
     
     setError(null)
@@ -34,7 +35,8 @@ export default function SyncPage() {
         ...(tokenId && { token_id: parseInt(tokenId) }),
         ...(selectedEntity === 'general_certificates' && { 
           empty_only: emptyOnly,
-          market_data: marketData 
+          market_data: marketData,
+          batch_process: batchProcess
         })
       }
 
@@ -106,6 +108,7 @@ export default function SyncPage() {
               setSelectedGroup('all')
               setTokenId('')
               setEmptyOnly(false)
+              setBatchProcess(false)
             }}
           >
             <SelectTrigger className="w-full bg-gray-900 text-white border-gray-700">
@@ -186,13 +189,22 @@ export default function SyncPage() {
               >
                 {syncing ? 'Syncing...' : 'Sync Contract Data'}
               </button>
-              <button
-                onClick={() => handleSync(true)}
-                disabled={syncing || !user?.wallet?.address}
-                className="w-full bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700 disabled:bg-gray-700 disabled:text-gray-400 transition-colors"
-              >
-                {syncing ? 'Syncing...' : 'Sync Market Data'}
-              </button>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={() => handleSync(true, false)}
+                  disabled={syncing || !user?.wallet?.address}
+                  className="w-full bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700 disabled:bg-gray-700 disabled:text-gray-400 transition-colors"
+                >
+                  {syncing ? 'Syncing...' : 'Sync Market Data'}
+                </button>
+                <button
+                  onClick={() => handleSync(true, true)}
+                  disabled={syncing || !user?.wallet?.address}
+                  className="w-full bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 disabled:bg-gray-700 disabled:text-gray-400 transition-colors"
+                >
+                  {syncing ? 'Syncing...' : 'Batch Sync Market Data'}
+                </button>
+              </div>
             </>
           ) : (
             <button

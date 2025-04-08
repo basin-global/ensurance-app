@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getActiveChains } from '@/config/chains';
 import { headers } from 'next/headers';
-import { isSpamContract } from '@/config/spamContracts';
 import { fetchTokenBalances } from '@/lib/moralis';
 import type { TokenBalance } from '@/types';
 
@@ -22,7 +21,7 @@ export async function GET(request: Request) {
 
     // Transform the response to match our existing TokenBalance type
     const transformedTokens = response.result
-      .filter(token => !isSpamContract(token.token_address) && !token.possible_spam)
+      .filter(token => !token.possible_spam)
       .map((token): TokenBalance => ({
         chain: chain,
         name: token.name,
