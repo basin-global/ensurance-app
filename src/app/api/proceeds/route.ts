@@ -31,7 +31,8 @@ async function getWithCache(type: 'names' | 'address', address?: string) {
     const addressMap = data.reduce((acc, row) => {
       acc[row.address.toLowerCase()] = {
         name: row.name,
-        type: row.type
+        type: row.type,
+        description: row.description
       };
       return acc;
     }, {});
@@ -82,7 +83,8 @@ export async function GET(request: Request) {
       console.log('Processing row:', row);
       acc[row.address.toLowerCase()] = {
         name: row.name,
-        type: row.type
+        type: row.type,
+        description: row.description
       };
       return acc;
     }, {});

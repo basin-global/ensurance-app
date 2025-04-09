@@ -21,7 +21,8 @@ export async function generateMetadata({ params }: { params: any }): Promise<Met
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
+  maximumScale: 5,
+  userScalable: true,
   themeColor: '#000000',
 }
 
@@ -35,23 +36,24 @@ export default function RootLayout({
       <head>
         <WebAnalytics />
       </head>
-      <body className="antialiased min-h-screen flex flex-col font-grotesk bg-black text-white">
+      <body className="antialiased min-h-screen flex flex-col font-grotesk bg-black text-white overflow-x-hidden">
         <PrivyProviderWrapper>
           <AnnouncementBanner />
           <Header />
           <ToastContainer 
             theme="dark"
             position="top-right"
-            toastClassName="!bg-gray-900 !text-gray-100"
+            toastClassName="!bg-gray-900 !text-gray-100 !max-w-[90vw] md:!max-w-md"
             progressClassName="!bg-blue-500"
             closeButton={false}
+            limit={3}
           />
-          <main className="flex-1">
+          <main className="flex-1 w-full max-w-[100vw]">
             {children}
           </main>
           <Footer />
         </PrivyProviderWrapper>
-        <div id="modal-root" />
+        <div id="modal-root" className="relative z-50" />
       </body>
     </html>
   )

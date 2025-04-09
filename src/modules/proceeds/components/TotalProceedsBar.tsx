@@ -240,14 +240,10 @@ export function TotalProceedsBar({ address, title, description, onClick }: Total
               cursor={false}
               content={({ active, payload }) => {
                 if (active && payload?.length) {
-                  const recipient = recipients.find(r => r.address === payload[0].dataKey);
-                  const shortAddress = recipient?.address ? 
-                    `...${recipient.address.slice(-4)}` : '';
                   return (
                     <div className="bg-gray-900 px-3 py-1.5 rounded-lg border border-gray-700 shadow-lg">
                       <span className="text-gray-400 text-sm">
-                        {recipient?.type.charAt(0).toUpperCase() + recipient?.type.slice(1)} {shortAddress}:{' '}
-                        {recipient?.percentage.toFixed(2)}%
+                        view ensurance proceeds
                       </span>
                     </div>
                   );

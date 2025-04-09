@@ -4,6 +4,7 @@ export interface ProceedsAddress {
   address: string;
   name: string | null;
   type: 'split' | 'stream' | 'swapper' | 'team';
+  description: string | null;
 }
 
 export const proceeds = {
@@ -15,23 +16,23 @@ export const proceeds = {
       console.log('Executing database query...');
       const result = await sql`
         WITH all_addresses AS (
-          SELECT LOWER(contract_address) as address, name, 'split' as type 
+          SELECT LOWER(contract_address) as address, name, description, 'split' as type 
           FROM proceeds.splits 
           WHERE chain = 'base' AND name IS NOT NULL
           UNION ALL
-          SELECT LOWER(contract_address) as address, name, 'stream' as type 
+          SELECT LOWER(contract_address) as address, name, description, 'stream' as type 
           FROM proceeds.streams 
           WHERE chain = 'base' AND name IS NOT NULL
           UNION ALL
-          SELECT LOWER(contract_address) as address, name, 'swapper' as type 
+          SELECT LOWER(contract_address) as address, name, description, 'swapper' as type 
           FROM proceeds.swappers 
           WHERE chain = 'base' AND name IS NOT NULL
           UNION ALL
-          SELECT LOWER(contract_address) as address, name, 'team' as type 
+          SELECT LOWER(contract_address) as address, name, description, 'team' as type 
           FROM proceeds.teams 
           WHERE chain = 'base' AND name IS NOT NULL
         )
-        SELECT DISTINCT address, name, type
+        SELECT DISTINCT address, name, description, type
         FROM all_addresses
         ORDER BY type, name;
       `;

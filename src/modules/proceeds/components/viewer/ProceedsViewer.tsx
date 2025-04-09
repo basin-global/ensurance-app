@@ -66,17 +66,19 @@ function FluidEdge({
         markerEnd={markerEnd}
         style={{
           ...style,
-          strokeWidth: data?.isReturnFlow ? 1.5 : 2, // Slightly thinner return lines
-          opacity: data?.isReturnFlow ? 0.5 : 0.6,   // Slightly more transparent return lines
+          strokeWidth: data?.isReturnFlow ? 1.5 : 3, // Thicker main flow lines (3px), return lines stay thin
+          opacity: data?.isReturnFlow ? 0.4 : 0.75,   // More opacity difference between return and main flows
           strokeDasharray: data?.isReturnFlow ? '4 4' : '8 4',
-          filter: 'drop-shadow(0 0 2px rgba(96, 165, 250, 0.3))'
+          filter: data?.isReturnFlow 
+            ? 'drop-shadow(0 0 1px rgba(147, 197, 253, 0.2))' // Lighter shadow for return flows
+            : 'drop-shadow(0 0 3px rgba(96, 165, 250, 0.4))'  // Stronger shadow for main flows
         }}
       />
       {data?.label && (
         <text
           x={midX}
           y={midY}
-          className={`text-xs ${data?.isReturnFlow ? 'fill-blue-300' : 'fill-gray-400'}`}
+          className={`text-xs ${data?.isReturnFlow ? 'fill-blue-200' : 'fill-gray-300'}`}
           textAnchor="middle"
           dominantBaseline="middle"
           style={{
@@ -205,7 +207,8 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
     knownSplits: Map<string, any> = new Map(),
     level: number = 0,
     index: number = 0,
-    totalAtLevel: number = 1
+    totalAtLevel: number = 1,
+    childPercentage?: string
   ) => {
     const normalizedAddress = splitAddress.toLowerCase();
     const newNodes: Node[] = [];
@@ -242,6 +245,18 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
       console.log('Looking up address:', normalizedAddress, 'Found:', addressInfo); // Debug log
 
       // Add node
+      const nodePercentage = level === 0 ? '100' : childPercentage?.toString();
+
+      console.log('Creating node:', {
+        address: normalizedAddress,
+        level,
+        percentage: nodePercentage,
+        splitMetadata: splitMetadata?.recipients?.map(r => ({
+          address: r.recipient.address.toLowerCase(),
+          percentage: r.percentAllocation
+        }))
+      });
+
       newNodes.push({
         id: normalizedAddress,
         type: 'flowNode',
@@ -251,7 +266,8 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
           recipients: splitMetadata?.recipients || [],
           isSplit: Boolean(splitMetadata?.recipients?.length),
           isSource: level === 0,
-          type: addressInfo?.type || 'account'
+          type: addressInfo?.type || 'account',
+          percentage: nodePercentage
         },
         position,
         draggable: true
@@ -342,16 +358,22 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
           const childResults = await Promise.all(
             splitRecipients
               .filter(r => !processedAddresses.has(r.address))
-              .map((r, idx) => 
-                processSplit(
+              .map((r, idx) => {
+                // Get the percentage from the parent's metadata
+                const childPercentage = splitMetadata?.recipients?.find(
+                  recipient => recipient.recipient.address.toLowerCase() === r.address.toLowerCase()
+                )?.percentAllocation;
+
+                return processSplit(
                   r.address, 
                   processedAddresses, 
                   knownSplits, 
                   level + 1,
                   idx,
-                  splitRecipients.length
+                  splitRecipients.length,
+                  childPercentage // Pass the percentage to the child
                 )
-              )
+              })
           );
           
           childResults.forEach(result => {
@@ -412,7 +434,7 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
   // Loading state
   if (loading) {
     return (
-      <div className="w-full h-[calc(100vh-8rem)] flex items-center justify-center bg-gray-900">
+      <div className="w-full h-[100dvh] flex items-center justify-center bg-gray-900">
         <div className="text-gray-200">loading proceeds data...</div>
       </div>
     );
@@ -421,14 +443,14 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
   // Error state
   if (error) {
     return (
-      <div className="w-full h-[calc(100vh-8rem)] flex items-center justify-center bg-gray-900">
+      <div className="w-full h-[100dvh] flex items-center justify-center bg-gray-900">
         <div className="text-red-500">{error}</div>
       </div>
     );
   }
 
   return (
-    <div className="w-full h-[calc(100vh-8rem)] bg-gray-900">
+    <div className="w-full h-[100dvh] pb-16 bg-gray-900">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -449,11 +471,6 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
       >
         <Background color="#334155" gap={12} />
         <Controls />
-        <MiniMap 
-          nodeColor={n => n.data?.isSplit ? '#60A5FA' : '#64748B'}
-          maskColor="rgba(0, 0, 0, 0.2)"
-          className="bg-gray-800/50 rounded-lg"
-        />
       </ReactFlow>
     </div>
   );

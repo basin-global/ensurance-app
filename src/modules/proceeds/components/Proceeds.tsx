@@ -28,36 +28,52 @@ export function Proceeds({
       
       <div className="space-y-6">
         {/* Proceeds Payout Section - Always Full Width */}
-        <div 
-          onClick={handleProceedsClick}
-          className="group cursor-pointer"
+        <a 
+          href={`/proceeds?address=${payout_recipient}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group cursor-pointer block"
         >
           <TotalProceedsBar 
             address={payout_recipient}
             title="ensurance proceeds"
-            description="perpetual funding for natural capital"
+            description="perpetual funding for what matters"
           />
-        </div>
+        </a>
 
         {/* Grid Container for Initial Supply and Provenance */}
         {(initial_supply || provenance) && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Initial Supply Section */}
             {initial_supply && (
-              <TotalProceedsBar 
-                address={initial_supply}
-                title="initial supply"
-                description="certificate distribution at launch"
-              />
+              <a
+                href={`/proceeds?address=${initial_supply}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group cursor-pointer block"
+              >
+                <TotalProceedsBar 
+                  address={initial_supply}
+                  title="initial supply"
+                  description="certificate distribution at launch"
+                />
+              </a>
             )}
 
             {/* Provenance Section */}
             {provenance && (
-              <TotalProceedsBar 
-                address={provenance}
-                title="provenance"
-                description="policy creator allocation"
-              />
+              <a
+                href={`/proceeds?address=${provenance}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group cursor-pointer block"
+              >
+                <TotalProceedsBar 
+                  address={provenance}
+                  title="provenance"
+                  description="policy creator allocation"
+                />
+              </a>
             )}
           </div>
         )}

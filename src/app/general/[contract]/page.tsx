@@ -55,7 +55,7 @@ export default async function GeneralCertificateDetails({
         </div>
       </Link>
       
-      <div className="container mx-auto px-4 flex-1">
+      <div className="container mx-auto px-4 flex-1 pb-12">
         <SplitsWrapper>
           <Details
             contractAddress={certificate.contract_address}

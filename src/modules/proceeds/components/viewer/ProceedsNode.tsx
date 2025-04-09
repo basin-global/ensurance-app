@@ -2,6 +2,7 @@
 
 import { Handle, Position } from 'reactflow';
 import 'reactflow/dist/style.css';
+import { useRouter } from 'next/navigation';
 
 interface FlowNodeProps {
   data: {
@@ -17,37 +18,54 @@ interface FlowNodeProps {
     isSplit: boolean;
     isSource?: boolean;
     isReoccurring?: boolean;
+    percentage?: string;
   };
 }
 
 export function FlowNode({ data }: FlowNodeProps) {
-  // Generate colors for recipients
-  const colors = data.recipients?.map((_, index) => {
-    const hue = (index * 137.508) % 360;
-    return `hsl(${hue}, 70%, 65%)`;
-  }) || [];
+  const router = useRouter();
+  // Bright, visible colors only
+  const colors = [
+    '#60A5FA', // blue-400
+    '#4ADE80', // green-400
+    '#F472B6', // pink-400
+    '#FBBF24', // amber-400
+    '#A78BFA', // violet-400
+    '#FB923C', // orange-400
+    '#67E8F9', // cyan-400
+    '#FCA5A5', // red-300
+    '#C084FC', // purple-400
+    '#86EFAC', // green-300
+  ];
 
   // Format address for display
   const shortAddress = `${data.fullAddress.slice(0, 6)}...${data.fullAddress.slice(-4)}`;
   const isNamedAddress = data.label !== shortAddress;
 
+  console.log('Rendering node:', {
+    address: data.fullAddress,
+    percentage: data.percentage,
+    isSource: data.isSource
+  });
+
   return (
-    <div className={`
-      relative p-4
-      rounded-xl
-      w-[240px]
-      flex flex-col items-center
-      ${data.isSource 
-        ? 'ring-2 ring-yellow-500 ring-opacity-50'
-        : ''
-      }
-      ${data.isSplit 
-        ? 'bg-gray-800/80 backdrop-blur-sm' 
-        : 'bg-gray-700/80 backdrop-blur-sm'
-      }
-      transition-all duration-300 ease-in-out
-      group
-    `}>
+    <div 
+      className={`
+        relative p-4
+        rounded-xl
+        w-[240px]
+        flex flex-col items-center
+        ${data.isSource 
+          ? 'ring-2 ring-yellow-500 ring-opacity-50'
+          : ''
+        }
+        ${data.isSplit 
+          ? 'bg-gray-800/80 backdrop-blur-sm' 
+          : 'bg-gray-700/80 backdrop-blur-sm'
+        }
+        transition-all duration-300 ease-in-out
+        group
+      `}>
       {/* Top handle with glow effect */}
       <Handle 
         type="target" 
@@ -65,13 +83,22 @@ export function FlowNode({ data }: FlowNodeProps) {
         {/* Address and name labels */}
         <div className="flex flex-col items-center gap-1">
           {isNamedAddress && (
-            <div className="text-gray-200 font-medium text-sm text-center">
+            <div className="text-gray-200 font-medium text-sm text-center flex items-center gap-2">
               {data.label}
+              {!data.isSource && data.percentage && (
+                <span className="text-blue-300">({Math.round(parseFloat(data.percentage))}%)</span>
+              )}
             </div>
           )}
-          <div className="text-gray-400 font-mono text-xs text-center">
+          <a 
+            href={`/proceeds/${data.fullAddress}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-400 font-mono text-xs text-center hover:text-blue-300 transition-colors relative z-50 cursor-pointer px-2 py-1 hover:bg-gray-700/50 rounded"
+            onClick={(e) => e.stopPropagation()}
+          >
             {shortAddress}
-          </div>
+          </a>
         </div>
         
         {/* Recipients bar */}
@@ -79,13 +106,15 @@ export function FlowNode({ data }: FlowNodeProps) {
           <div className="w-full h-8 rounded-lg overflow-hidden bg-gray-900/50 flex">
             {data.recipients.map((recipient, index) => {
               const percentage = Math.max(0, Math.min(100, recipient.percentAllocation || 0));
+              const colorIndex = index % colors.length;
               return (
                 <div
                   key={recipient.recipient.address}
                   className="h-full transition-all duration-300"
                   style={{
-                    backgroundColor: colors[index],
+                    backgroundColor: colors[colorIndex],
                     width: `${percentage}%`,
+                    opacity: 0.9 // Slightly reduce opacity for better blending
                   }}
                   title={`${recipient.recipient.address} (${percentage}%)`}
                 />
@@ -97,7 +126,7 @@ export function FlowNode({ data }: FlowNodeProps) {
         {/* Show single bar for non-split nodes */}
         {!data.isSplit && (
           <div className="w-full h-8 rounded-lg overflow-hidden bg-gray-900/50">
-            <div className="w-full h-full bg-gray-600" />
+            <div className="w-full h-full bg-blue-400/70" />
           </div>
         )}
       </div>
