@@ -29,10 +29,11 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip"
 import ZORA_COIN_ABI from '@/abi/ZoraCoin.json'
-import { tradeCoin, tradeCoinCall, getTradeFromLogs } from '@zoralabs/coins-sdk'
+import { tradeCoin, tradeCoinCall, getTradeFromLogs, simulateBuy } from '@zoralabs/coins-sdk'
 import { TRADE_REFERRER } from '@/modules/general/service'
 import { toast } from 'react-toastify'
 import Image from 'next/image'
+import { useDebounce } from '@/hooks/useDebounce'
 
 interface EnsureButtonsProps {
   contractAddress: `0x${string}`
@@ -57,9 +58,12 @@ export function EnsureButtons({
   const [modalOpen, setModalOpen] = useState(false)
   const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy')
   const [ethAmount, setEthAmount] = useState('0.000111')
+  const debouncedEthAmount = useDebounce(ethAmount, 500)
   const [estimatedTokens, setEstimatedTokens] = useState<string>('0')
   const [ethBalance, setEthBalance] = useState<bigint>(BigInt(0))
   const [tokenBalance, setTokenBalance] = useState<bigint>(BigInt(0))
+  const [ethPriceInUsd, setEthPriceInUsd] = useState<number>(0)
+  const [isSimulating, setIsSimulating] = useState(false)
   const [coinDetails, setCoinDetails] = useState<{ 
     symbol: string,
     price?: string,
@@ -117,19 +121,101 @@ export function EnsureButtons({
 
   // Calculate estimated tokens when ETH amount changes
   useEffect(() => {
-    if (coinDetails?.price && ethAmount) {
+    let mounted = true
+    if (!contractAddress || !debouncedEthAmount || tradeType !== 'buy' || !userAddress || !modalOpen) return
+
+    const calculateTokens = async () => {
       try {
-        const ethValue = Number(ethAmount)
-        const pricePerToken = Number(coinDetails.price)
-        if (pricePerToken > 0) {
+        setIsSimulating(true)
+        console.log('Calculating tokens with:', {
+          ethAmount: debouncedEthAmount,
+          contractAddress
+        })
+
+        const publicClient = createPublicClient({
+          chain: base,
+          transport: http('https://mainnet.base.org')
+        })
+
+        // Get the pool address
+        const poolAddress = await publicClient.readContract({
+          address: contractAddress,
+          abi: ZORA_COIN_ABI,
+          functionName: 'poolAddress'
+        }) as `0x${string}`
+
+        if (!mounted) return
+
+        // Get the pool state
+        const poolState = await publicClient.readContract({
+          address: poolAddress,
+          abi: [
+            {
+              inputs: [],
+              name: 'slot0',
+              outputs: [
+                { name: 'sqrtPriceX96', type: 'uint160' },
+                { name: 'tick', type: 'int24' },
+                { name: 'observationIndex', type: 'uint16' },
+                { name: 'observationCardinality', type: 'uint16' },
+                { name: 'observationCardinalityNext', type: 'uint16' },
+                { name: 'feeProtocol', type: 'uint8' },
+                { name: 'unlocked', type: 'bool' }
+              ],
+              stateMutability: 'view',
+              type: 'function'
+            }
+          ],
+          functionName: 'slot0'
+        })
+
+        if (!mounted) return
+
+        // Calculate price from sqrtPriceX96
+        const sqrtPriceX96 = poolState[0]
+        const price = (Number(sqrtPriceX96) / 2**96) ** 2
+        const tokenPrice = price * (10**18)
+        
+        // Calculate tokens
+        const ethValue = parseEther(debouncedEthAmount)
+        const tokens = ethValue * BigInt(Math.floor(tokenPrice)) / BigInt(10**18)
+
+        if (!mounted) return
+        setEstimatedTokens(formatEther(tokens))
+      } catch (error) {
+        console.error('Error calculating tokens:', error)
+        if (mounted && coinDetails?.price) {
+          const ethValue = Number(debouncedEthAmount)
+          const pricePerToken = Number(coinDetails.price)
           const tokens = ethValue / pricePerToken
           setEstimatedTokens(tokens.toFixed(6))
         }
-      } catch (error) {
-        console.error('Error calculating tokens:', error)
+      } finally {
+        if (mounted) {
+          setIsSimulating(false)
+        }
       }
     }
-  }, [ethAmount, coinDetails?.price])
+
+    calculateTokens()
+    return () => {
+      mounted = false
+    }
+  }, [debouncedEthAmount, contractAddress, tradeType, userAddress, modalOpen, coinDetails?.price])
+
+  // Fetch ETH price in USD
+  useEffect(() => {
+    const fetchEthPrice = async () => {
+      try {
+        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd')
+        const data = await response.json()
+        setEthPriceInUsd(data.ethereum.usd)
+      } catch (error) {
+        console.error('Error fetching ETH price:', error)
+      }
+    }
+    fetchEthPrice()
+  }, [])
 
   const handleOpenModal = async (type: 'buy' | 'sell') => {
     if (!authenticated) {
@@ -294,8 +380,8 @@ export function EnsureButtons({
   const formatBalance = (balance: bigint) => {
     if (balance === BigInt(0)) return '0'
     const formatted = formatEther(balance)
-    // Ensure we don't lose precision by avoiding number conversion
-    return formatted.replace(/\.?0+$/, '') // Remove trailing zeros after decimal, but keep significant digits
+    // Keep only 6 decimal places
+    return formatted.replace(/\.(\d{0,6}).*$/, '.$1')
   }
 
   // Calculate price and conversion details
@@ -358,10 +444,18 @@ export function EnsureButtons({
       </div>
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-[425px] bg-black/95 border border-gray-800 shadow-xl backdrop-blur-xl">
+        <DialogContent className="sm:max-w-[500px] bg-black/95 border border-gray-800 shadow-xl backdrop-blur-xl">
           <DialogHeader className="border-b border-gray-800 pb-4">
-            <DialogTitle className="text-xl font-bold text-white flex items-center gap-4">
-              <div className="relative w-12 h-12 rounded-lg overflow-hidden">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-2">
+                <DialogTitle className="text-xl font-bold text-white">
+                  {tradeType === 'buy' ? 'ensure' : 'un-ensure'}
+                </DialogTitle>
+                <div className="text-3xl font-bold text-white">
+                  {coinDetails?.symbol || 'Token'}
+                </div>
+              </div>
+              <div className="relative w-20 h-20 rounded-lg overflow-hidden mr-4">
                 <Image 
                   src={imageUrl}
                   alt={coinDetails?.symbol || 'Token'}
@@ -369,54 +463,54 @@ export function EnsureButtons({
                   className="object-cover"
                 />
               </div>
-              <div>
-                {tradeType === 'buy' ? 'ensure' : 'un-ensure'}
-                {coinDetails?.symbol && <span className="text-muted-foreground text-sm ml-2">{coinDetails.symbol}</span>}
-              </div>
-            </DialogTitle>
-            <DialogDescription className="space-y-3 mt-2">
-              {priceDetails && (
-                <div className="flex flex-col gap-2 bg-gray-900/50 p-3 rounded-lg border border-gray-800">
-                  <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-400">price per token</p>
-                    <p className="text-sm font-medium text-white">{priceDetails.pricePerToken} ETH</p>
-                  </div>
-                  {tradeType === 'buy' && Number(ethAmount) > 0 && (
-                    <div className="flex justify-between items-center">
-                      <p className="text-sm text-gray-400">estimated tokens</p>
-                      <p className="text-sm font-medium text-white">{priceDetails.estimatedTokens}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </DialogDescription>
+            </div>
           </DialogHeader>
-          <div className="py-4">
-            <div className="space-y-2">
-              <label htmlFor="amount" className="text-sm font-medium text-gray-300">
-                {tradeType === 'buy' ? 'ensure with eth' : 'tokens to un-ensure'}
-              </label>
-              <Input
-                id="amount"
-                type="number"
-                value={tradeType === 'buy' ? ethAmount : estimatedTokens}
-                onChange={(e) => tradeType === 'buy' ? setEthAmount(e.target.value) : setEstimatedTokens(e.target.value)}
-                placeholder="enter amount"
-                className="bg-gray-900/50 border-gray-800 text-white placeholder:text-gray-500"
-                min="0"
-                step="0.000001"
-              />
-              <div className="flex justify-end">
-                <p className="text-xs text-gray-500">
-                  balance: {tradeType === 'buy' 
-                    ? `${formatBalance(ethBalance)} eth`
-                    : `${formatBalance(tokenBalance)} ${coinDetails?.symbol?.toLowerCase() || 'tokens'}`
-                  }
-                </p>
+          <div className="py-6">
+            <div className="grid grid-cols-2 gap-6">
+              {/* Left side - ETH details */}
+              <div className="space-y-3">
+                <label htmlFor="amount" className="text-sm font-medium text-gray-300">
+                  {tradeType === 'buy' ? 'ensure with eth' : 'tokens to un-ensure'}
+                </label>
+                <div className="flex items-center gap-4">
+                  <Input
+                    id="amount"
+                    type="number"
+                    value={tradeType === 'buy' ? ethAmount : estimatedTokens}
+                    onChange={(e) => tradeType === 'buy' ? setEthAmount(e.target.value) : setEstimatedTokens(e.target.value)}
+                    placeholder="enter amount"
+                    className="bg-gray-900/50 border-gray-800 text-white placeholder:text-gray-500 h-12 text-lg font-medium w-36"
+                    min="0"
+                    step="0.000001"
+                  />
+                </div>
+                {tradeType === 'buy' && ethPriceInUsd > 0 && (
+                  <div className="text-sm text-gray-400">
+                    ${(Number(ethAmount) * ethPriceInUsd).toFixed(2)} USD
+                  </div>
+                )}
+                <div className="text-sm text-gray-400 whitespace-nowrap">
+                  your balance: {formatBalance(ethBalance)} ETH
+                </div>
+              </div>
+
+              {/* Right side - Token details */}
+              <div className="space-y-5">
+                <div className="text-sm font-medium text-gray-300 text-right">
+                  estimated {coinDetails?.symbol?.toLowerCase() || 'tokens'}
+                </div>
+                <div className="text-2xl font-medium text-white text-right">
+                  {isSimulating ? 'calculating...' : Math.floor(Number(estimatedTokens)).toLocaleString()}
+                </div>
+                {tradeType === 'sell' && (
+                  <div className="text-sm text-gray-400 text-right">
+                    your balance: {formatBalance(tokenBalance)} {coinDetails?.symbol?.toLowerCase() || 'tokens'}
+                  </div>
+                )}
               </div>
             </div>
           </div>
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-800">
+          <div className="flex justify-end gap-3 pt-6 border-t border-gray-800">
             <Button 
               variant="ghost" 
               onClick={() => setModalOpen(false)}
@@ -429,17 +523,17 @@ export function EnsureButtons({
                 <TooltipTrigger asChild>
                   <Button 
                     onClick={handleTrade}
-                    disabled={isLoading || (tradeType === 'buy' ? !ethAmount || Number(ethAmount) <= 0 : !estimatedTokens || Number(estimatedTokens) <= 0)}
+                    disabled={isLoading || isSimulating || (tradeType === 'buy' ? !ethAmount || Number(ethAmount) <= 0 : !estimatedTokens || Number(estimatedTokens) <= 0)}
                     className={`min-w-[120px] font-bold ${
                       tradeType === 'buy' 
                         ? 'bg-green-600 hover:bg-green-500 text-white' 
                         : 'bg-red-600 hover:bg-red-500 text-white'
                     }`}
                   >
-                    {isLoading ? (
+                    {isLoading || isSimulating ? (
                       <div className="flex items-center gap-2">
                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        <span>processing...</span>
+                        <span>{isSimulating ? 'calculating...' : 'processing...'}</span>
                       </div>
                     ) : (
                       tradeType === 'buy' ? 'ENSURE' : 'UN-ENSURE'

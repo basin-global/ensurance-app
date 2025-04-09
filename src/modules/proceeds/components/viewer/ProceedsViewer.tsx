@@ -26,15 +26,38 @@ function FluidEdge({
   markerEnd,
   data
 }: EdgeProps) {
-  const [edgePath, labelX, labelY] = getSmoothStepPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
-    borderRadius: 30
-  });
+  // Calculate control points for a natural curve
+  const midX = (sourceX + targetX) / 2;
+  const midY = (sourceY + targetY) / 2;
+  
+  // Calculate horizontal distance for determining curve intensity
+  const horizontalDistance = Math.abs(targetX - sourceX);
+  const verticalDistance = Math.abs(targetY - sourceY);
+  
+  // Determine if this is an upward flow (return flow)
+  const isUpwardFlow = targetY < sourceY;
+  
+  let edgePath;
+  
+  if (data?.isReturnFlow) {
+    // Return flows take a wide path around the outside
+    const curveIntensity = Math.max(horizontalDistance, 400); // Minimum curve width
+    const sign = targetX > sourceX ? 1 : -1; // Determine which side to curve towards
+    
+    // Create a wide curve that goes around the outside
+    edgePath = `M ${sourceX} ${sourceY}
+                C ${sourceX + (sign * curveIntensity)} ${sourceY},
+                  ${targetX + (sign * curveIntensity)} ${targetY},
+                  ${targetX} ${targetY}`;
+  } else {
+    // Main flows stay more central with gentle curves
+    const variance = Math.min(verticalDistance * 0.2, 100);
+    
+    edgePath = `M ${sourceX} ${sourceY}
+                C ${sourceX} ${midY - variance},
+                  ${targetX} ${midY + variance},
+                  ${targetX} ${targetY}`;
+  }
 
   return (
     <>
@@ -43,21 +66,23 @@ function FluidEdge({
         markerEnd={markerEnd}
         style={{
           ...style,
-          strokeWidth: 2,
-          stroke: '#60A5FA',
-          opacity: 0.6
+          strokeWidth: data?.isReturnFlow ? 1.5 : 2, // Slightly thinner return lines
+          opacity: data?.isReturnFlow ? 0.5 : 0.6,   // Slightly more transparent return lines
+          strokeDasharray: data?.isReturnFlow ? '4 4' : '8 4',
+          filter: 'drop-shadow(0 0 2px rgba(96, 165, 250, 0.3))'
         }}
       />
       {data?.label && (
         <text
-          x={labelX}
-          y={labelY}
-          className="fill-gray-400 text-xs"
+          x={midX}
+          y={midY}
+          className={`text-xs ${data?.isReturnFlow ? 'fill-blue-300' : 'fill-gray-400'}`}
           textAnchor="middle"
           dominantBaseline="middle"
           style={{
             pointerEvents: 'none',
-            userSelect: 'none'
+            userSelect: 'none',
+            filter: 'drop-shadow(0 1px 1px rgb(0 0 0 / 0.3))'
           }}
         >
           {data.label}
@@ -80,10 +105,6 @@ const flowStyles = {
 // Default viewport settings
 const defaultViewport = { x: 0, y: 0, zoom: 1 };
 
-// Node types configuration
-const nodeTypes = { flowNode: FlowNode };
-const edgeTypes = { fluid: FluidEdge };
-
 // Flow configuration
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 1.5;
@@ -94,29 +115,86 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [addressNames, setAddressNames] = useState<Record<string, { name: string; type: string }>>({});
 
-  // Initialize splits client
-  const splitsClient = useMemo(() => new SplitsClient({
-    chainId,
-    includeEnsNames: false,
-    apiConfig: {
-      apiKey: process.env.NEXT_PUBLIC_SPLITS_API_KEY
-    }
-  }).dataClient, [chainId]);
+  // Memoize node types and edge types
+  const nodeTypes = useMemo(() => ({ flowNode: FlowNode }), []);
+  const edgeTypes = useMemo(() => ({ fluid: FluidEdge }), []);
+
+  // Initialize splits client with rate limiting
+  const splitsClient = useMemo(() => {
+    const client = new SplitsClient({
+      chainId,
+      includeEnsNames: false,
+      apiConfig: {
+        apiKey: process.env.NEXT_PUBLIC_SPLITS_API_KEY
+      }
+    }).dataClient;
+
+    // Add delay between requests to avoid rate limiting
+    const originalGetSplitMetadata = client.getSplitMetadata.bind(client);
+    client.getSplitMetadata = async (...args) => {
+      await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
+      return originalGetSplitMetadata(...args);
+    };
+
+    return client;
+  }, [chainId]);
+
+  // Fetch all address names upfront
+  useEffect(() => {
+    const fetchAddressNames = async () => {
+      try {
+        const response = await fetch('/api/proceeds');
+        if (!response.ok) {
+          console.error('Failed to fetch names:', response.status, response.statusText);
+          return;
+        }
+        const names = await response.json();
+        console.log('API Response:', {
+          status: response.status,
+          names,
+          exampleKey: Object.keys(names)[0],
+          exampleValue: names[Object.keys(names)[0]]
+        });
+        setAddressNames(names);
+      } catch (err) {
+        console.error('Failed to fetch address names:', err);
+      }
+    };
+
+    fetchAddressNames();
+  }, []);
 
   // Calculate node position based on level and index
   const calculatePosition = (level: number, index: number, totalAtLevel: number) => {
-    const radius = level * 300; // Distance from center increases with level
-    const angleStep = (2 * Math.PI) / Math.max(totalAtLevel, 1);
-    const angle = index * angleStep;
+    // Base spacing configuration - increased spacing
+    const VERTICAL_SPACING = 350;  // Increased from 250
+    const HORIZONTAL_SPACING = 400; // Increased from 300
+    const HORIZONTAL_OFFSET = 200;  // Increased from 150
     
-    // Add some random variation to prevent perfect circles
-    const randomRadius = radius * (0.9 + Math.random() * 0.2);
-    const randomAngle = angle + (Math.random() * 0.2 - 0.1);
+    // Calculate base position
+    const y = level * VERTICAL_SPACING;
+    
+    // Calculate x position with cascade effect
+    let x;
+    if (totalAtLevel === 1) {
+      // Single node centered with level offset
+      x = level * HORIZONTAL_OFFSET;
+    } else {
+      // Multiple nodes spread out with level offset
+      const spread = (totalAtLevel - 1) * HORIZONTAL_SPACING;
+      const startX = -(spread / 2) + (level * HORIZONTAL_OFFSET);
+      x = startX + (index * HORIZONTAL_SPACING);
+    }
+    
+    // Reduced random variation
+    const randomX = x + (Math.random() * 20 - 10); // Reduced from 40
+    const randomY = y + (Math.random() * 20 - 10); // Reduced from 40
     
     return {
-      x: Math.cos(randomAngle) * randomRadius,
-      y: Math.sin(randomAngle) * randomRadius
+      x: randomX,
+      y: randomY
     };
   };
 
@@ -156,18 +234,27 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
       // Calculate position
       const position = calculatePosition(level, index, totalAtLevel);
 
+      // Case-insensitive lookup in the address map
+      const addressInfo = Object.entries(addressNames).find(
+        ([addr]) => addr.toLowerCase() === normalizedAddress
+      )?.[1];
+      
+      console.log('Looking up address:', normalizedAddress, 'Found:', addressInfo); // Debug log
+
       // Add node
       newNodes.push({
         id: normalizedAddress,
         type: 'flowNode',
         data: {
-          label: `${splitAddress.slice(0, 6)}...${splitAddress.slice(-4)}`,
+          label: addressInfo?.name || `${splitAddress.slice(0, 6)}...${splitAddress.slice(-4)}`,
+          fullAddress: splitAddress,
           recipients: splitMetadata?.recipients || [],
           isSplit: Boolean(splitMetadata?.recipients?.length),
-          isSource: level === 0
+          isSource: level === 0,
+          type: addressInfo?.type || 'account'
         },
         position,
-        draggable: true // Ensure node is draggable
+        draggable: true
       });
 
       if (splitMetadata?.recipients) {
@@ -176,15 +263,26 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
           splitMetadata.recipients.map(async (recipient) => {
             const recipientAddress = recipient.recipient.address.toLowerCase();
             
-            // Skip if already processed or known
-            if (processedAddresses.has(recipientAddress) || knownSplits.has(recipientAddress)) {
+            // If we've already processed this address or have it in knownSplits, use cached info
+            if (processedAddresses.has(recipientAddress)) {
               return {
                 address: recipientAddress,
-                isSplit: true,
+                isSplit: knownSplits.has(recipientAddress),
                 percentage: recipient.percentAllocation
               };
             }
 
+            // If it's in knownSplits but not processed, use that info
+            if (knownSplits.has(recipientAddress)) {
+              const metadata = knownSplits.get(recipientAddress);
+              return {
+                address: recipientAddress,
+                isSplit: Boolean(metadata?.recipients?.length),
+                percentage: recipient.percentAllocation
+              };
+            }
+
+            // Only check new addresses
             try {
               const metadata = await splitsClient.getSplitMetadata({
                 chainId,
@@ -197,6 +295,7 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
                 percentage: recipient.percentAllocation
               };
             } catch (err) {
+              console.warn(`Error checking if ${recipientAddress} is split:`, err);
               return {
                 address: recipientAddress,
                 isSplit: false,
@@ -209,6 +308,9 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
         // Filter split recipients and create edges
         const splitRecipients = recipientChecks.filter(r => r.isSplit);
         splitRecipients.forEach(({ address, percentage }) => {
+          // Determine if this is a return flow (going to a previously seen node)
+          const isReturnFlow = processedAddresses.has(address.toLowerCase());
+          
           newEdges.push({
             id: `${normalizedAddress}-${address}`,
             source: normalizedAddress,
@@ -217,12 +319,21 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
             targetHandle: 'target',
             label: `${Math.round(percentage)}%`,
             type: 'fluid',
+            animated: true,
             markerEnd: {
               type: MarkerType.ArrowClosed,
               width: 20,
-              height: 20
+              height: 20,
+              color: isReturnFlow ? '#93C5FD' : '#60A5FA' // Lighter blue for return flows
             },
-            style: { stroke: '#64748b' }
+            style: { 
+              stroke: isReturnFlow ? '#93C5FD' : '#60A5FA', // Lighter blue for return flows
+              strokeWidth: 2,
+              opacity: 0.6
+            },
+            data: {
+              isReturnFlow
+            }
           });
         });
 
@@ -260,6 +371,7 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
           type: 'flowNode',
           data: {
             label: `${splitAddress.slice(0, 6)}...${splitAddress.slice(-4)}`,
+            fullAddress: splitAddress,
             isSplit: false,
             recipients: []
           },
@@ -269,7 +381,7 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
       }
       return { nodes: newNodes, edges: newEdges };
     }
-  }, [chainId, splitsClient]);
+  }, [chainId, splitsClient, addressNames]);
 
   // Initial load
   useEffect(() => {
@@ -322,8 +434,8 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        nodeTypes={{ flowNode: FlowNode }}
-        edgeTypes={{ fluid: FluidEdge }}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         defaultEdgeOptions={{
           type: 'fluid'
         }}

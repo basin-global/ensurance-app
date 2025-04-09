@@ -28,6 +28,13 @@ export function TotalProceedsBar({ address, title, description, onClick }: Total
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // TODO: Consider updating visualization to use simpler div-based approach like ProceedsNode
+  // - Current: Uses Recharts with complex chart setup
+  // - Potential: Use flex-based divs with percentage widths
+  // - Benefits: Faster rendering, simpler code, more reliable
+  // - Note: Keep the complex recursive percentage calculations as they serve a different purpose
+  // Reference: See ProceedsNode.tsx implementation
+
   // Initialize splits client
   const splitsClient = useMemo(() => new SplitsClient({
     chainId: base.id,
