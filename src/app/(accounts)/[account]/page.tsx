@@ -22,8 +22,15 @@ export default function AccountPage({ params }: AccountPageProps) {
   return (
     <div className="min-h-screen flex flex-col">
       <div className="flex-1 mb-4">
+        {/* Migration Message */}
+        <div className="bg-gray-900/30 rounded-lg p-8 text-center">
+          <div className="text-2xl text-gray-200 font-medium">
+            API migration in progress - balance functionality will be restored soon
+          </div>
+        </div>
+
+        {/* Commented out original columns
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-1">
-          {/* Left Column - Chat */}
           <div className="bg-gray-900/30 rounded-lg p-3">
             <div className="flex items-center gap-2 mb-1">
               <div className="text-xs uppercase tracking-wider text-gray-400 font-medium">
@@ -38,7 +45,6 @@ export default function AccountPage({ params }: AccountPageProps) {
             />
           </div>
 
-          {/* Right Column - Overview */}
           <div className="bg-gray-900/30 rounded-lg p-3">
             <div className="flex items-center gap-2 mb-1">
               <div className="text-xs uppercase tracking-wider text-gray-400 font-medium">
@@ -53,6 +59,7 @@ export default function AccountPage({ params }: AccountPageProps) {
             />
           </div>
         </div>
+        */}
       </div>
       <VerificationSection 
         type="account" 

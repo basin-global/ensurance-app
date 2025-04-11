@@ -70,139 +70,6 @@ export function EnsureButtons({
     decimals?: number 
   } | null>(null)
 
-  // Fetch ETH balance when needed
-  useEffect(() => {
-    if (authenticated && userAddress) {
-      const fetchEthBalance = async () => {
-        try {
-          const publicClient = createPublicClient({
-            chain: base,
-            transport: http('https://mainnet.base.org')
-          })
-
-          console.log('Fetching ETH balance for:', userAddress)
-          const eth = await publicClient.getBalance({ address: userAddress })
-          console.log('ETH balance:', formatEther(eth), 'ETH')
-          setEthBalance(eth)
-        } catch (error) {
-          console.error('Error fetching ETH balance:', error)
-        }
-      }
-      fetchEthBalance()
-    }
-  }, [authenticated, userAddress])
-
-  // Fetch token balance when needed
-  useEffect(() => {
-    if (authenticated && userAddress && contractAddress) {
-      const fetchTokenBalance = async () => {
-        try {
-          const publicClient = createPublicClient({
-            chain: base,
-            transport: http('https://mainnet.base.org')
-          })
-
-          const balance = await publicClient.readContract({
-            address: contractAddress,
-            abi: ZORA_COIN_ABI,
-            functionName: 'balanceOf',
-            args: [userAddress]
-          }) as bigint
-
-          console.log('Token balance:', formatEther(balance), coinDetails?.symbol || 'tokens')
-          setTokenBalance(balance)
-        } catch (error) {
-          console.error('Error fetching token balance:', error)
-        }
-      }
-      fetchTokenBalance()
-    }
-  }, [authenticated, userAddress, contractAddress, coinDetails?.symbol])
-
-  // Calculate estimated tokens when ETH amount changes
-  useEffect(() => {
-    let mounted = true
-    if (!contractAddress || !debouncedEthAmount || tradeType !== 'buy' || !userAddress || !modalOpen) return
-
-    const calculateTokens = async () => {
-      try {
-        setIsSimulating(true)
-        console.log('Calculating tokens with:', {
-          ethAmount: debouncedEthAmount,
-          contractAddress
-        })
-
-        const publicClient = createPublicClient({
-          chain: base,
-          transport: http('https://mainnet.base.org')
-        })
-
-        // Get the pool address
-        const poolAddress = await publicClient.readContract({
-          address: contractAddress,
-          abi: ZORA_COIN_ABI,
-          functionName: 'poolAddress'
-        }) as `0x${string}`
-
-        if (!mounted) return
-
-        // Get the pool state
-        const poolState = await publicClient.readContract({
-          address: poolAddress,
-          abi: [
-            {
-              inputs: [],
-              name: 'slot0',
-              outputs: [
-                { name: 'sqrtPriceX96', type: 'uint160' },
-                { name: 'tick', type: 'int24' },
-                { name: 'observationIndex', type: 'uint16' },
-                { name: 'observationCardinality', type: 'uint16' },
-                { name: 'observationCardinalityNext', type: 'uint16' },
-                { name: 'feeProtocol', type: 'uint8' },
-                { name: 'unlocked', type: 'bool' }
-              ],
-              stateMutability: 'view',
-              type: 'function'
-            }
-          ],
-          functionName: 'slot0'
-        })
-
-        if (!mounted) return
-
-        // Calculate price from sqrtPriceX96
-        const sqrtPriceX96 = poolState[0]
-        const price = (Number(sqrtPriceX96) / 2**96) ** 2
-        const tokenPrice = price * (10**18)
-        
-        // Calculate tokens
-        const ethValue = parseEther(debouncedEthAmount)
-        const tokens = ethValue * BigInt(Math.floor(tokenPrice)) / BigInt(10**18)
-
-        if (!mounted) return
-        setEstimatedTokens(formatEther(tokens))
-      } catch (error) {
-        console.error('Error calculating tokens:', error)
-        if (mounted && coinDetails?.price) {
-          const ethValue = Number(debouncedEthAmount)
-          const pricePerToken = Number(coinDetails.price)
-          const tokens = ethValue / pricePerToken
-          setEstimatedTokens(tokens.toFixed(6))
-        }
-      } finally {
-        if (mounted) {
-          setIsSimulating(false)
-        }
-      }
-    }
-
-    calculateTokens()
-    return () => {
-      mounted = false
-    }
-  }, [debouncedEthAmount, contractAddress, tradeType, userAddress, modalOpen, coinDetails?.price])
-
   // Fetch ETH price in USD
   useEffect(() => {
     const fetchEthPrice = async () => {
@@ -222,11 +89,43 @@ export function EnsureButtons({
       login()
       return
     }
+    
     setTradeType(type)
     setModalOpen(true)
-    if (!coinDetails) {
-      const details = await getCoinDetails(contractAddress)
-      setCoinDetails(details)
+    
+    try {
+      // Create public client for reading balances
+      const publicClient = createPublicClient({
+        chain: base,
+        transport: http('https://mainnet.base.org')
+      })
+
+      // Fetch ETH balance
+      if (userAddress) {
+        const eth = await publicClient.getBalance({ address: userAddress })
+        setEthBalance(eth)
+      }
+
+      // Fetch token balance
+      if (userAddress && contractAddress) {
+        const balance = await publicClient.readContract({
+          address: contractAddress,
+          abi: ZORA_COIN_ABI,
+          functionName: 'balanceOf',
+          args: [userAddress]
+        }) as bigint
+        setTokenBalance(balance)
+      }
+
+      // Fetch coin details if needed
+      if (!coinDetails) {
+        const details = await getCoinDetails(contractAddress)
+        setCoinDetails(details)
+      }
+    } catch (error) {
+      console.error('Error fetching balances:', error)
+      // Don't block modal opening on balance fetch errors
+      // User can still see previous balances if any
     }
   }
 
@@ -404,6 +303,90 @@ export function EnsureButtons({
   }
 
   const priceDetails = getPriceDetails()
+
+  // Calculate estimated tokens when ETH amount changes
+  useEffect(() => {
+    let mounted = true
+    if (!contractAddress || !debouncedEthAmount || tradeType !== 'buy' || !userAddress || !modalOpen) return
+
+    const calculateTokens = async () => {
+      try {
+        setIsSimulating(true)
+        console.log('Calculating tokens with:', {
+          ethAmount: debouncedEthAmount,
+          contractAddress
+        })
+
+        const publicClient = createPublicClient({
+          chain: base,
+          transport: http('https://mainnet.base.org')
+        })
+
+        // Get the pool address
+        const poolAddress = await publicClient.readContract({
+          address: contractAddress,
+          abi: ZORA_COIN_ABI,
+          functionName: 'poolAddress'
+        }) as `0x${string}`
+
+        if (!mounted) return
+
+        // Get the pool state
+        const poolState = await publicClient.readContract({
+          address: poolAddress,
+          abi: [
+            {
+              inputs: [],
+              name: 'slot0',
+              outputs: [
+                { name: 'sqrtPriceX96', type: 'uint160' },
+                { name: 'tick', type: 'int24' },
+                { name: 'observationIndex', type: 'uint16' },
+                { name: 'observationCardinality', type: 'uint16' },
+                { name: 'observationCardinalityNext', type: 'uint16' },
+                { name: 'feeProtocol', type: 'uint8' },
+                { name: 'unlocked', type: 'bool' }
+              ],
+              stateMutability: 'view',
+              type: 'function'
+            }
+          ],
+          functionName: 'slot0'
+        })
+
+        if (!mounted) return
+
+        // Calculate price from sqrtPriceX96
+        const sqrtPriceX96 = poolState[0]
+        const price = (Number(sqrtPriceX96) / 2**96) ** 2
+        const tokenPrice = price * (10**18)
+        
+        // Calculate tokens
+        const ethValue = parseEther(debouncedEthAmount)
+        const tokens = ethValue * BigInt(Math.floor(tokenPrice)) / BigInt(10**18)
+
+        if (!mounted) return
+        setEstimatedTokens(formatEther(tokens))
+      } catch (error) {
+        console.error('Error calculating tokens:', error)
+        if (mounted && coinDetails?.price) {
+          const ethValue = Number(debouncedEthAmount)
+          const pricePerToken = Number(coinDetails.price)
+          const tokens = ethValue / pricePerToken
+          setEstimatedTokens(tokens.toFixed(6))
+        }
+      } finally {
+        if (mounted) {
+          setIsSimulating(false)
+        }
+      }
+    }
+
+    calculateTokens()
+    return () => {
+      mounted = false
+    }
+  }, [debouncedEthAmount, contractAddress, tradeType, userAddress, modalOpen, coinDetails?.price])
 
   return (
     <>
