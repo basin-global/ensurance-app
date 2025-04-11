@@ -8,23 +8,24 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/layout/PageHeader'
 
 interface SyndicateDetails {
-  id: string
-  name: string
-  description: string
-  strategy: string
-  asset_address: string
-  chain: string
-  impact_tags: string[]
-  currency: string
-  image_url: string
+  name: string;
+  tagline: string;
+  description: string | null;
+  asset_address: string;
+  chain: string;
+  natural_capital_stocks: string[];
+  natural_capital_flows: string[];
+  nat_cap_rate: string | number;
+  image_url: string;
   media?: {
-    banner?: string
+    banner?: string;
   }
 }
 
 export default function SyndicateDetailsPage() {
   const params = useParams()
-  const contractAddress = params.contract as string
+  // Keep the hyphenated version for the API query
+  const syndicateName = params.name as string;
   
   const [syndicate, setSyndicate] = useState<SyndicateDetails | null>(null)
   const [loading, setLoading] = useState(true)
@@ -34,7 +35,7 @@ export default function SyndicateDetailsPage() {
     const fetchSyndicateDetails = async () => {
       try {
         setLoading(true)
-        const response = await fetch(`/api/syndicates?id=${contractAddress}`)
+        const response = await fetch(`/api/syndicates?name=${syndicateName}`)
         
         if (!response.ok) {
           throw new Error('Failed to fetch syndicate details')
@@ -54,10 +55,10 @@ export default function SyndicateDetailsPage() {
       }
     }
     
-    if (contractAddress) {
+    if (syndicateName) {
       fetchSyndicateDetails()
     }
-  }, [contractAddress])
+  }, [syndicateName])
   
   if (loading) {
     return (
@@ -91,7 +92,14 @@ export default function SyndicateDetailsPage() {
   }
   
   // Get banner image from media.banner or fallback to image_url
-  const bannerImage = syndicate.media?.banner || syndicate.image_url;
+  const bannerImage = syndicate.media?.banner || syndicate.image_url || '/assets/ensurance-example.png';
+  
+  console.log('Syndicate data:', {
+    name: syndicate.name,
+    bannerImage,
+    media: syndicate.media,
+    image_url: syndicate.image_url
+  });
   
   return (
     <div className="flex flex-col">
@@ -105,6 +113,10 @@ export default function SyndicateDetailsPage() {
           priority
           sizes="100vw"
           quality={90}
+          onError={(e) => {
+            const img = e.target as HTMLImageElement;
+            img.src = '/assets/ensurance-example.png';
+          }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
         
@@ -120,17 +132,20 @@ export default function SyndicateDetailsPage() {
           {/* Title Content */}
           <div className="container mx-auto px-4 pb-8">
             <div className="max-w-4xl mx-auto">
-              <h1 className="text-4xl font-bold mb-3 text-white">
+              <h1 className="text-4xl font-bold mb-3 text-white capitalize">
                 {syndicate.name}
               </h1>
+              <p className="text-xl text-gray-200 mb-4">
+                {syndicate.tagline}
+              </p>
               
               <div className="flex flex-wrap gap-2">
-                {syndicate.impact_tags?.map((tag, index) => (
+                {syndicate.natural_capital_stocks?.map((stock, index) => (
                   <span 
                     key={index} 
                     className="inline-flex items-center rounded-full border border-gray-600 bg-black/40 px-2.5 py-0.5 text-sm font-medium text-white"
                   >
-                    {tag}
+                    {stock}
                   </span>
                 ))}
               </div>
@@ -151,29 +166,41 @@ export default function SyndicateDetailsPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-900/50 rounded-xl p-6 mb-6">
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Asset Details</h3>
-              <dl className="space-y-2">
+              <h3 className="text-lg font-semibold">Natural Capital</h3>
+              <dl className="space-y-4">
                 <div>
-                  <dt className="text-sm text-gray-400">Chain</dt>
-                  <dd className="capitalize">{syndicate.chain}</dd>
+                  <dt className="text-sm text-gray-400 mb-2">Stocks</dt>
+                  <dd className="flex flex-wrap gap-2">
+                    {syndicate.natural_capital_stocks.map((stock, index) => (
+                      <span key={index} className="text-sm px-2 py-1 bg-primary-dark/10 rounded-full">
+                        {stock}
+                      </span>
+                    ))}
+                  </dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-gray-400">Asset</dt>
-                  <dd>{syndicate.currency}</dd>
+                  <dt className="text-sm text-gray-400 mb-2">Flows</dt>
+                  <dd className="flex flex-wrap gap-2">
+                    {syndicate.natural_capital_flows.map((flow, index) => (
+                      <span key={index} className="text-sm px-2 py-1 bg-emerald-500/10 rounded-full text-emerald-700 dark:text-emerald-300">
+                        {flow}
+                      </span>
+                    ))}
+                  </dd>
                 </div>
               </dl>
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Contract Details</h3>
-              <dl className="space-y-2">
+              <h3 className="text-lg font-semibold">Asset Details</h3>
+              <dl className="space-y-4">
                 <div>
-                  <dt className="text-sm text-gray-400">Syndicate Address</dt>
-                  <dd className="font-mono text-sm break-all">{syndicate.id}</dd>
+                  <dt className="text-sm text-gray-400">Asset</dt>
+                  <dd className="font-mono text-sm break-all">{syndicate.asset_address}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-gray-400">Asset Address</dt>
-                  <dd className="font-mono text-sm break-all">{syndicate.asset_address}</dd>
+                  <dt className="text-sm text-gray-400">Natural Capital Rate</dt>
+                  <dd className="text-emerald-500 font-semibold">{syndicate.nat_cap_rate}% NCR</dd>
                 </div>
               </dl>
             </div>
@@ -181,7 +208,7 @@ export default function SyndicateDetailsPage() {
 
           <div className="flex justify-center">
             <a 
-              href={`mailto:tmo@basin.global?subject=Join Waitlist: ${syndicate.name}&body=Hi, I'm interested in joining the waitlist for the ${syndicate.name} syndicate.%0D%0A%0D%0ASyndicate ID: ${syndicate.id}`}
+              href={`mailto:tmo@basin.global?subject=Join Waitlist: ${syndicate.name}&body=Hi, I'm interested in joining the waitlist for the ${syndicate.name} syndicate.%0D%0A%0D%0ASyndicate: ${syndicate.name}`}
               className="bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 w-full md:w-auto md:min-w-[200px] text-center"
             >
               Join Waitlist

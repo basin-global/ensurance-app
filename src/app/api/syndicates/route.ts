@@ -8,54 +8,42 @@ export async function GET(request: Request) {
   try {
     // Get query parameters
     const { searchParams } = new URL(request.url);
-    const chain = searchParams.get('chain');
-    const id = searchParams.get('id');
+    const name = searchParams.get('name');
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit') as string) : 20;
     const page = searchParams.get('page') ? parseInt(searchParams.get('page') as string) : 1;
     const offset = (page - 1) * limit;
     
-    // Build the SQL query with optional filters
-    let query = `
-      SELECT 
-        s.contract_address as id,
-        s.name,
-        s.description,
-        s.strategy,
-        s.asset_address,
-        s.chain,
-        s.impact_tags,
-        s.media,
-        s.image_url,
-        a.symbol as currency
-      FROM 
-        syndicates.syndicates s
-      LEFT JOIN 
-        market.approved_assets a ON s.asset_address = a.contract_address AND s.chain = a.chain
-    `;
-    
-    const whereConditions = [];
+    let whereClause = '';
     const values: any[] = [];
     
-    // Add chain filter if provided
-    if (chain) {
-      whereConditions.push(`s.chain = $${values.length + 1}`);
-      values.push(chain);
+    // Add name filter if provided
+    if (name) {
+      whereClause = 'WHERE name = $1';
+      // Convert hyphenated URL name back to spaces for DB query
+      values.push(name.replace(/-/g, ' '));
     }
     
-    // Add id filter if provided
-    if (id) {
-      whereConditions.push(`s.contract_address = $${values.length + 1}`);
-      values.push(id);
-    }
-    
-    // Add WHERE clause if there are conditions
-    if (whereConditions.length > 0) {
-      query += ` WHERE ${whereConditions.join(' AND ')}`;
-    }
-    
-    // Add pagination (only if not fetching by ID)
-    if (!id) {
-      query += ` LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
+    // Build the SQL query
+    const query = `
+      SELECT 
+        name,
+        tagline,
+        description,
+        asset_address,
+        chain,
+        media,
+        image_url,
+        natural_capital_stocks,
+        natural_capital_flows,
+        nat_cap_rate
+      FROM syndicates.syndicates
+      ${whereClause}
+      ORDER BY name
+      ${!name ? `LIMIT $${values.length + 1} OFFSET $${values.length + 2}` : ''}
+    `;
+
+    // Add pagination values if not fetching by name
+    if (!name) {
       values.push(limit);
       values.push(offset);
     }
@@ -65,18 +53,19 @@ export async function GET(request: Request) {
     
     // Transform the data to match the expected format in the frontend
     const syndicates = result.rows.map(item => ({
-      id: item.id,
       name: item.name,
+      tagline: item.tagline,
       description: item.description,
-      strategy: item.strategy,
       asset_address: item.asset_address,
-      chain: item.chain,
-      impact_tags: item.impact_tags,
-      currency: item.currency,
+      chain: item.chain || 'base',
       media: item.media || {},
-      // Use the image_url from the database, fallback to banner from media or default
-      image_url: item.image_url || item.media?.banner || '/assets/ensurance-example.png'
+      image_url: item.image_url,
+      natural_capital_stocks: item.natural_capital_stocks || [],
+      natural_capital_flows: item.natural_capital_flows || [],
+      nat_cap_rate: item.nat_cap_rate || 0
     }));
+
+    console.log('API Response:', syndicates);
     
     return NextResponse.json(syndicates);
   } catch (error) {
