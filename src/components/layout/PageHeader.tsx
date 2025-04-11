@@ -18,20 +18,32 @@ interface PageHeaderProps {
   activeTab?: string
   onTabChange?: (value: string) => void
   variant?: 'default' | 'compact'
+  onSearch?: (query: string) => void
 }
 
 export function PageHeader({ 
   title, 
   description,
   searchQuery = '', 
-  setSearchQuery = () => {}, 
-  searchPlaceholder = "Search accounts...",
+  setSearchQuery,
+  searchPlaceholder = "Search...",
   showSearch = true,
   tabs,
   activeTab,
   onTabChange,
-  variant = 'default'
+  variant = 'default',
+  onSearch
 }: PageHeaderProps) {
+  // Handle search input
+  const handleSearch = (query: string) => {
+    if (setSearchQuery) {
+      setSearchQuery(query);
+    }
+    if (onSearch) {
+      onSearch(query);
+    }
+  };
+
   if (variant === 'compact') {
     return (
       <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 mb-2 px-4">
@@ -78,7 +90,7 @@ export function PageHeader({
         <div className="w-full flex justify-center mb-6 md:mb-8 px-2 md:px-0">
           <AssetSearch 
             searchQuery={searchQuery} 
-            setSearchQuery={setSearchQuery}
+            setSearchQuery={handleSearch}
             placeholder={searchPlaceholder}
           />
         </div>
