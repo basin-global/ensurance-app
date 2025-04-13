@@ -16,7 +16,11 @@ export default function SyndicatesPage() {
         <div className="space-y-8">
           <PageHeader
             title="ensurance syndicates"
-            showSearch={false}
+            description="diversified natural capital investments"
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            searchPlaceholder="what do you want to ensure"
+            showSearch={true}
           />
 
           <SyndicateGrid 

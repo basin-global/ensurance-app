@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Image from 'next/image'
+import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -104,50 +106,44 @@ export default function SyndicateDetailsPage() {
   return (
     <div className="flex flex-col">
       {/* Hero Section with Banner */}
-      <div className="relative h-[50vh] min-h-[400px]">
+      <div className="relative h-[60vh] min-h-[500px]">
         <Image
           src={bannerImage}
           alt={`${syndicate.name} Banner`}
           fill
-          className="object-cover brightness-90"
+          className="object-cover"
           priority
           sizes="100vw"
-          quality={90}
+          quality={95}
           onError={(e) => {
             const img = e.target as HTMLImageElement;
             img.src = '/assets/ensurance-example.png';
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
         
         {/* Overlay Content */}
         <div className="absolute inset-0 flex flex-col">
-          <div className="flex-1 pt-8">
-            <PageHeader 
-              title="ensurance syndicate" 
-              showSearch={false} 
-            />
-          </div>
+          <Link href="/syndicates" className="block">
+            <div className="flex justify-center items-center gap-3 group pt-8">
+              <ArrowLeft className="w-6 h-6 text-gray-400 group-hover:text-white transition-colors" />
+              <PageHeader 
+                title="ensurance syndicates"
+                showSearch={false}
+              />
+            </div>
+          </Link>
           
           {/* Title Content */}
-          <div className="container mx-auto px-4 pb-8">
-            <div className="max-w-4xl mx-auto">
-              <h1 className="text-4xl font-bold mb-3 text-white capitalize">
-                {syndicate.name}
-              </h1>
-              <p className="text-xl text-gray-200 mb-4">
-                {syndicate.tagline}
-              </p>
-              
-              <div className="flex flex-wrap gap-2">
-                {syndicate.natural_capital_stocks?.map((stock, index) => (
-                  <span 
-                    key={index} 
-                    className="inline-flex items-center rounded-full border border-gray-600 bg-black/40 px-2.5 py-0.5 text-sm font-medium text-white"
-                  >
-                    {stock}
-                  </span>
-                ))}
+          <div className="container mx-auto px-4 pb-12 mt-auto">
+            <div className="max-w-4xl mx-auto space-y-6">
+              <div className="space-y-4">
+                <h1 className="text-4xl font-semibold text-white tracking-tight">
+                  {syndicate.name}
+                </h1>
+                <p className="text-xl text-white/85 font-normal leading-relaxed">
+                  {syndicate.tagline}
+                </p>
               </div>
             </div>
           </div>
@@ -155,64 +151,57 @@ export default function SyndicateDetailsPage() {
       </div>
 
       {/* Content Section */}
-      <div className="container mx-auto px-4 py-6">
-        <div className="max-w-4xl mx-auto">
-          {/* Description */}
-          {syndicate.description && (
-            <div className="prose dark:prose-invert max-w-none mb-6">
-              <p className="text-base leading-relaxed">{syndicate.description}</p>
+      <div className="container mx-auto px-4 py-12">
+        <div className="max-w-4xl mx-auto space-y-12">
+          {/* Description and CTA */}
+          <div className="flex gap-8 items-center">
+            <div className="flex-1">
+              {syndicate.description && (
+                <div className="prose prose-lg dark:prose-invert max-w-none -mt-1">
+                  <p className="text-lg leading-relaxed text-white/85">{syndicate.description}</p>
+                </div>
+              )}
             </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-900/50 rounded-xl p-6 mb-6">
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Natural Capital</h3>
-              <dl className="space-y-4">
-                <div>
-                  <dt className="text-sm text-gray-400 mb-2">Stocks</dt>
-                  <dd className="flex flex-wrap gap-2">
-                    {syndicate.natural_capital_stocks.map((stock, index) => (
-                      <span key={index} className="text-sm px-2 py-1 bg-primary-dark/10 rounded-full">
-                        {stock}
-                      </span>
-                    ))}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm text-gray-400 mb-2">Flows</dt>
-                  <dd className="flex flex-wrap gap-2">
-                    {syndicate.natural_capital_flows.map((flow, index) => (
-                      <span key={index} className="text-sm px-2 py-1 bg-emerald-500/10 rounded-full text-emerald-700 dark:text-emerald-300">
-                        {flow}
-                      </span>
-                    ))}
-                  </dd>
-                </div>
-              </dl>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Asset Details</h3>
-              <dl className="space-y-4">
-                <div>
-                  <dt className="text-sm text-gray-400">Asset</dt>
-                  <dd className="font-mono text-sm break-all">{syndicate.asset_address}</dd>
-                </div>
-                <div>
-                  <dt className="text-sm text-gray-400">Natural Capital Rate</dt>
-                  <dd className="text-emerald-500 font-semibold">{syndicate.nat_cap_rate}% NCR</dd>
-                </div>
-              </dl>
+            <div className="shrink-0 pt-1">
+              <a 
+                href={`mailto:tmo@basin.global?subject=Join Waitlist: ${syndicate.name}&body=Hi, I'm interested in joining the waitlist for the ${syndicate.name} syndicate.%0D%0A%0D%0ASyndicate: ${syndicate.name}`}
+                className="px-8 py-3 bg-white hover:bg-white/90 text-black font-semibold rounded-full text-sm tracking-wide transition-all duration-300 shadow-xl shadow-white/10 whitespace-nowrap"
+              >
+                Join Waitlist
+              </a>
             </div>
           </div>
 
-          <div className="flex justify-center">
-            <a 
-              href={`mailto:tmo@basin.global?subject=Join Waitlist: ${syndicate.name}&body=Hi, I'm interested in joining the waitlist for the ${syndicate.name} syndicate.%0D%0A%0D%0ASyndicate: ${syndicate.name}`}
-              className="bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 w-full md:w-auto md:min-w-[200px] text-center"
-            >
-              Join Waitlist
-            </a>
+          {/* Natural Capital Details */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+            <div className="space-y-4">
+              <h3 className="text-xl font-semibold text-white tracking-tight mb-6">Natural Cap Rate</h3>
+              <div className="text-3xl font-semibold text-white tracking-tight">
+                {syndicate.nat_cap_rate}%
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-xl font-semibold text-white tracking-tight mb-6">Natural Capital Stocks</h3>
+              <div className="flex flex-wrap gap-2">
+                {syndicate.natural_capital_stocks.map((stock, index) => (
+                  <span key={index} className="px-4 py-2 text-sm bg-white/10 backdrop-blur-sm rounded-full text-white/90 font-medium tracking-wide">
+                    {stock}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-xl font-semibold text-white tracking-tight mb-6">Natural Capital Flows</h3>
+              <div className="flex flex-wrap gap-2">
+                {syndicate.natural_capital_flows.map((flow, index) => (
+                  <span key={index} className="px-4 py-2 text-sm bg-white/10 backdrop-blur-sm rounded-full text-white/90 font-medium tracking-wide">
+                    {flow}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
