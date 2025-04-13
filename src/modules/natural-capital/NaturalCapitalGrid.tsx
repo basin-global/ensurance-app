@@ -269,7 +269,7 @@ export default function NaturalCapitalGrid({
 
                 .natural-capital-section {
                     position: relative;
-                    padding: ${variant === 'showcase' ? '60px 0 120px' : variant === 'detailed' ? '30px 0 60px' : '20px 0 40px'};
+                    padding: ${variant === 'showcase' ? '60px 0 120px' : variant === 'detailed' ? '30px 0 60px' : '0'};
                     background: ${variant !== 'standard' ? `
                         linear-gradient(180deg, 
                             rgba(0, 0, 0, 0) 0%,
@@ -301,6 +301,7 @@ export default function NaturalCapitalGrid({
                         rgba(255, 255, 255, 0.15) 80%,
                         transparent
                     );
+                    display: ${variant === 'standard' ? 'none' : 'block'};
                 }
 
                 .circle-grid {

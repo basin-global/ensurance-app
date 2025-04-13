@@ -138,10 +138,10 @@ export default function SyndicateDetailsPage() {
           <div className="container mx-auto px-4 pb-12 mt-auto">
             <div className="max-w-4xl mx-auto space-y-6">
               <div className="space-y-4">
-                <h1 className="text-4xl font-semibold text-white tracking-tight">
+                <h1 className="text-4xl font-semibold text-white tracking-tight lowercase">
                   {syndicate.name}
                 </h1>
-                <p className="text-xl text-white/85 font-normal leading-relaxed">
+                <p className="text-xl text-white/85 font-normal leading-relaxed lowercase">
                   {syndicate.tagline}
                 </p>
               </div>
@@ -153,39 +153,35 @@ export default function SyndicateDetailsPage() {
       {/* Content Section */}
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-4xl mx-auto space-y-12">
-          {/* Description and CTA */}
-          <div className="flex gap-8 items-center">
-            <div className="flex-1">
-              {syndicate.description && (
-                <div className="prose prose-lg dark:prose-invert max-w-none -mt-1">
-                  <p className="text-lg leading-relaxed text-white/85">{syndicate.description}</p>
-                </div>
-              )}
-            </div>
-            <div className="shrink-0 pt-1">
-              <a 
-                href={`mailto:tmo@basin.global?subject=Join Waitlist: ${syndicate.name}&body=Hi, I'm interested in joining the waitlist for the ${syndicate.name} syndicate.%0D%0A%0D%0ASyndicate: ${syndicate.name}`}
-                className="px-8 py-3 bg-white hover:bg-white/90 text-black font-semibold rounded-full text-sm tracking-wide transition-all duration-300 shadow-xl shadow-white/10 whitespace-nowrap"
-              >
-                Join Waitlist
-              </a>
-            </div>
+          {/* Top Stats */}
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <span className="px-4 py-2 bg-white/10 backdrop-blur-md rounded-full text-sm text-white/90 font-medium tracking-wide lowercase">
+              natural cap rate: {syndicate.nat_cap_rate}%
+            </span>
+            <a 
+              href={`mailto:tmo@basin.global?subject=Join Waitlist: ${syndicate.name}&body=Hi, I'm interested in joining the waitlist for the ${syndicate.name} syndicate.%0D%0A%0D%0ASyndicate: ${syndicate.name}`}
+              className="px-4 py-2 bg-white/10 hover:bg-white/15 backdrop-blur-md rounded-full text-sm text-white/90 font-medium tracking-wide lowercase transition-all duration-300"
+            >
+              join waitlist
+            </a>
           </div>
 
-          {/* Natural Capital Details */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-            <div className="space-y-4">
-              <h3 className="text-xl font-semibold text-white tracking-tight mb-6">Natural Cap Rate</h3>
-              <div className="text-3xl font-semibold text-white tracking-tight">
-                {syndicate.nat_cap_rate}%
-              </div>
+          {/* Description */}
+          {syndicate.description && (
+            <div className="prose prose-lg dark:prose-invert max-w-none">
+              <p className="text-lg leading-relaxed text-white/85 lowercase">{syndicate.description}</p>
             </div>
+          )}
 
+          {/* Natural Capital Details */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
             <div className="space-y-4">
-              <h3 className="text-xl font-semibold text-white tracking-tight mb-6">Natural Capital Stocks</h3>
+              <h3 className="text-xl font-semibold text-white tracking-tight lowercase mb-6">
+                natural capital stocks
+              </h3>
               <div className="flex flex-wrap gap-2">
                 {syndicate.natural_capital_stocks.map((stock, index) => (
-                  <span key={index} className="px-4 py-2 text-sm bg-white/10 backdrop-blur-sm rounded-full text-white/90 font-medium tracking-wide">
+                  <span key={index} className="px-4 py-2 text-sm bg-white/10 backdrop-blur-sm rounded-full text-white/90 font-medium tracking-wide lowercase">
                     {stock}
                   </span>
                 ))}
@@ -193,10 +189,12 @@ export default function SyndicateDetailsPage() {
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-xl font-semibold text-white tracking-tight mb-6">Natural Capital Flows</h3>
+              <h3 className="text-xl font-semibold text-white tracking-tight lowercase mb-6">
+                natural capital flows
+              </h3>
               <div className="flex flex-wrap gap-2">
                 {syndicate.natural_capital_flows.map((flow, index) => (
-                  <span key={index} className="px-4 py-2 text-sm bg-white/10 backdrop-blur-sm rounded-full text-white/90 font-medium tracking-wide">
+                  <span key={index} className="px-4 py-2 text-sm bg-white/10 backdrop-blur-sm rounded-full text-white/90 font-medium tracking-wide lowercase">
                     {flow}
                   </span>
                 ))}

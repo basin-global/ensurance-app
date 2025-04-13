@@ -1,5 +1,7 @@
 import { AssetSearch } from '@/modules/assets/AssetSearch'
 import { cn } from '@/lib/utils'
+import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 
 interface Tab {
   value: string
@@ -19,6 +21,8 @@ interface PageHeaderProps {
   onTabChange?: (value: string) => void
   variant?: 'default' | 'compact'
   onSearch?: (query: string) => void
+  backLink?: string
+  showBackArrow?: boolean
 }
 
 export function PageHeader({ 
@@ -32,7 +36,9 @@ export function PageHeader({
   activeTab,
   onTabChange,
   variant = 'default',
-  onSearch
+  onSearch,
+  backLink,
+  showBackArrow = false
 }: PageHeaderProps) {
   // Handle search input
   const handleSearch = (query: string) => {
@@ -44,23 +50,41 @@ export function PageHeader({
     }
   };
 
+  const headerContent = (
+    <>
+      <h1 className={cn(
+        "font-bold text-center",
+        variant === 'compact' ? "text-xl md:text-2xl" : "text-2xl md:text-4xl mb-3 md:mb-4"
+      )}>{title}</h1>
+      {description && (
+        <p className={cn(
+          "text-gray-400 text-center max-w-2xl mx-auto text-sm md:text-base",
+          variant === 'compact' ? "md:text-left" : "mb-6 md:mb-8"
+        )}>{description}</p>
+      )}
+    </>
+  );
+
+  const wrappedContent = showBackArrow && backLink ? (
+    <Link href={backLink} className="block">
+      <div className="flex justify-center items-center gap-3 group">
+        <ArrowLeft className="w-6 h-6 text-gray-400 group-hover:text-white transition-colors" />
+        {headerContent}
+      </div>
+    </Link>
+  ) : headerContent;
+
   if (variant === 'compact') {
     return (
-      <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 mb-2 px-4">
-        <h1 className="text-xl md:text-2xl font-bold text-center md:text-right">{title}</h1>
-        {description && (
-          <p className="text-gray-400 text-center md:text-left max-w-xl">{description}</p>
-        )}
+      <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 mb-2 px-4 pt-8">
+        {wrappedContent}
       </div>
     )
   }
 
   return (
-    <div className="px-4 md:px-6">
-      <h1 className="text-2xl md:text-4xl font-bold text-center mb-3 md:mb-4">{title}</h1>
-      {description && (
-        <p className="text-gray-400 text-center mb-6 md:mb-8 max-w-2xl mx-auto text-sm md:text-base">{description}</p>
-      )}
+    <div className="px-4 md:px-6 pt-8">
+      {wrappedContent}
       {tabs && (
         <nav className="mb-6 md:mb-8 overflow-x-auto">
           <div className="container mx-auto flex flex-col items-center min-w-full">

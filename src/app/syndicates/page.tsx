@@ -19,7 +19,7 @@ export default function SyndicatesPage() {
             description="diversified natural capital investments"
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
-            searchPlaceholder="what do you want to ensure"
+            searchPlaceholder="what do you want to ensure?"
             showSearch={true}
           />
 

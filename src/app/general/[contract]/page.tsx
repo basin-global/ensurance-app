@@ -45,15 +45,12 @@ export default async function GeneralCertificateDetails({
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Link href="/general" className="block mb-8">
-        <div className="flex justify-center items-center gap-3 group pt-8">
-          <ArrowLeft className="w-6 h-6 text-gray-400 group-hover:text-white transition-colors" />
-          <PageHeader 
-            title="general ensurance"
-            showSearch={false}
-          />
-        </div>
-      </Link>
+      <PageHeader 
+        title="general ensurance"
+        showSearch={false}
+        showBackArrow={true}
+        backLink="/general"
+      />
       
       <div className="container mx-auto px-4 flex-1 pb-12">
         <SplitsWrapper>

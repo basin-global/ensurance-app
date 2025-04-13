@@ -69,7 +69,7 @@ export default function PoolsPage() {
         <div className="space-y-8">
           <PageHeader
             title="ensurance pools"
-            description="liquidity pools to ensure what mattters"
+            description="liquidity for what mattters"
             showSearch={true}
             searchPlaceholder="Search pools..."
             searchQuery={searchQuery}
