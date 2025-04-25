@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { isEnsuranceToken } from '@/modules/specific/config/ensurance'
+import { isEnsuranceToken } from '@/modules/specific/contract'
 import AccountStats from '@/modules/accounts/AccountStats'
 // import SpecificGrid from '@/modules/specific/SpecificGrid'
 import Link from 'next/link'

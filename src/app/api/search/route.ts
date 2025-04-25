@@ -1,5 +1,4 @@
 import { accounts } from '@/lib/database/accounts';
-import { ensurance } from '@/lib/database/certificates/specific';
 import { groups } from '@/lib/database/groups';
 import { searchDocs } from '@/lib/docs-search';
 import { NextRequest, NextResponse } from 'next/server';
@@ -9,8 +8,7 @@ export const revalidate = 60;
 // Simple in-memory cache with stale-while-revalidate
 let cache = {
     groups: { data: null, timestamp: 0, isRevalidating: false },
-    accounts: { data: null, timestamp: 0, isRevalidating: false },
-    certificates: { data: null, timestamp: 0, isRevalidating: false }
+    accounts: { data: null, timestamp: 0, isRevalidating: false }
 };
 
 const CACHE_TTL = 60000; // 1 minute
@@ -122,15 +120,13 @@ export async function GET(request: NextRequest) {
         // Only fetch and search other data if we have a search query
         let groupsData = [];
         let accountsData = [];
-        let certificatesData = [];
 
         // Initialize from cache if valid
         groupsData = await getDataWithCache('groups', () => groups.getSearchResults());
         accountsData = await getDataWithCache('accounts', () => accounts.getSearchResults());
-        certificatesData = await getDataWithCache('certificates', () => ensurance.getSearchResults());
 
         // Process results in parallel with null checks
-        const [matchingGroups, matchingAccounts, matchingCertificates] = await Promise.all([
+        const [matchingGroups, matchingAccounts] = await Promise.all([
             groupsData
                 .filter(group => 
                     (group?.group_name?.toLowerCase().includes(searchLower) ||
@@ -151,16 +147,6 @@ export async function GET(request: NextRequest) {
                     type: 'account',
                     is_agent: account.is_agent,
                     is_ensurance: account.group_name === '.ensurance' && account.full_account_name !== 'situs.ensurance'
-                })),
-            certificatesData
-                .filter(cert => 
-                    cert.name?.toLowerCase().includes(searchLower) ||
-                    cert.chain?.toLowerCase().includes(searchLower)
-                )
-                .map(cert => ({
-                    name: cert.name || `Certificate #${cert.token_id}`,
-                    path: `/certificates/${cert.chain}/${cert.token_id}`,
-                    type: 'certificate'
                 }))
         ]);
 
@@ -168,8 +154,7 @@ export async function GET(request: NextRequest) {
         const results = [
             ...matchingNavItems,
             ...matchingGroups,
-            ...matchingAccounts,
-            ...matchingCertificates
+            ...matchingAccounts
         ];
 
         // Add docs results to the combined results

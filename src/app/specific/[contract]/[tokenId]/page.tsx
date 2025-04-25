@@ -1,80 +1,109 @@
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { isSpamContract } from '@/config/spamContracts';
-import { Asset } from '@/types';
-import { AssetDetailView } from '@/modules/assets/details/AssetDetailView';
-import { isEnsuranceToken } from '@/modules/specific/config/ensurance';
+import { useParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { usePrivy } from '@privy-io/react-auth'
+import { getSpecificToken } from '@/modules/specific/mint'
+import { specificContract, isSpecificContract, SpecificMetadata } from '@/modules/specific/config/ERC1155'
+import type { Address } from 'viem'
 
-interface AssetPageProps {
-  params: {
-    chain: string;
-    contract: string;
-    tokenId: string;
-  };
-}
+export default function SpecificTokenPage() {
+  const params = useParams()
+  const { ready, authenticated, user } = usePrivy()
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string>()
+  const [tokenData, setTokenData] = useState<SpecificMetadata>()
 
-export default function AssetPage({ params }: AssetPageProps) {
-  const router = useRouter();
-  const pathname = usePathname();
-  
-  const [assetDetails, setAssetDetails] = useState<Asset | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Validate contract address format
+  const contract = params.contract as string
+  if (!contract?.startsWith('0x') || contract.length !== 42) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-4">Invalid Contract</h1>
+        <p className="text-red-600">
+          Invalid contract address format.
+        </p>
+      </div>
+    )
+  }
 
-  const isSpam = isSpamContract(params.chain, params.contract);
+  // Now we can safely cast to Address since we validated the format
+  if (!isSpecificContract(contract as Address)) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-4">Invalid Contract</h1>
+        <p className="text-red-600">
+          This contract is not a valid specific certificate contract.
+        </p>
+      </div>
+    )
+  }
+
+  const tokenId = params.tokenId as string
 
   useEffect(() => {
-    // Early return if we're already on a certificate page
-    if (pathname.includes('/certificates/')) {
-      return;
-    }
-
-    // Check if this is an Ensurance token before any data fetching
-    if (isEnsuranceToken(params.chain, params.contract)) {
-      const certificatePath = `/certificates/${params.chain}/${params.tokenId}`;
-      router.replace(certificatePath);
-      return;
-    }
-
-    // Only fetch if not an Ensurance token
-    const fetchAssetDetails = async () => {
-      setLoading(true);
+    async function loadToken() {
       try {
-        const response = await fetch(
-          `/api/simplehash/nft?chain=${params.chain}&contractAddress=${params.contract}&tokenId=${params.tokenId}`
-        );
-        if (!response.ok) throw new Error('Failed to fetch asset details');
-        const data = await response.json();
-        setAssetDetails(data);
+        setLoading(true)
+        const { metadata } = await getSpecificToken(tokenId)
+        setTokenData(metadata)
       } catch (err) {
-        console.error('Error fetching asset:', err);
-        setError('Failed to fetch asset details. Please try again later.');
+        console.error('Error loading token:', err)
+        setError('Failed to load token data')
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    fetchAssetDetails();
-  }, [params.chain, params.contract, params.tokenId, router, pathname]);
+    if (ready) {
+      loadToken()
+    }
+  }, [ready, tokenId])
 
   if (loading) {
-    return <div className="flex justify-center items-center h-screen">Loading asset details...</div>;
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-4">Loading...</h1>
+      </div>
+    )
   }
 
-  if (error) {
-    return <div className="flex justify-center items-center h-screen">{error}</div>;
-  }
-
-  if (!assetDetails) {
-    return <div className="flex justify-center items-center h-screen">Asset not found</div>;
+  if (error || !tokenData) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-4">Error</h1>
+        <p className="text-red-600">{error || 'Token not found'}</p>
+      </div>
+    )
   }
 
   return (
-    <AssetDetailView
-      asset={assetDetails}
-      isSpam={isSpam}
-    />
-  );
-} 
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-4">
+        {tokenData.name || `Token #${tokenId}`}
+      </h1>
+      <div className="max-w-2xl">
+        <div className="bg-white shadow rounded-lg p-6">
+          {/* Token details will go here */}
+          <div className="space-y-4">
+            <p className="text-sm text-gray-500">
+              Token details and mint UI coming soon...
+            </p>
+            {authenticated ? (
+              <div className="mt-4">
+                {/* Mint UI will go here */}
+                <p className="text-sm text-gray-500">
+                  Mint functionality coming soon...
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 mt-4">
+                Connect your wallet to mint this token.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

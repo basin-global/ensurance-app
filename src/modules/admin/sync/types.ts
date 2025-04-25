@@ -13,6 +13,7 @@ export interface GeneralCertificateData {
   symbol: string;
   token_uri: string;
   pool_address: string;
+  total_supply?: string;
   total_volume?: string;
   volume_24h?: string;
   market_cap?: string;

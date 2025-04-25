@@ -1,4 +1,4 @@
-import { PlusCircle, MinusCircle } from 'lucide-react'
+import { PlusCircle, MinusCircle, Flame } from 'lucide-react'
 import { usePrivy, useWallets } from '@privy-io/react-auth'
 import { useGeneralService } from '@/modules/general/service/hooks'
 import { useState, useEffect } from 'react'
@@ -38,6 +38,7 @@ import { useDebounce } from '@/hooks/useDebounce'
 interface EnsureButtonsProps {
   contractAddress: `0x${string}`
   showMinus?: boolean
+  showBurn?: boolean
   size?: 'sm' | 'lg'
   defaultAmount?: bigint
   imageUrl?: string
@@ -47,6 +48,7 @@ interface EnsureButtonsProps {
 export function EnsureButtons({ 
   contractAddress,
   showMinus = true,
+  showBurn = false,
   size = 'lg',
   defaultAmount = parseEther('0.000111'),
   imageUrl = '/assets/no-image-found.png'
@@ -56,7 +58,7 @@ export function EnsureButtons({
   const { getBuyConfig, getSellConfig, userAddress, getCoinDetails } = useGeneralService()
   const [isLoading, setIsLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
-  const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy')
+  const [tradeType, setTradeType] = useState<'buy' | 'sell' | 'burn'>('buy')
   const [ethAmount, setEthAmount] = useState('0.000111')
   const debouncedEthAmount = useDebounce(ethAmount, 500)
   const [estimatedTokens, setEstimatedTokens] = useState<string>('0')
@@ -84,7 +86,7 @@ export function EnsureButtons({
     fetchEthPrice()
   }, [])
 
-  const handleOpenModal = async (type: 'buy' | 'sell') => {
+  const handleOpenModal = async (type: 'buy' | 'sell' | 'burn') => {
     if (!authenticated) {
       login()
       return
@@ -122,10 +124,13 @@ export function EnsureButtons({
         const details = await getCoinDetails(contractAddress)
         setCoinDetails(details)
       }
+
+      // For burn, set the estimated tokens to the current balance
+      if (type === 'burn') {
+        setEstimatedTokens(formatEther(tokenBalance))
+      }
     } catch (error) {
       console.error('Error fetching balances:', error)
-      // Don't block modal opening on balance fetch errors
-      // User can still see previous balances if any
     }
   }
 
@@ -154,6 +159,54 @@ export function EnsureButtons({
         chain: base,
         transport: custom(provider)
       })
+
+      if (tradeType === 'burn') {
+        const tokenAmountInWei = parseEther(estimatedTokens)
+        if (tokenAmountInWei > tokenBalance) {
+          toast.error('Insufficient token balance')
+          return
+        }
+
+        const pendingToast = toast.loading('burning tokens...')
+        
+        try {
+          const hash = await walletClient.writeContract({
+            address: contractAddress,
+            abi: ZORA_COIN_ABI,
+            functionName: 'burn',
+            args: [tokenAmountInWei],
+            chain: base,
+            account: userAddress as `0x${string}`
+          })
+          
+          await publicClient.waitForTransactionReceipt({ hash })
+          
+          toast.update(pendingToast, {
+            render: 'tokens burned successfully',
+            type: 'success',
+            isLoading: false,
+            autoClose: 5000,
+            className: '!bg-orange-500/20 !text-orange-200 !border-orange-500/30'
+          })
+          
+          setModalOpen(false)
+          return
+        } catch (error: any) {
+          console.error('Burn failed:', error)
+          if (error?.code === 4001 || error?.message?.includes('rejected')) {
+            toast.dismiss(pendingToast)
+            toast.error('transaction cancelled')
+          } else {
+            toast.update(pendingToast, {
+              render: 'burn failed',
+              type: 'error',
+              isLoading: false,
+              autoClose: 5000
+            })
+          }
+          return
+        }
+      }
 
       const ethAmountInWei = parseEther(ethAmount)
 
@@ -197,13 +250,13 @@ export function EnsureButtons({
         params: contractCallParams
       })
 
-      const pendingToast = toast.loading(`${tradeType === 'buy' ? 'ensuring what matters' : 'un-ensuring what matters'}...`)
+      const pendingToast = toast.loading(`${tradeType === 'buy' ? 'ensuring what matters' : tradeType === 'sell' ? 'un-ensuring what matters' : 'burning tokens'}...`)
       
       try {
         // Execute the trade using writeContract
         const hash = await walletClient.writeContract({
           ...contractCallParams,
-          value: tradeType === 'buy' ? ethAmountInWei : BigInt(0),
+          value: tradeType === 'buy' ? ethAmountInWei : tradeType === 'sell' ? BigInt(0) : BigInt(0),
           chain: base,
           account: userAddress as `0x${string}`
         })
@@ -217,13 +270,15 @@ export function EnsureButtons({
           console.log('Trade details:', tradeEvent)
           const amount = tradeType === 'buy' ? 
             (tradeEvent as any).coinsPurchased : 
-            (tradeEvent as any).amountSold
+            tradeType === 'sell' ? 
+            (tradeEvent as any).amountSold : 
+            (tradeEvent as any).amountBurned
           toast.update(pendingToast, {
-            render: `you have ${tradeType === 'buy' ? 'ensured' : 'un-ensured'} what matters`,
+            render: `you have ${tradeType === 'buy' ? 'ensured' : tradeType === 'sell' ? 'un-ensured' : 'burned'} what matters`,
             type: 'success',
             isLoading: false,
             autoClose: 5000,
-            className: tradeType === 'buy' ? '' : '!bg-red-500/20 !text-red-200 !border-red-500/30'
+            className: tradeType === 'buy' ? '' : tradeType === 'sell' ? '!bg-red-500/20 !text-red-200 !border-red-500/30' : '!bg-orange-500/20 !text-orange-200 !border-orange-500/30'
           })
         } else {
           toast.update(pendingToast, {
@@ -236,7 +291,7 @@ export function EnsureButtons({
         
         setModalOpen(false)
       } catch (error: any) {
-        console.error(`${tradeType === 'buy' ? 'Buy' : 'Sell'} failed:`, error)
+        console.error(`${tradeType === 'buy' ? 'Buy' : tradeType === 'sell' ? 'Sell' : 'Burn'} failed:`, error)
         if (error?.code === 4001 || error?.message?.includes('rejected')) { // User rejected or cancelled
           toast.dismiss(pendingToast)
           toast.error('transaction cancelled')
@@ -259,7 +314,7 @@ export function EnsureButtons({
       }
 
     } catch (error: any) {
-      console.error(`${tradeType === 'buy' ? 'Buy' : 'Sell'} failed:`, error)
+      console.error(`${tradeType === 'buy' ? 'Buy' : tradeType === 'sell' ? 'Sell' : 'Burn'} failed:`, error)
       if (error?.code === 4001 || error?.message?.includes('rejected')) { // User rejected or cancelled
         toast.error('transaction cancelled')
       } else if (error?.message?.includes('insufficient funds')) {
@@ -278,9 +333,41 @@ export function EnsureButtons({
   // Format balance with appropriate decimals
   const formatBalance = (balance: bigint) => {
     if (balance === BigInt(0)) return '0'
+    
     const formatted = formatEther(balance)
-    // Keep only 6 decimal places
-    return formatted.replace(/\.(\d{0,6}).*$/, '.$1')
+    const num = Number(formatted)
+    
+    if (num < 1) {
+      // Show up to 6 decimal places for small numbers
+      return num.toLocaleString('en-US', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 6
+      })
+    } else {
+      // Show only 2 decimal places for numbers >= 1
+      return num.toLocaleString('en-US', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+      })
+    }
+  }
+
+  // Format input value with appropriate decimals
+  const formatInputValue = (value: string) => {
+    const num = Number(value)
+    if (num === 0 || isNaN(num)) return value
+    
+    if (num < 1) {
+      return num.toLocaleString('en-US', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 6
+      })
+    } else {
+      return num.toLocaleString('en-US', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+      })
+    }
   }
 
   // Calculate price and conversion details
@@ -424,6 +511,24 @@ export function EnsureButtons({
             </Tooltip>
           </TooltipProvider>
         )}
+
+        {showBurn && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => handleOpenModal('burn')}
+                  className="flex items-center gap-2 text-gray-300 hover:text-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Flame className={`${iconSize} stroke-[1.5] stroke-orange-500 hover:stroke-orange-400 transition-colors`} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>burn tokens</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
       </div>
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
@@ -432,7 +537,7 @@ export function EnsureButtons({
             <div className="flex items-center justify-between">
               <div className="flex flex-col gap-2">
                 <DialogTitle className="text-xl font-bold text-white">
-                  {tradeType === 'buy' ? 'ensure' : 'un-ensure'}
+                  {tradeType === 'buy' ? 'ensure' : tradeType === 'sell' ? 'un-ensure' : 'burn'}
                 </DialogTitle>
                 <div className="text-3xl font-bold text-white">
                   {coinDetails?.symbol || 'Token'}
@@ -450,10 +555,11 @@ export function EnsureButtons({
           </DialogHeader>
           <div className="py-6">
             <div className="grid grid-cols-2 gap-6">
-              {/* Left side - ETH details */}
               <div className="space-y-3">
                 <label htmlFor="amount" className="text-sm font-medium text-gray-300">
-                  {tradeType === 'buy' ? 'ensure with eth' : 'tokens to un-ensure'}
+                  {tradeType === 'buy' ? 'ensure with eth' : 
+                   tradeType === 'sell' ? 'tokens to un-ensure' : 
+                   'tokens to burn'}
                 </label>
                 <div className="flex items-center gap-4">
                   <Input
@@ -464,7 +570,7 @@ export function EnsureButtons({
                     placeholder="enter amount"
                     className="bg-gray-900/50 border-gray-800 text-white placeholder:text-gray-500 h-12 text-lg font-medium w-36"
                     min="0"
-                    step="0.000001"
+                    step={tradeType === 'buy' ? "0.000001" : Number(tokenBalance) < 1 ? "0.000001" : "0.01"}
                   />
                 </div>
                 {tradeType === 'buy' && ethPriceInUsd > 0 && (
@@ -473,24 +579,27 @@ export function EnsureButtons({
                   </div>
                 )}
                 <div className="text-sm text-gray-400 whitespace-nowrap">
-                  your balance: {formatBalance(ethBalance)} ETH
+                  your balance: {tradeType === 'buy' ? 
+                    `${formatBalance(ethBalance)} ETH` : 
+                    `${formatBalance(tokenBalance)} ${coinDetails?.symbol?.toLowerCase() || 'tokens'}`}
                 </div>
               </div>
 
-              {/* Right side - Token details */}
-              <div className="space-y-5">
-                <div className="text-sm font-medium text-gray-300 text-right">
-                  estimated {coinDetails?.symbol?.toLowerCase() || 'tokens'}
-                </div>
-                <div className="text-2xl font-medium text-white text-right">
-                  {isSimulating ? 'calculating...' : Math.floor(Number(estimatedTokens)).toLocaleString()}
-                </div>
-                {tradeType === 'sell' && (
-                  <div className="text-sm text-gray-400 text-right">
-                    your balance: {formatBalance(tokenBalance)} {coinDetails?.symbol?.toLowerCase() || 'tokens'}
+              {tradeType !== 'burn' && (
+                <div className="space-y-5">
+                  <div className="text-sm font-medium text-gray-300 text-right">
+                    estimated {coinDetails?.symbol?.toLowerCase() || 'tokens'}
                   </div>
-                )}
-              </div>
+                  <div className="text-2xl font-medium text-white text-right">
+                    {isSimulating ? 'calculating...' : formatInputValue(estimatedTokens)}
+                  </div>
+                  {tradeType === 'sell' && (
+                    <div className="text-sm text-gray-400 text-right">
+                      your balance: {formatBalance(tokenBalance)} {coinDetails?.symbol?.toLowerCase() || 'tokens'}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           <div className="flex justify-end gap-3 pt-6 border-t border-gray-800">
@@ -506,25 +615,27 @@ export function EnsureButtons({
                 <TooltipTrigger asChild>
                   <Button 
                     onClick={handleTrade}
-                    disabled={isLoading || isSimulating || (tradeType === 'buy' ? !ethAmount || Number(ethAmount) <= 0 : !estimatedTokens || Number(estimatedTokens) <= 0)}
+                    disabled={isLoading || (tradeType === 'burn' ? !estimatedTokens || Number(estimatedTokens) <= 0 : tradeType === 'buy' ? !ethAmount || Number(ethAmount) <= 0 : !estimatedTokens || Number(estimatedTokens) <= 0)}
                     className={`min-w-[120px] font-bold ${
                       tradeType === 'buy' 
                         ? 'bg-green-600 hover:bg-green-500 text-white' 
-                        : 'bg-red-600 hover:bg-red-500 text-white'
+                        : tradeType === 'sell'
+                        ? 'bg-red-600 hover:bg-red-500 text-white'
+                        : 'bg-orange-600 hover:bg-orange-500 text-white'
                     }`}
                   >
-                    {isLoading || isSimulating ? (
+                    {isLoading ? (
                       <div className="flex items-center gap-2">
                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        <span>{isSimulating ? 'calculating...' : 'processing...'}</span>
+                        <span>processing...</span>
                       </div>
                     ) : (
-                      tradeType === 'buy' ? 'ENSURE' : 'UN-ENSURE'
+                      tradeType === 'buy' ? 'ENSURE' : tradeType === 'sell' ? 'UN-ENSURE' : 'BURN'
                     )}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{tradeType === 'buy' ? '(Buy)' : '(Sell)'}</p>
+                  <p>{tradeType === 'buy' ? '(Buy)' : tradeType === 'sell' ? '(Sell)' : '(Burn)'}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

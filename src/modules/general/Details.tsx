@@ -26,6 +26,7 @@ interface CertificateData {
   token_uri: string
   contract_address: string
   unique_holders: string
+  total_supply: string
 }
 
 interface DetailsProps {
@@ -35,6 +36,43 @@ interface DetailsProps {
   payout_recipient?: string
   provenance?: string
   initial_supply?: string
+}
+
+// Format number to human readable format (k, M)
+const formatToHumanReadable = (num: number): string => {
+  if (num === 0) return '0'
+  if (num < 1000) return num.toString()
+  
+  if (num < 1000000) {
+    // Format as k
+    const value = num / 1000
+    return value < 10 ? value.toFixed(1) + 'k' : Math.floor(value) + 'k'
+  } else {
+    // Format as M
+    const value = num / 1000000
+    return value < 10 ? value.toFixed(1) + 'M' : Math.floor(value) + 'M'
+  }
+}
+
+// Convert string number with decimals to regular number
+const parseTokenAmount = (amount: string): number => {
+  try {
+    // Handle scientific notation and convert to regular number
+    const normalizedNum = Number(amount).toString()
+    
+    // If the number has a decimal point, remove 18 decimal places
+    if (normalizedNum.includes('.')) {
+      const [whole, decimal] = normalizedNum.split('.')
+      const paddedDecimal = decimal.padEnd(18, '0')
+      return Number(whole + paddedDecimal.slice(0, 18)) / Math.pow(10, 18)
+    }
+    
+    // If it's a whole number, divide by 10^18
+    return Number(amount) / Math.pow(10, 18)
+  } catch (error) {
+    console.error('Error parsing token amount:', error)
+    return 0
+  }
 }
 
 export default function Details({ 
@@ -173,7 +211,7 @@ export default function Details({
             {/* Metrics Card */}
             <Card className="bg-primary-dark/50 border-gray-800">
               <CardContent className="p-6">
-                <div className="grid grid-cols-3 gap-6">
+                <div className="grid grid-cols-4 gap-6">
                   <div>
                     <h3 className="text-sm text-gray-400 mb-1">market cap</h3>
                     <p className="text-xl font-semibold">${Number(certificateData.market_cap || '0').toLocaleString(undefined, { 
@@ -192,6 +230,20 @@ export default function Details({
                     <h3 className="text-sm text-gray-400 mb-1">ensurers</h3>
                     <p className="text-xl font-semibold">{Number(certificateData.unique_holders || '0').toLocaleString()}</p>
                   </div>
+                  <div>
+                    <h3 className="text-sm text-gray-400 mb-1">burned</h3>
+                    <p className="text-xl font-semibold">
+                      {(() => {
+                        const totalSupply = Number(certificateData.total_supply || '1000000000')
+                        const burned = 1000000000 - totalSupply
+                        console.log('Burn calculation:', {
+                          totalSupply,
+                          burned
+                        })
+                        return formatToHumanReadable(Math.max(0, burned))
+                      })()}
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -201,6 +253,7 @@ export default function Details({
               <EnsureButtons 
                 contractAddress={contractAddress} 
                 imageUrl={convertIpfsUrl(metadata?.image) || FALLBACK_IMAGE}
+                showBurn={true}
               />
             </div>
 

@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { isSpamContract } from '@/config/spamContracts';
 import { Asset } from '@/types';
 import { AssetDetailView } from '@/modules/assets/details/AssetDetailView';
-import { isEnsuranceToken } from '@/modules/specific/config/ensurance';
+import { isEnsuranceToken } from '@/modules/specific/contract';
 
 interface AssetPageProps {
   params: {

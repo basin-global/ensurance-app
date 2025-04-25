@@ -411,6 +411,7 @@ async function syncGeneralCertificatesMarketData(): Promise<SyncOperationResult>
 
           // Log the market data we found
           console.log('Found market data:', {
+            totalSupply: coinData.totalSupply,
             totalVolume: coinData.totalVolume,
             volume24h: coinData.volume24h,
             marketCap: coinData.marketCap,
@@ -420,6 +421,7 @@ async function syncGeneralCertificatesMarketData(): Promise<SyncOperationResult>
 
           // Update market data in database
           await generalCertificates.updateMarketData(cert, {
+            total_supply: coinData.totalSupply || '0',
             total_volume: coinData.totalVolume || '0',
             volume_24h: coinData.volume24h || '0',
             market_cap: coinData.marketCap || '0',
@@ -438,6 +440,7 @@ async function syncGeneralCertificatesMarketData(): Promise<SyncOperationResult>
               symbol: cert.symbol || '',
               token_uri: cert.token_uri || '',
               pool_address: cert.pool_address || '',
+              total_supply: coinData.totalSupply || '0',
               total_volume: coinData.totalVolume || '0',
               volume_24h: coinData.volume24h || '0',
               market_cap: coinData.marketCap || '0',
@@ -553,6 +556,7 @@ async function syncGeneralCertificatesMarketDataBatch(): Promise<SyncOperationRe
 
               // Update market data in database
               await generalCertificates.updateMarketData(cert, {
+                total_supply: tokenData.totalSupply || '0',
                 total_volume: tokenData.totalVolume || '0',
                 volume_24h: tokenData.volume24h || '0',
                 market_cap: tokenData.marketCap || '0',
@@ -571,6 +575,7 @@ async function syncGeneralCertificatesMarketDataBatch(): Promise<SyncOperationRe
                   symbol: cert.symbol || '',
                   token_uri: cert.token_uri || '',
                   pool_address: cert.pool_address || '',
+                  total_supply: tokenData.totalSupply || '0',
                   total_volume: tokenData.totalVolume || '0',
                   volume_24h: tokenData.volume24h || '0',
                   market_cap: tokenData.marketCap || '0',

@@ -4,7 +4,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreVertical, PlusCircle, ArrowLeftRight } from "lucide-react"
 import Link from 'next/link'
 import Image from 'next/image'
-import { isEnsuranceToken, getCertificateUsdValue } from '@/modules/specific/config/ensurance'
+import { isEnsuranceToken, getCertificateUsdValue } from '@/modules/specific/contract'
 import { Asset, EnsureOperation } from '@/types'
 import { toast } from 'react-toastify'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"

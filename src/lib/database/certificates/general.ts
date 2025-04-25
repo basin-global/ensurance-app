@@ -64,6 +64,7 @@ export const generalCertificates = {
    * Update certificate with market data
    */
   async updateMarketData(cert: GeneralCertificate, data: {
+    total_supply: string;
     total_volume: string;
     volume_24h: string;
     market_cap: string;
@@ -73,6 +74,7 @@ export const generalCertificates = {
     await sql`
       UPDATE certificates.general 
       SET 
+        total_supply = ${data.total_supply},
         total_volume = ${data.total_volume},
         volume_24h = ${data.volume_24h},
         market_cap = ${data.market_cap},
