@@ -3,7 +3,8 @@ import axios from 'axios'
 import AssetCard from './AssetCard'
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ensuranceContracts, isEnsuranceToken } from '@/modules/specific/contract'
+// TODO: Implement contract functionality when completing assets feature
+// import { ensuranceContracts, isEnsuranceToken } from '@/modules/specific/contract'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { getChainBySimplehashName, getActiveChains } from '@/config/chains';
@@ -69,7 +70,7 @@ export default function AssetsModule({
 
   // Get available chains based on tab
   const availableChains = isEnsuranceTab 
-    ? Object.keys(ensuranceContracts)
+    ? [] // TODO: Add ensurance contracts when implementing assets feature
     : getActiveChains().map(c => c.simplehashName);
 
   // Modify fetchAssets to handle pagination

@@ -1,7 +1,8 @@
 import React from 'react';
 import Image from 'next/image';
 import { getActiveChains, chainOrder } from '@/config/chains';
-import { ensuranceContracts } from '@/modules/specific/contract';
+// TODO: Implement contract functionality when completing assets feature
+// import { ensuranceContracts } from '@/modules/specific/contract';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ChainDropdownProps } from '@/types';
 
@@ -16,7 +17,7 @@ function ChainDropdown({
 }: ChainDropdownProps) {
   const chains = getActiveChains()
     // Filter for Ensurance contracts if needed
-    .filter(chain => !filterEnsurance || chain.simplehashName in ensuranceContracts)
+    .filter(chain => !filterEnsurance) // TODO: Add ensurance contract check when implementing assets feature
     // For exchange variant, only show exchange-enabled chains
     .filter(chain => !filterEnsurance || EXCHANGE_ENABLED_CHAINS.includes(chain.simplehashName as typeof EXCHANGE_ENABLED_CHAINS[number]))
     .sort((a, b) => {

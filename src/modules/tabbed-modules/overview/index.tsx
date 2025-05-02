@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { isEnsuranceToken } from '@/modules/specific/contract'
+// TODO: Implement isEnsuranceToken check when completing assets feature
+// import { isEnsuranceToken } from '@/modules/specific/contract'
 import AccountStats from '@/modules/accounts/AccountStats'
 // import SpecificGrid from '@/modules/specific/SpecificGrid'
 import Link from 'next/link'
@@ -88,11 +89,8 @@ export default function OverviewTab({ description, tbaAddress, isOwner }: Overvi
           const quantity = Number(nft.queried_wallet_balances?.[0]?.quantity_string || 1)
           totalCount += quantity
 
-          if (isEnsuranceToken(nft.chain, nft.contract_address)) {
-            ensuredCount++
-          } else {
-            nonEnsuredCount++
-          }
+          // TODO: Implement isEnsuranceToken check when completing assets feature
+          nonEnsuredCount++
         });
 
         if (isMounted) {

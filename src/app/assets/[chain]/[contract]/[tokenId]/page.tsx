@@ -5,7 +5,8 @@ import { useRouter, usePathname } from 'next/navigation';
 import { isSpamContract } from '@/config/spamContracts';
 import { Asset } from '@/types';
 import { AssetDetailView } from '@/modules/assets/details/AssetDetailView';
-import { isEnsuranceToken } from '@/modules/specific/contract';
+// TODO: Implement isEnsuranceToken check when completing assets feature
+// import { isEnsuranceToken } from '@/modules/specific/contract';
 
 interface AssetPageProps {
   params: {
@@ -31,12 +32,12 @@ export default function AssetPage({ params }: AssetPageProps) {
       return;
     }
 
-    // Check if this is an Ensurance token before any data fetching
-    if (isEnsuranceToken(params.chain, params.contract)) {
-      const certificatePath = `/certificates/${params.chain}/${params.tokenId}`;
-      router.replace(certificatePath);
-      return;
-    }
+    // TODO: Implement isEnsuranceToken check when completing assets feature
+    // if (isEnsuranceToken(params.chain, params.contract)) {
+    //   const certificatePath = `/certificates/${params.chain}/${params.tokenId}`;
+    //   router.replace(certificatePath);
+    //   return;
+    // }
 
     // Only fetch if not an Ensurance token
     const fetchAssetDetails = async () => {

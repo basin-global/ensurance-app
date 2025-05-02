@@ -8,7 +8,7 @@ import { specificContract } from './ERC1155'
  */
 export const publicClient = createPublicClient({
   chain: base,
-  transport: http(specificContract.network.rpcUrl)
+  transport: http(specificContract.rpcUrl)
 })
 
 // USDC on Base

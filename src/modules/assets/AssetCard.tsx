@@ -4,7 +4,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreVertical, PlusCircle, ArrowLeftRight } from "lucide-react"
 import Link from 'next/link'
 import Image from 'next/image'
-import { isEnsuranceToken, getCertificateUsdValue } from '@/modules/specific/contract'
+// TODO: Implement contract functionality when completing assets feature
+// import { isEnsuranceToken, getCertificateUsdValue } from '@/modules/specific/contract'
 import { Asset, EnsureOperation } from '@/types'
 import { toast } from 'react-toastify'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -54,7 +55,7 @@ export default function AssetCard({
 
   const isEnsured = isEnsuranceTab
     ? (asset.queried_wallet_balances || []).length > 0
-    : isEnsuranceToken(asset.chain, asset.contract_address);
+    : false; // TODO: Implement isEnsuranceToken check when completing assets feature
 
   const handleModalClose = () => {
     setIsEnsureModalOpen(false)
@@ -79,7 +80,7 @@ export default function AssetCard({
     setIsEnsureModalOpen(false);
   };
 
-  const isEnsurable = isEnsuranceTab || isEnsuranceToken(asset.chain, asset.contract_address);
+  const isEnsurable = isEnsuranceTab; // TODO: Add isEnsuranceToken check when completing assets feature
 
   const showCardContent = variant !== 'account-main';
   const showQuantityBadge = quantity > 0 && variant !== 'account-main';
@@ -224,7 +225,7 @@ export default function AssetCard({
               {variant === 'exchange' && (
                 <div className="mt-2 text-sm flex items-center justify-center gap-2">
                   <ArrowLeftRight className="w-4 h-4 text-gray-400" />
-                  <span className="font-medium">${getCertificateUsdValue(asset.chain, asset.contract_address, asset.token_id).toFixed(2)}</span>
+                  <span className="font-medium">-</span>
                   <ArrowLeftRight className="w-4 h-4 text-gray-400" />
                 </div>
               )}

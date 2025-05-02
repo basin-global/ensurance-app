@@ -41,7 +41,8 @@ export const specificMetadata = {
     // Upload main file
     const { url } = await put(`${BLOB_DIR}/${tokenId}.${ext}`, file, {
       access: 'public',
-      addRandomSuffix: false
+      addRandomSuffix: false,
+      token: process.env.BLOB_READ_WRITE_TOKEN
     })
 
     // For videos, handle thumbnail
@@ -60,7 +61,8 @@ export const specificMetadata = {
         thumbnail,
         {
           access: 'public',
-          addRandomSuffix: false
+          addRandomSuffix: false,
+          token: process.env.BLOB_READ_WRITE_TOKEN
         }
       )
 
