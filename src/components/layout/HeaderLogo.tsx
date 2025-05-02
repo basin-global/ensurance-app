@@ -43,7 +43,7 @@ export function HeaderLogo() {
     tagline = ''
   } else if (pathname.includes('/proceeds')) {
     headerText = 'ensurance proceeds'
-    tagline = 'perpetual funding for natural capital & the people who steward it'
+    tagline = 'perpetual funding for what matters'
   } else if (groupName) {
     headerText = `${groupName} ensurance agents`
     tagline = ''
