@@ -1,5 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { generalCertificates } from '@/lib/database/certificates/general';
+
+export const dynamic = 'force-dynamic';
+
+// Whitelist of tokens that can use symbol-based lookups
+const SYMBOL_WHITELIST = ['weth', 'usdc', 'dai', 'eth'];
 
 const convertIpfsUrl = (url: string) => {
   if (url?.startsWith('ipfs://')) {
@@ -8,9 +13,9 @@ const convertIpfsUrl = (url: string) => {
   return url
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    const searchParams = request.nextUrl.searchParams;
     const address = searchParams.get('address');
     const symbol = searchParams.get('symbol');
 
@@ -35,8 +40,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ url: squidChainUrl });
     }
 
-    // 3. Try Squid symbol-based SVG
-    if (symbol) {
+    // 3. Try Squid symbol-based SVG only for whitelisted tokens
+    if (symbol && SYMBOL_WHITELIST.includes(symbol.toLowerCase())) {
       const squidSymbolUrl = `https://raw.githubusercontent.com/0xsquid/assets/main/images/tokens/${symbol.toLowerCase()}.svg`;
       const squidSymbolResponse = await fetch(squidSymbolUrl);
       if (squidSymbolResponse.ok) {
