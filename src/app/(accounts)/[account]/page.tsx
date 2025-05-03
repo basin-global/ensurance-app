@@ -1,7 +1,7 @@
 'use client'
 
-import ChatTab from '@/modules/tabbed-modules/chat'
-import OverviewTab from '@/modules/tabbed-modules/overview'
+import ChatTab from '@/modules/account-modules/chat'
+import OverviewTab from '@/modules/account-modules/overview'
 import { useAccount } from '@/modules/accounts/context'
 import VerificationSection from '@/components/layout/verifications/VerificationSection'
 

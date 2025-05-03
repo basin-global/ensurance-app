@@ -1,7 +1,7 @@
 'use client'
 
-import { PlaceTab, ImpactTab, ReputationTab } from '@/modules/tabbed-modules'
-import TabbedModules from '@/modules/tabbed-modules'
+import { PlaceTab, ImpactTab, ReputationTab } from '@/modules/account-modules'
+import TabbedModules from '@/modules/account-modules'
 import { useAccount } from '@/modules/accounts/context'
 
 interface PresencePageProps {

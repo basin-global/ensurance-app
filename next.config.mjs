@@ -29,7 +29,8 @@ const nextConfig = {
       'arweave.net',
       'cloudflare-ipfs.com',
       '2rhcowhl4b5wwjk8.public.blob.vercel-storage.com',
-      'magic.decentralized-content.com'
+      'magic.decentralized-content.com',
+      'raw.githubusercontent.com'
     ]
   }
 }

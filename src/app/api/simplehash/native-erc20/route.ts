@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getActiveChains } from '@/config/chains';
 import { headers } from 'next/headers';
 import { isSpamContract } from '@/config/spamContracts';
-import { calculateTokenPrice, calculateNativeTokenPrice } from '@/modules/tabbed-modules/currency/utils';
+import { calculateTokenPrice, calculateNativeTokenPrice } from '@/modules/account-modules/currency/utils';
 import type { ActiveChain } from '@/lib/simplehash';
 import type { TokenBalance } from '@/types';
 

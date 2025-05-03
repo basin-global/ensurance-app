@@ -1,7 +1,6 @@
 'use client'
 
-import { AssetsTab, CurrencyTab } from '@/modules/tabbed-modules'
-import TabbedModules from '@/modules/tabbed-modules'
+import Portfolio from '@/modules/account-modules/portfolio'
 import { useAccount } from '@/modules/accounts/context'
 
 interface HoldPageProps {
@@ -22,25 +21,12 @@ export default function HoldPage({ params }: HoldPageProps) {
     )
   }
 
-  const tabs = [
-    {
-      value: 'assets',
-      label: 'Assets',
-      component: AssetsTab
-    },
-    {
-      value: 'currency',
-      label: 'Currency',
-      component: CurrencyTab
-    }
-  ]
-
   return (
-    <TabbedModules 
-      tabs={tabs}
-      address={accountData.tba_address}
-      isOwner={isOwner}
-      label="PORTFOLIO"
-    />
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-medium">Portfolio</h2>
+      </div>
+      <Portfolio tbaAddress={accountData.tba_address} />
+    </div>
   )
 } 
