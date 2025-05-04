@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { ChevronDown } from 'lucide-react'
 import { usePrivy } from '@privy-io/react-auth'
+import { toast } from 'react-toastify'
 
 export function ConnectOperator() {
   const { login, ready, authenticated, logout, user } = usePrivy()
@@ -41,6 +42,21 @@ export function ConnectOperator() {
     setShowDropdown(false)
   }
 
+  const handleCopyAddress = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!user?.wallet?.address) return
+    
+    navigator.clipboard.writeText(user.wallet.address)
+      .then(() => toast.success('Address copied to clipboard!', {
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      }))
+      .catch(() => toast.error('Failed to copy address'))
+  }
+
   const statusDotClasses = "w-2 h-2 rounded-full relative after:content-[''] after:absolute after:inset-0 after:rounded-full after:animate-pulse"
 
   return (
@@ -67,7 +83,11 @@ export function ConnectOperator() {
             className="absolute top-full right-0 mt-2 bg-black/80 backdrop-blur-sm rounded-lg p-4 shadow-xl"
           >
             <div className="flex flex-col items-end space-y-2">
-              <div className="text-sm font-mono text-gray-400">
+              <div 
+                onClick={handleCopyAddress}
+                className="text-sm font-mono text-gray-400 cursor-pointer hover:text-gray-200 transition-colors"
+                title="Click to copy full address"
+              >
                 {truncateAddress(user?.wallet?.address)}
               </div>
               <button

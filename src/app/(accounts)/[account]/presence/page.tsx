@@ -3,6 +3,7 @@
 import { PlaceTab, ImpactTab, ReputationTab } from '@/modules/account-modules'
 import TabbedModules from '@/modules/account-modules'
 import { useAccount } from '@/modules/accounts/context'
+import VerificationSection from '@/components/layout/verifications/VerificationSection'
 
 interface PresencePageProps {
   params: {
@@ -44,11 +45,18 @@ export default function PresencePage({ params }: PresencePageProps) {
   ]
 
   return (
-    <TabbedModules 
-      tabs={tabs}
-      address={accountData.tba_address}
-      isOwner={isOwner}
-      label="PRESENCE"
-    />
+    <div className="space-y-6">
+      <TabbedModules 
+        tabs={tabs}
+        address={accountData.tba_address}
+        isOwner={isOwner}
+        label="PRESENCE"
+      />
+      <VerificationSection 
+        type="account" 
+        name={params.account} 
+        group={params.account.split('.')[1]} 
+      />
+    </div>
   )
 } 

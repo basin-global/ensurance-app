@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import useSWR from 'swr'
+import OperatorVerification from './OperatorVerification'
 
 interface Props {
   name: string
@@ -79,6 +80,13 @@ export default function AccountVerification({ name, group }: Props) {
         >
           tokenbound
         </Link>
+      </div>
+      <div className="flex gap-2">
+        <OperatorVerification 
+          name={name}
+          group={group}
+          tokenId={accountData.token_id}
+        />
       </div>
     </div>
   )
