@@ -48,6 +48,9 @@ export default function Card({ token, variant }: CardProps) {
   };
 
   const getTokenImage = (token: PortfolioToken): string | undefined => {
+    if (token.type === 'native') {
+      return token.metadata?.image || 'https://raw.githubusercontent.com/0xsquid/assets/main/images/tokens/eth.svg';
+    }
     if (token.type === 'erc721' || token.type === 'erc1155') {
       const nftToken = token as NFTToken;
       return nftToken.nftMetadata.image.cachedUrl || nftToken.nftMetadata.image.originalUrl;
@@ -60,7 +63,7 @@ export default function Card({ token, variant }: CardProps) {
 
   const getTokenName = (token: PortfolioToken) => {
     if (token.type === 'erc721' || token.type === 'erc1155') {
-      return token.name;
+      return token.name || token.symbol;
     }
     return token.symbol;
   };

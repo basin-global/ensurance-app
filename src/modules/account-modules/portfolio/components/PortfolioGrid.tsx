@@ -38,7 +38,7 @@ export default function PortfolioGrid({ tokens, isLoading = false }: PortfolioGr
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
       {tokens.map((token) => (
         <UICard 
-          key={token.address} 
+          key={`${token.address}-${token.type}${token.type === 'erc721' || token.type === 'erc1155' ? `-${token.tokenId}` : ''}`}
           className="bg-primary-dark border-gray-800 hover:border-gray-700 transition-colors"
         >
           <CardContent className="p-4">

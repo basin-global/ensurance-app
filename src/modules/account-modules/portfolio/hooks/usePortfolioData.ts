@@ -36,6 +36,7 @@ export function usePortfolioData(tbaAddress: string) {
         // Transform fungible tokens (native + ERC20)
         const fungibleTokens = await Promise.all(
           fungibleData.data.tokens.map(async (token: any) => {
+            // Identify ETH by null tokenAddress in Alchemy response
             const isNative = !token.tokenAddress;
             const price = token.tokenPrices?.[0]?.value;
             const decimals = token.tokenMetadata?.decimals || 18;
@@ -51,25 +52,23 @@ export function usePortfolioData(tbaAddress: string) {
             // Calculate total value in USD
             const totalValue = price ? parseFloat(formattedBalance) * parseFloat(price) : null;
 
-            // For image lookup, use tokenAddress for all tokens (including native)
-            const imageUrl = await getTokenImage(
-              token.tokenAddress || token.address,
-              token.tokenMetadata?.symbol || 'ETH'
-            );
+            // For ETH, use direct image URL
+            const imageUrl = isNative 
+              ? 'https://raw.githubusercontent.com/0xsquid/assets/main/images/tokens/eth.svg'
+              : await getTokenImage(token.tokenAddress);
 
             return {
               type: isNative ? 'native' : 'erc20',
-              address: isNative ? token.address : token.tokenAddress,
-              symbol: token.tokenMetadata?.symbol || 'ETH',
-              name: token.tokenMetadata?.name || 'Ethereum',
+              address: isNative ? '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' : token.tokenAddress,
+              symbol: isNative ? 'ETH' : (token.tokenMetadata?.symbol || 'Unknown'),
+              name: isNative ? 'Ethereum' : (token.tokenMetadata?.name || 'Unknown Token'),
               balance: token.tokenBalance,
               decimals,
               value: {
                 usd: totalValue
               },
-              ...(isNative ? {} : { contractAddress: token.tokenAddress }),
               metadata: {
-                name: token.tokenMetadata?.name || 'Ethereum',
+                name: isNative ? 'Ethereum' : (token.tokenMetadata?.name || 'Unknown Token'),
                 image: imageUrl
               }
             };

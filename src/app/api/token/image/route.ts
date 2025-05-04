@@ -3,9 +3,6 @@ import { generalCertificates } from '@/lib/database/certificates/general';
 
 export const dynamic = 'force-dynamic';
 
-// Whitelist of tokens that can use symbol-based lookups
-const SYMBOL_WHITELIST = ['weth', 'usdc', 'dai', 'eth'];
-
 const convertIpfsUrl = (url: string) => {
   if (url?.startsWith('ipfs://')) {
     return url.replace('ipfs://', 'https://magic.decentralized-content.com/ipfs/')
@@ -17,10 +14,16 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const address = searchParams.get('address');
-    const symbol = searchParams.get('symbol');
 
     if (!address) {
       return NextResponse.json({ error: 'Address is required' }, { status: 400 });
+    }
+
+    // Handle ETH with direct path
+    if (address === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
+      return NextResponse.json({ 
+        url: 'https://raw.githubusercontent.com/0xsquid/assets/main/images/tokens/eth.svg'
+      });
     }
 
     // 1. Check if it's one of our Zora coins
@@ -40,23 +43,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ url: squidChainUrl });
     }
 
-    // 3. Try Squid symbol-based SVG only for whitelisted tokens
-    if (symbol && SYMBOL_WHITELIST.includes(symbol.toLowerCase())) {
-      const squidSymbolUrl = `https://raw.githubusercontent.com/0xsquid/assets/main/images/tokens/${symbol.toLowerCase()}.svg`;
-      const squidSymbolResponse = await fetch(squidSymbolUrl);
-      if (squidSymbolResponse.ok) {
-        return NextResponse.json({ url: squidSymbolUrl });
-      }
-    }
-
-    // 4. Try TrustWallet
+    // 3. Try TrustWallet
     const trustWalletUrl = `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/${address}/logo.png`;
     const trustWalletResponse = await fetch(trustWalletUrl);
     if (trustWalletResponse.ok) {
       return NextResponse.json({ url: trustWalletUrl });
     }
 
-    // 5. No image found
+    // 4. No image found
     return NextResponse.json({ url: null });
 
   } catch (error) {

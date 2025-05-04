@@ -27,7 +27,7 @@ export default function PortfolioList({ tokens }: PortfolioListProps) {
         <tbody className="divide-y divide-gray-800">
           {tokens.map((token) => (
             <Card
-              key={token.address}
+              key={`${token.address}-${token.type}${token.type === 'erc721' || token.type === 'erc1155' ? `-${token.tokenId}` : ''}`}
               token={token}
               variant="list"
             />

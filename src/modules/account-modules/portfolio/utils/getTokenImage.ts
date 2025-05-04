@@ -7,9 +7,9 @@ const convertIpfsUrl = (url: string) => {
   return url
 }
 
-export async function getTokenImage(address: string, symbol: string): Promise<string | null> {
+export async function getTokenImage(address: string): Promise<string | null> {
   try {
-    const response = await fetch(`/api/token/image?address=${address}&symbol=${symbol}`);
+    const response = await fetch(`/api/token/image?address=${address}`);
     if (!response.ok) {
       throw new Error('Failed to fetch token image');
     }

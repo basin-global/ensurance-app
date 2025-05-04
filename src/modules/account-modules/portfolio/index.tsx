@@ -29,12 +29,20 @@ export default function Portfolio({ tbaAddress }: PortfolioProps) {
   // Step 1: Use all tokens from the endpoint, no initial filtering
   const uniqueTokens = useMemo(() => {
     if (!rawTokens) return [];
-    return rawTokens;
+    // Create a Map to dedupe tokens by address and type
+    const tokenMap = new Map();
+    rawTokens.forEach(token => {
+      const key = `${token.address}-${token.type}${token.type === 'erc721' || token.type === 'erc1155' ? `-${token.tokenId}` : ''}`;
+      tokenMap.set(key, token);
+    });
+    return Array.from(tokenMap.values());
   }, [rawTokens]);
 
   // Step 2: Only filter based on user selection
   const filteredTokens = useMemo(() => {
-    const filtered = uniqueTokens.filter(token => {
+    if (!uniqueTokens?.length) return [];
+    
+    return uniqueTokens.filter(token => {
       switch (filter) {
         case 'currency':
           return token.type === 'native' || token.type === 'erc20';
@@ -45,12 +53,11 @@ export default function Portfolio({ tbaAddress }: PortfolioProps) {
           return true;
       }
     });
-    return filtered;
-  }, [uniqueTokens, filter]);
+  }, [uniqueTokens, filter]); // Depend on both uniqueTokens and filter
 
   // Step 3: Sort the filtered tokens
   const sortedTokens = useMemo(() => {
-    if (!filteredTokens.length) return [];
+    if (!filteredTokens?.length) return [];
     
     return [...filteredTokens].sort((a, b) => {
       switch (sort.field) {
@@ -73,7 +80,7 @@ export default function Portfolio({ tbaAddress }: PortfolioProps) {
           return 0;
       }
     });
-  }, [filteredTokens, sort]);
+  }, [filteredTokens, sort]); // Depend on filteredTokens and sort
 
   const handleSortClick = () => {
     const fields = SORT_CYCLES;
