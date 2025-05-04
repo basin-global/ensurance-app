@@ -20,19 +20,22 @@ export function usePortfolioData(tbaAddress: string) {
         setIsLoading(true);
         setError(null);
 
-        const response = await fetch(
-          `/api/alchemy/fungible?address=${tbaAddress}`
-        );
+        // Fetch both fungible and non-fungible tokens in parallel
+        const [fungibleResponse, nonfungibleResponse] = await Promise.all([
+          fetch(`/api/alchemy/fungible?address=${tbaAddress}`),
+          fetch(`/api/alchemy/nonfungible?address=${tbaAddress}`)
+        ]);
 
-        if (!response.ok) {
+        if (!fungibleResponse.ok || !nonfungibleResponse.ok) {
           throw new Error('Failed to fetch token data');
         }
 
-        const responseData = await response.json();
-        
-        // Transform and fetch images for each token
-        const transformedTokens = await Promise.all(
-          responseData.data.tokens.map(async (token: any) => {
+        const fungibleData = await fungibleResponse.json();
+        const nonfungibleData = await nonfungibleResponse.json();
+
+        // Transform fungible tokens (native + ERC20)
+        const fungibleTokens = await Promise.all(
+          fungibleData.data.tokens.map(async (token: any) => {
             const isNative = !token.tokenAddress;
             const price = token.tokenPrices?.[0]?.value;
             const decimals = token.tokenMetadata?.decimals || 18;
@@ -49,7 +52,6 @@ export function usePortfolioData(tbaAddress: string) {
             const totalValue = price ? parseFloat(formattedBalance) * parseFloat(price) : null;
 
             // For image lookup, use tokenAddress for all tokens (including native)
-            // This ensures we match the contract_address in our general certificates table
             const imageUrl = await getTokenImage(
               token.tokenAddress || token.address,
               token.tokenMetadata?.symbol || 'ETH'
@@ -72,9 +74,58 @@ export function usePortfolioData(tbaAddress: string) {
               }
             };
           })
-        ).then(tokens => tokens.filter(Boolean)); // Remove null entries
+        );
 
-        setTokens(transformedTokens);
+        // Transform non-fungible tokens (ERC721 + ERC1155)
+        const nftTokens = nonfungibleData.data.ownedNfts.map((nft: any) => ({
+          type: nft.tokenType.toLowerCase() as 'erc721' | 'erc1155',
+          address: nft.contract.address,
+          contractAddress: nft.contract.address,
+          symbol: nft.contract.symbol || nft.contract.name,
+          name: nft.name,
+          balance: nft.balance,
+          decimals: 0,
+          tokenId: nft.tokenId,
+          tokenType: nft.tokenType,
+          contract: {
+            address: nft.contract.address,
+            name: nft.contract.name,
+            symbol: nft.contract.symbol,
+            tokenType: nft.tokenType
+          },
+          description: nft.description,
+          tokenUri: nft.tokenUri,
+          nftMetadata: {
+            name: nft.name,
+            description: nft.description,
+            image: {
+              cachedUrl: nft.image.cachedUrl,
+              thumbnailUrl: nft.image.thumbnailUrl,
+              contentType: nft.image.contentType,
+              originalUrl: nft.image.originalUrl
+            },
+            ...(nft.animation && {
+              animation: {
+                cachedUrl: nft.animation.cachedUrl,
+                contentType: nft.animation.contentType
+              }
+            }),
+            ...(nft.raw?.metadata?.content && {
+              content: {
+                uri: nft.raw.metadata.content.uri,
+                mime: nft.raw.metadata.content.mime
+              }
+            })
+          },
+          metadata: {
+            name: nft.name,
+            image: nft.image.cachedUrl || nft.image.originalUrl
+          }
+        }));
+
+        // Combine and filter out null values
+        const allTokens = [...fungibleTokens, ...nftTokens].filter(Boolean);
+        setTokens(allTokens);
       } catch (err) {
         console.error('Error fetching portfolio data:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch token data');

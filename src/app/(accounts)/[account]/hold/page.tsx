@@ -23,9 +23,6 @@ export default function HoldPage({ params }: HoldPageProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-medium">Portfolio</h2>
-      </div>
       <Portfolio tbaAddress={accountData.tba_address} />
     </div>
   )

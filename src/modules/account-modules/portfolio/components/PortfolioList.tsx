@@ -19,7 +19,7 @@ export default function PortfolioList({ tokens }: PortfolioListProps) {
       <table className="w-full">
         <thead>
           <tr className="text-left text-sm text-gray-400">
-            <th className="pb-4 font-medium">asset</th>
+            <th className="pb-4 font-medium">name</th>
             <th className="pb-4 font-medium">balance</th>
             <th className="pb-4 font-medium text-right">value</th>
           </tr>
