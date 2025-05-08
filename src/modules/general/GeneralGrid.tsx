@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import Link from 'next/link'
 import Image from 'next/image'
-import { EnsureButtons } from '@/components/layout/EnsureButtons'
+import { EnsureButtons } from '@/components/layout/EnsureButtonsZora'
 
 interface CreatorEarning {
   amountUsd: string

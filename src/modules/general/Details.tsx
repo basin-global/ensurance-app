@@ -5,7 +5,8 @@ import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ChevronDown, ChevronUp } from 'lucide-react'
-import { EnsureButtons } from '@/components/layout/EnsureButtons'
+import { EnsureButtons } from '@/components/layout/EnsureButtonsZora'
+import { EnsureButtons0x } from '@/components/layout/EnsureButtons0x'
 import { Proceeds } from '@/modules/proceeds/components/Proceeds'
 
 const FALLBACK_IMAGE = '/assets/no-image-found.png'
@@ -249,12 +250,24 @@ export default function Details({
             </Card>
 
             {/* Ensure Buttons */}
-            <div className="flex justify-center pt-2">
-              <EnsureButtons 
-                contractAddress={contractAddress} 
-                imageUrl={convertIpfsUrl(metadata?.image) || FALLBACK_IMAGE}
-                showBurn={true}
-              />
+            <div className="flex flex-col items-center gap-6 pt-2">
+              <div>
+                <EnsureButtons 
+                  contractAddress={contractAddress} 
+                  imageUrl={convertIpfsUrl(metadata?.image) || FALLBACK_IMAGE}
+                  showBurn={true}
+                />
+              </div>
+              
+              <div className="w-full flex flex-col items-center gap-4">
+                <div className="w-full h-px bg-gray-800" />
+                <div className="text-sm text-gray-400">or trade with</div>
+                <EnsureButtons0x
+                  contractAddress={contractAddress}
+                  imageUrl={convertIpfsUrl(metadata?.image) || FALLBACK_IMAGE}
+                  showBurn={true}
+                />
+              </div>
             </div>
 
             {/* Proceeds Section */}
