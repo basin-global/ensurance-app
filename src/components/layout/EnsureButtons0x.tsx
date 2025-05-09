@@ -1,6 +1,6 @@
 'use client'
 
-import { PlusCircle, MinusCircle, Flame, ChevronDown } from 'lucide-react'
+import { PlusCircle, RefreshCw, Flame, ChevronDown } from 'lucide-react'
 import { usePrivy, useWallets } from '@privy-io/react-auth'
 import { useGeneralService } from '@/modules/general/service/hooks'
 import { useState, useEffect } from 'react'
@@ -43,6 +43,7 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip"
 import { SUPPORTED_TOKENS } from '@/modules/specific/config/ERC20'
+import ZORA_COIN_ABI from '@/abi/ZoraCoin.json'
 import { toast } from 'react-toastify'
 import Image from 'next/image'
 import { useDebounce } from '@/hooks/useDebounce'
@@ -64,6 +65,18 @@ interface EnsureButtons0xProps {
 
 const PERMIT2_ADDRESS = '0x000000000022D473030F116dDEE9F6B43aC78BA3'
 
+// Add standard ERC20 approve ABI
+const ERC20_APPROVE_ABI = [{
+  inputs: [
+    { name: 'spender', type: 'address' },
+    { name: 'amount', type: 'uint256' }
+  ],
+  name: 'approve',
+  outputs: [{ name: '', type: 'bool' }],
+  stateMutability: 'nonpayable',
+  type: 'function'
+}] as const
+
 export function EnsureButtons0x({ 
   contractAddress,
   showMinus = true,
@@ -79,12 +92,67 @@ export function EnsureButtons0x({
   const [tradeType, setTradeType] = useState<'buy' | 'sell' | 'burn'>('buy')
   const [amount, setAmount] = useState('')
   const [formattedAmount, setFormattedAmount] = useState('')
+  const [tokenBalance, setTokenBalance] = useState<bigint>(BigInt(0))
+  const [tokenSymbol, setTokenSymbol] = useState<string>('')
   const debouncedAmount = useDebounce(amount, 500)
   const [selectedToken, setSelectedToken] = useState<Token | null>(null)
   const [availableTokens, setAvailableTokens] = useState<Token[]>([])
   const [estimatedOutput, setEstimatedOutput] = useState<string>('0')
   const [isSimulating, setIsSimulating] = useState(false)
   const [isApproving, setIsApproving] = useState(false)
+
+  // Add effect to fetch token details
+  useEffect(() => {
+    const fetchTokenDetails = async () => {
+      if (!contractAddress) return
+      
+      try {
+        const publicClient = createPublicClient({
+          chain: base,
+          transport: http()
+        })
+
+        const symbol = await publicClient.readContract({
+          address: contractAddress,
+          abi: ZORA_COIN_ABI,
+          functionName: 'symbol'
+        }) as string
+        
+        setTokenSymbol(symbol)
+      } catch (error) {
+        console.error('Error fetching token details:', error)
+      }
+    }
+
+    fetchTokenDetails()
+  }, [contractAddress])
+
+  // Add effect to fetch token balance when needed
+  useEffect(() => {
+    const fetchTokenBalance = async () => {
+      if (!authenticated || !userAddress || !contractAddress) return
+      
+      try {
+        const publicClient = createPublicClient({
+          chain: base,
+          transport: http()
+        })
+
+        const balance = await publicClient.readContract({
+          address: contractAddress,
+          abi: ZORA_COIN_ABI,
+          functionName: 'balanceOf',
+          args: [userAddress]
+        }) as bigint
+        
+        setTokenBalance(balance)
+      } catch (error) {
+        console.error('Error fetching token balance:', error)
+      }
+    }
+
+    fetchTokenBalance()
+  }, [authenticated, userAddress, contractAddress, modalOpen])
 
   // Handle amount input with comma formatting
   const handleAmountChange = (value: string) => {
@@ -151,7 +219,7 @@ export function EnsureButtons0x({
           } else if (details.code === 'INSUFFICIENT_BALANCE') {
             toast.error('Insufficient balance for this trade.');
           } else {
-            toast.error(details.message || errorData.error || 'Failed to get quote');
+            toast.error(details.message || errorData.error || 'Failed to get quote')
           }
           return
         }
@@ -191,6 +259,12 @@ export function EnsureButtons0x({
     setTradeType(type)
     setModalOpen(true)
     
+    // For burn, set the amount to the current balance
+    if (type === 'burn') {
+      setAmount(formatEther(tokenBalance))
+      setFormattedAmount(formatEther(tokenBalance))
+    }
+    
     // Load available tokens for buy
     if (type === 'buy' && authenticated && userAddress) {
       try {
@@ -226,262 +300,290 @@ export function EnsureButtons0x({
     }
   }
 
-  const handleApproval = async (
-    provider: any,
-    sellTokenAddress: Address,
-    pendingToast: any
-  ): Promise<boolean> => {
-    try {
-      setIsApproving(true)
-      
-      const approvalTx = {
-        from: userAddress,
-        to: sellTokenAddress,
-        data: encodeFunctionData({
-          abi: [{
-            name: 'approve',
-            type: 'function',
-            inputs: [
-              { name: 'spender', type: 'address' },
-              { name: 'amount', type: 'uint256' }
-            ],
-            outputs: [{ name: 'success', type: 'bool' }]
-          }],
-          functionName: 'approve',
-          args: [PERMIT2_ADDRESS, maxUint256]
-        })
-      }
-
-      toast.update(pendingToast, {
-        render: 'Approving Permit2 access (one-time approval)...',
-        type: 'info',
-        isLoading: true
-      })
-
-      const approvalHash = await provider.request({
-        method: 'eth_sendTransaction',
-        params: [approvalTx]
-      })
-
-      const publicClient = createPublicClient({
-        chain: base,
-        transport: http()
-      })
-
-      await publicClient.waitForTransactionReceipt({ hash: approvalHash })
-      console.log('Permit2 approved with unlimited allowance')
-      return true
-    } catch (error) {
-      console.error('Approval failed:', error)
-      toast.update(pendingToast, {
-        render: error instanceof Error ? error.message : 'Failed to approve tokens',
-        type: 'error',
-        isLoading: false,
-        autoClose: 5000
-      })
-      return false
-    } finally {
-      setIsApproving(false)
-    }
-  }
-
   const handleTrade = async () => {
-    if (!authenticated || !selectedToken || !userAddress) {
+    if (!authenticated || !userAddress) {
       login()
       return
     }
 
-    const pendingToast = toast.loading('Preparing transaction...')
-    
+    const pendingToast = toast.loading('setting everything up...')
+
     try {
       setIsLoading(true)
       const activeWallet = wallets[0]
       if (!activeWallet) {
+        toast.dismiss(pendingToast)
         toast.error('No wallet connected')
         return
       }
 
       const provider = await activeWallet.getEthereumProvider()
-      const sellAmountWei = parseEther(amount).toString()
-      const sellTokenAddress = tradeType === 'buy' ? selectedToken.address : contractAddress
-
-      // Create public client for transaction monitoring
+      
+      // Create public client for reading
       const publicClient = createPublicClient({
         chain: base,
         transport: http()
       })
 
-      // 1. Get initial quote
-      const params = new URLSearchParams({
-        action: 'quote',
-        sellToken: sellTokenAddress,
-        buyToken: tradeType === 'buy' ? contractAddress : selectedToken.address,
-        sellAmount: sellAmountWei,
-        taker: userAddress,
-        swapFeeToken: sellTokenAddress
+      // Create wallet client
+      const walletClient = createWalletClient({
+        chain: base,
+        transport: custom(provider)
       })
 
-      let quoteResponse = await fetch(`/api/0x?${params}`)
-      if (!quoteResponse.ok) {
-        const errorData = await quoteResponse.json()
-        console.error('Quote error details:', errorData)
-        
-        // Handle v2 API error structure
-        const details = errorData.details || {}
-        if (details.validationErrors?.length > 0) {
-          toast.error(`Invalid trade parameters: ${details.validationErrors[0]}`)
-        } else if (details.code === 'INSUFFICIENT_LIQUIDITY') {
-          toast.error('Insufficient liquidity for this trade.')
-        } else if (details.code === 'INVALID_TOKEN') {
-          toast.error('One or more tokens are not supported.')
-        } else if (details.code === 'INSUFFICIENT_BALANCE') {
-          toast.error('Insufficient balance for this trade.')
-        } else {
-          toast.error(details.message || errorData.error || 'Failed to get quote')
+      if (tradeType === 'burn') {
+        const tokenAmountInWei = parseEther(amount)
+        if (tokenAmountInWei > tokenBalance) {
+          toast.dismiss(pendingToast)
+          toast.error('Insufficient token balance')
+          return
         }
-        return
-      }
 
-      let quoteData = await quoteResponse.json()
-      console.log('Trade quote data:', quoteData)
-
-      // 2. Handle approval if needed (one-time unlimited approval)
-      if (quoteData.issues?.allowance?.actual === '0') {
-        const approved = await handleApproval(provider, sellTokenAddress, pendingToast)
-        if (!approved) return
-
-        // Get fresh quote after approval
-        const newQuoteResponse = await fetch(`/api/0x?${params}`)
-        if (!newQuoteResponse.ok) {
-          throw new Error('Failed to get updated quote')
-        }
-        quoteData = await newQuoteResponse.json()
-        console.log('Updated quote after approval:', quoteData)
-      }
-
-      // 3. Handle permit signing and transaction
-      if (!quoteData.permit2?.eip712) {
-        throw new Error('Missing permit data in quote response')
-      }
-
-      const { types, domain, message } = quoteData.permit2.eip712
-      
-      console.log('Signing permit with exact data from API:', {
-        types,
-        domain,
-        primaryType: 'PermitTransferFrom',
-        message
-      })
-
-      // Get signature from wallet
-      const signature = await provider.request({
-        method: 'eth_signTypedData_v4',
-        params: [
-          userAddress,
-          JSON.stringify({
-            types,
-            domain,
-            primaryType: 'PermitTransferFrom',
-            message
+        try {
+          toast.update(pendingToast, {
+            render: 'confirming burn...',
+            type: 'info',
+            isLoading: true
           })
-        ]
-      })
 
-      console.log('Raw signature received:', signature)
-
-      // Format signature according to 0x specification
-      // Signature is 65 bytes (130 hex chars without 0x prefix)
-      const signatureLength = 65
-      const signatureLengthInHex = numberToHex(signatureLength, {
-        size: 32,
-        signed: false,
-      })
-
-      console.log('Signature formatting:', {
-        rawSignature: signature,
-        signatureLength,
-        signatureLengthInHex
-      })
-
-      // Combine transaction data with signature length and signature
-      const finalTxData = concat([
-        quoteData.transaction.data,
-        signatureLengthInHex,
-        signature
-      ])
-
-      console.log('Transaction data components:', {
-        originalData: quoteData.transaction.data,
-        signatureLengthInHex,
-        signature,
-        finalData: finalTxData
-      })
-
-      // Execute the trade with properly formatted data
-      const tx = {
-        from: userAddress,
-        to: quoteData.transaction.to,
-        data: finalTxData,
-        value: quoteData.transaction.value === '0' ? '0x0' : `0x${BigInt(quoteData.transaction.value).toString(16)}`,
-        gas: `0x${BigInt(quoteData.transaction.gas).toString(16)}`,
-        gasPrice: quoteData.transaction.gasPrice ? `0x${BigInt(quoteData.transaction.gasPrice).toString(16)}` : undefined
-      }
-
-      console.log('Final transaction:', tx)
-      
-      toast.update(pendingToast, {
-        render: 'Waiting for wallet confirmation...',
-        type: 'info',
-        isLoading: true
-      })
-
-      const txHash = await provider.request({
-        method: 'eth_sendTransaction',
-        params: [tx]
-      })
-
-      console.log('Transaction submitted:', txHash)
-      
-      toast.update(pendingToast, {
-        render: 'Transaction submitted! Waiting for confirmation...',
-        type: 'info',
-        isLoading: true
-      })
-
-      // Wait for transaction confirmation using publicClient
-      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash })
-      
-      if (receipt.status === 'success') {
-        toast.update(pendingToast, {
-          render: 'Transaction successful!',
-          type: 'success',
-          isLoading: false,
-          autoClose: 5000
-        })
+          const hash = await walletClient.writeContract({
+            address: contractAddress,
+            abi: ZORA_COIN_ABI,
+            functionName: 'burn',
+            args: [tokenAmountInWei],
+            chain: base,
+            account: userAddress as `0x${string}`
+          })
+          
+          await publicClient.waitForTransactionReceipt({ hash })
+          
+          toast.update(pendingToast, {
+            render: 'tokens burned successfully',
+            type: 'success',
+            isLoading: false,
+            autoClose: 5000,
+            className: '!bg-orange-500/20 !text-orange-200 !border-orange-500/30'
+          })
+          
+          setModalOpen(false)
+          return
+        } catch (error: any) {
+          console.error('Burn failed:', error)
+          if (error?.code === 4001 || error?.message?.includes('rejected')) {
+            toast.dismiss(pendingToast)
+            toast.error('transaction cancelled')
+          } else {
+            toast.update(pendingToast, {
+              render: 'burn failed',
+              type: 'error',
+              isLoading: false,
+              autoClose: 5000
+            })
+          }
+          return
+        }
       } else {
-        toast.update(pendingToast, {
-          render: 'Transaction failed on-chain. Check block explorer for details.',
-          type: 'error',
-          isLoading: false,
-          autoClose: 5000
-        })
-      }
+        // For buy/sell, need selected token
+        if (!selectedToken) {
+          toast.dismiss(pendingToast)
+          toast.error('Please select a token')
+          return
+        }
 
-      setModalOpen(false)
+        const sellAmountWei = parseEther(amount).toString()
+        const sellTokenAddress = tradeType === 'buy' ? selectedToken.address : contractAddress
+
+        // 1. Get initial quote
+        const params = new URLSearchParams({
+          action: 'quote',
+          sellToken: sellTokenAddress,
+          buyToken: tradeType === 'buy' ? contractAddress : selectedToken.address,
+          sellAmount: sellAmountWei,
+          taker: userAddress,
+          swapFeeToken: sellTokenAddress
+        })
+
+        let quoteResponse = await fetch(`/api/0x?${params}`)
+        if (!quoteResponse.ok) {
+          const errorData = await quoteResponse.json()
+          console.error('Quote error details:', errorData)
+          
+          toast.dismiss(pendingToast)
+          // Handle v2 API error structure
+          const details = errorData.details || {}
+          if (details.validationErrors?.length > 0) {
+            toast.error(`Invalid trade parameters: ${details.validationErrors[0]}`)
+          } else if (details.code === 'INSUFFICIENT_LIQUIDITY') {
+            toast.error('Insufficient liquidity for this trade.')
+          } else if (details.code === 'INVALID_TOKEN') {
+            toast.error('One or more tokens are not supported.')
+          } else if (details.code === 'INSUFFICIENT_BALANCE') {
+            toast.error('Insufficient balance for this trade.')
+          } else {
+            toast.error(details.message || errorData.error || 'Failed to get quote')
+          }
+          return
+        }
+
+        let quoteData = await quoteResponse.json()
+        console.log('Trade quote data:', quoteData)
+
+        // Handle permit signing and execute transaction
+        if (!quoteData.permit2?.eip712) {
+          toast.dismiss(pendingToast)
+          throw new Error('Missing permit data in quote response')
+        }
+
+        const { types, domain, message } = quoteData.permit2.eip712
+        
+        console.log('Signing permit with exact data from API:', {
+          types,
+          domain,
+          primaryType: 'PermitTransferFrom',
+          message
+        })
+
+        toast.update(pendingToast, {
+          render: 'Please sign the permit...',
+          type: 'info',
+          isLoading: true
+        })
+
+        try {
+          // Get signature from wallet
+          const signature = await provider.request({
+            method: 'eth_signTypedData_v4',
+            params: [
+              userAddress,
+              JSON.stringify({
+                types,
+                domain,
+                primaryType: 'PermitTransferFrom',
+                message
+              })
+            ]
+          })
+
+          console.log('Raw signature received:', signature)
+
+          // Add a small delay to let MetaMask UI reset
+          await new Promise(resolve => setTimeout(resolve, 1000))
+
+          // Format signature according to 0x specification
+          const signatureLength = 65
+          const signatureLengthInHex = numberToHex(signatureLength, {
+            size: 32,
+            signed: false,
+          })
+
+          // Combine transaction data with signature
+          const finalTxData = concat([
+            quoteData.transaction.data,
+            signatureLengthInHex,
+            signature
+          ])
+
+          // Execute the trade
+          toast.update(pendingToast, {
+            render: 'confirm the transaction...',
+            type: 'info',
+            isLoading: true
+          })
+
+          // Add another small delay before transaction
+          await new Promise(resolve => setTimeout(resolve, 500))
+
+          const tx = {
+            from: userAddress,
+            to: quoteData.transaction.to,
+            data: finalTxData,
+            value: quoteData.transaction.value === '0' ? '0x0' : `0x${BigInt(quoteData.transaction.value).toString(16)}`,
+            gas: `0x${BigInt(quoteData.transaction.gas).toString(16)}`,
+            gasPrice: quoteData.transaction.gasPrice ? `0x${BigInt(quoteData.transaction.gasPrice).toString(16)}` : undefined
+          }
+
+          const txHash = await provider.request({
+            method: 'eth_sendTransaction',
+            params: [tx]
+          })
+
+          await publicClient.waitForTransactionReceipt({ hash: txHash })
+          
+          toast.update(pendingToast, {
+            render: 'transaction successful!',
+            type: 'success',
+            isLoading: false,
+            autoClose: 5000
+          })
+
+          setModalOpen(false)
+        } catch (error: any) {
+          console.error('Transaction failed:', error)
+          if (error?.code === 4001 || error?.message?.includes('rejected')) {
+            toast.dismiss(pendingToast)
+            toast.error('Transaction cancelled')
+          } else {
+            toast.update(pendingToast, {
+              render: error?.message || 'Transaction failed',
+              type: 'error',
+              isLoading: false,
+              autoClose: 5000
+            })
+          }
+        }
+      }
     } catch (error: any) {
       console.error('Trade failed:', error)
-      toast.update(pendingToast, {
-        render: error?.message || 'Failed to execute trade',
-        type: 'error',
-        isLoading: false,
-        autoClose: 5000
-      })
+      toast.dismiss(pendingToast)
+      if (error?.code === 4001 || error?.message?.includes('rejected')) {
+        toast.error('Transaction cancelled')
+      } else {
+        toast.error(error?.message || 'Failed to execute trade')
+      }
     } finally {
       setIsLoading(false)
     }
   }
 
   const iconSize = size === 'sm' ? 'w-6 h-6' : 'w-10 h-10'
+
+  // Format balance with appropriate decimals
+  const formatBalance = (balance: bigint) => {
+    if (balance === BigInt(0)) return '0'
+    
+    const formatted = formatEther(balance)
+    const num = Number(formatted)
+    
+    if (num < 1) {
+      return num.toLocaleString('en-US', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 6
+      })
+    } else {
+      return num.toLocaleString('en-US', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+      })
+    }
+  }
+
+  // Format input value with appropriate decimals
+  const formatInputValue = (value: string) => {
+    const num = Number(value)
+    if (num === 0 || isNaN(num)) return '0'
+    
+    if (num < 1) {
+      return num.toLocaleString('en-US', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 6
+      })
+    } else {
+      return num.toLocaleString('en-US', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+      })
+    }
+  }
 
   return (
     <>
@@ -497,7 +599,7 @@ export function EnsureButtons0x({
               </button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>ensure with 0x (buy)</p>
+              <p>ensure (buy)</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -510,11 +612,11 @@ export function EnsureButtons0x({
                   onClick={() => handleOpenModal('sell')}
                   className="flex items-center gap-2 text-gray-300 hover:text-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <MinusCircle className={`${iconSize} stroke-[1.5] stroke-red-500 hover:stroke-red-400 transition-colors`} />
+                  <RefreshCw className={`${iconSize} stroke-[1.5] stroke-blue-500 hover:stroke-blue-400 transition-colors`} />
                 </button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>un-ensure with 0x (sell)</p>
+                <p>transform</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -532,7 +634,7 @@ export function EnsureButtons0x({
                 </button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>burn tokens</p>
+                <p>burn</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -543,13 +645,18 @@ export function EnsureButtons0x({
         <DialogContent className="sm:max-w-[500px] bg-black/95 border border-gray-800 shadow-xl backdrop-blur-xl">
           <DialogHeader className="border-b border-gray-800 pb-4">
             <div className="flex items-center justify-between">
-              <DialogTitle className="text-xl font-bold text-white">
-                {tradeType === 'buy' ? 'ensure' : tradeType === 'sell' ? 'un-ensure' : 'burn'} with 0x
-              </DialogTitle>
-              <div className="relative w-20 h-20 rounded-lg overflow-hidden">
+              <div className="flex flex-col gap-2">
+                <DialogTitle className="text-xl font-bold text-white">
+                  {tradeType === 'buy' ? 'ensure' : tradeType === 'sell' ? 'transform' : 'burn'}
+                </DialogTitle>
+                <div className="text-3xl font-bold text-white">
+                  {tokenSymbol || 'Token'}
+                </div>
+              </div>
+              <div className="relative w-20 h-20 rounded-lg overflow-hidden mr-4">
                 <Image 
                   src={imageUrl}
-                  alt="Token"
+                  alt={tokenSymbol || 'Token'}
                   fill
                   className="object-cover"
                 />
@@ -557,97 +664,178 @@ export function EnsureButtons0x({
             </div>
           </DialogHeader>
 
-          <div className="py-6 space-y-6">
-            {/* Token Selection */}
-            <div className="space-y-3">
-              <label className="text-sm font-medium text-gray-300">
-                {tradeType === 'buy' ? 'Pay with' : 'Receive'}
-              </label>
-              <Select
-                value={selectedToken?.address}
-                onValueChange={(value) => {
-                  const token = tradeType === 'buy' 
-                    ? availableTokens.find(t => t.address === value)
-                    : Object.values(SUPPORTED_TOKENS).find(t => t.address === value)
-                  if (token) {
-                    setSelectedToken(token)
-                  }
-                }}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select token" />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-900 border border-gray-800">
-                  {(tradeType === 'buy' ? availableTokens : Object.values(SUPPORTED_TOKENS))
-                    .filter(token => {
-                      // Only filter out small balances for buy tokens (availableTokens)
-                      if (tradeType !== 'buy') return true;
-                      // Type guard to ensure we're working with a Token that has balance
-                      if (!('balance' in token)) return false;
-                      const balance = Number(formatEther(BigInt(token.balance)))
-                      return balance >= 0.000001;
-                    })
-                    .sort((a, b) => {
-                      // Only sort by balance for buy tokens
-                      if (tradeType !== 'buy') return 0;
-                      // Type guard for balance property
-                      const balanceA = 'balance' in a ? Number(formatEther(BigInt(a.balance))) : 0
-                      const balanceB = 'balance' in b ? Number(formatEther(BigInt(b.balance))) : 0
-                      return balanceB - balanceA
-                    })
-                    .map((token) => {
-                      // Format balance
-                      let displayBalance = ''
-                      if ('balance' in token && token.balance) {
-                        const balance = Number(formatEther(BigInt(token.balance)))
-                        if (balance >= 1) {
-                          displayBalance = balance.toLocaleString('en-US', { maximumFractionDigits: 0 })
-                        } else if (balance >= 0.000001) {
-                          displayBalance = balance.toFixed(6)
-                        }
+          <div className="py-6">
+            {tradeType === 'burn' ? (
+              // Burn UI
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-gray-300">
+                    quantity to burn
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <Input
+                      type="number"
+                      value={amount}
+                      onChange={(e) => {
+                        setAmount(e.target.value)
+                        setFormattedAmount(e.target.value)
+                      }}
+                      placeholder="enter amount"
+                      className="bg-gray-900/50 border-gray-800 text-white placeholder:text-gray-500 h-12 text-lg font-medium w-36"
+                      min="0"
+                      step={Number(tokenBalance) < 1 ? "0.000001" : "0.01"}
+                    />
+                  </div>
+                  <div className="text-sm text-gray-400 whitespace-nowrap">
+                    your balance: {formatBalance(tokenBalance)}
+                  </div>
+                </div>
+              </div>
+            ) : tradeType === 'sell' ? (
+              // Un-ensure (Sell) UI
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-gray-300">
+                    quantity to transform
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <Input
+                      type="number"
+                      value={amount}
+                      onChange={(e) => {
+                        setAmount(e.target.value)
+                        setFormattedAmount(e.target.value)
+                      }}
+                      placeholder="enter amount"
+                      className="bg-gray-900/50 border-gray-800 text-white placeholder:text-gray-500 h-12 text-lg font-medium w-36"
+                      min="0"
+                      step={Number(tokenBalance) < 1 ? "0.000001" : "0.01"}
+                    />
+                  </div>
+                  <div className="text-sm text-gray-400 whitespace-nowrap">
+                    your balance: {formatBalance(tokenBalance)}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-gray-300">
+                    transform to
+                  </label>
+                  <Select
+                    value={SUPPORTED_TOKENS.USDC.address}
+                    onValueChange={(value) => {
+                      const token = Object.values(SUPPORTED_TOKENS).find(t => t.address === value)
+                      if (token) {
+                        setSelectedToken(token)
                       }
-                      
-                      return (
-                        <SelectItem 
-                          key={token.address} 
-                          value={token.address}
-                          className="hover:bg-gray-800"
-                        >
-                          <div className="flex justify-between items-center w-full gap-4">
-                            <span className="font-medium">{token.symbol}</span>
-                            {displayBalance && (
-                              <span className="text-gray-400 text-sm">{displayBalance}</span>
-                            )}
-                          </div>
-                        </SelectItem>
-                      )
-                    })}
-                </SelectContent>
-              </Select>
-            </div>
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue>USDC</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-900 border border-gray-800">
+                      <SelectItem 
+                        value={SUPPORTED_TOKENS.USDC.address}
+                        className="hover:bg-gray-800"
+                      >
+                        USDC
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
 
-            {/* Amount Input */}
-            <div className="space-y-3">
-              <label className="text-sm font-medium text-gray-300">
-                Amount
-              </label>
-              <Input
-                type="text"
-                value={formattedAmount}
-                onChange={(e) => handleAmountChange(e.target.value)}
-                className="bg-gray-900/50 border-gray-800 text-white"
-                placeholder="0.0"
-              />
-            </div>
+                  <div className="text-sm text-gray-400">
+                    estimated: {isSimulating ? 'calculating...' : formatInputValue(estimatedOutput)} USDC
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // Buy UI
+              <div className="space-y-6">
+                {/* Token Selection */}
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-gray-300">
+                    {tradeType === 'buy' ? 'buy with' : 'receive'}
+                  </label>
+                  <Select
+                    value={selectedToken?.address}
+                    onValueChange={(value) => {
+                      const token = tradeType === 'buy' 
+                        ? availableTokens.find(t => t.address === value)
+                        : Object.values(SUPPORTED_TOKENS).find(t => t.address === value)
+                      if (token) {
+                        setSelectedToken(token)
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select token" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-900 border border-gray-800">
+                      {(tradeType === 'buy' ? availableTokens : Object.values(SUPPORTED_TOKENS))
+                        .filter(token => {
+                          if (tradeType !== 'buy') return true;
+                          if (!('balance' in token)) return false;
+                          const balance = Number(formatEther(BigInt(token.balance)))
+                          return balance >= 0.000001;
+                        })
+                        .sort((a, b) => {
+                          if (tradeType !== 'buy') return 0;
+                          const balanceA = 'balance' in a ? Number(formatEther(BigInt(a.balance))) : 0
+                          const balanceB = 'balance' in b ? Number(formatEther(BigInt(b.balance))) : 0
+                          return balanceB - balanceA
+                        })
+                        .map((token) => {
+                          let displayBalance = ''
+                          if ('balance' in token && token.balance) {
+                            const balance = Number(formatEther(BigInt(token.balance)))
+                            if (balance >= 1) {
+                              displayBalance = balance.toLocaleString('en-US', { maximumFractionDigits: 0 })
+                            } else if (balance >= 0.000001) {
+                              displayBalance = balance.toFixed(6)
+                            }
+                          }
+                          
+                          return (
+                            <SelectItem 
+                              key={token.address} 
+                              value={token.address}
+                              className="hover:bg-gray-800"
+                            >
+                              <div className="flex justify-between items-center w-full gap-4">
+                                <span className="font-medium">{token.symbol}</span>
+                                {displayBalance && (
+                                  <span className="text-gray-400 text-sm">{displayBalance}</span>
+                                )}
+                              </div>
+                            </SelectItem>
+                          )
+                        })}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            {/* Estimated Output */}
-            {tradeType !== 'burn' && (
-              <div className="space-y-3">
-                <label className="text-sm font-medium text-gray-300">
-                  Estimated {tradeType === 'buy' ? 'tokens' : 'receive amount'}
-                </label>
-                <div className="text-xl font-medium text-white">
-                  {isSimulating ? 'Calculating...' : estimatedOutput}
+                {/* Amount Input */}
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-gray-300">
+                    {tradeType === 'buy' ? 'quantity' : 'quantity to receive'}
+                  </label>
+                  <Input
+                    type="text"
+                    value={formattedAmount}
+                    onChange={(e) => handleAmountChange(e.target.value)}
+                    className="bg-gray-900/50 border-gray-800 text-white"
+                    placeholder="0.0"
+                  />
+                </div>
+
+                {/* Estimated Output */}
+                <div className="space-y-5">
+                  <div className="text-sm font-medium text-gray-300 text-right">
+                    estimated {tokenSymbol?.toLowerCase() || 'tokens'}
+                  </div>
+                  <div className="text-2xl font-medium text-white text-right">
+                    {isSimulating ? 'calculating...' : estimatedOutput}
+                  </div>
                 </div>
               </div>
             )}
@@ -664,12 +852,12 @@ export function EnsureButtons0x({
             </Button>
             <Button
               onClick={handleTrade}
-              disabled={isLoading || !selectedToken || Number(amount) <= 0}
+              disabled={isLoading || (tradeType === 'burn' ? !amount || Number(amount) <= 0 : !selectedToken || !amount || Number(amount) <= 0)}
               className={`min-w-[120px] ${
                 tradeType === 'buy' 
                   ? 'bg-green-600 hover:bg-green-500' 
                   : tradeType === 'sell'
-                  ? 'bg-red-600 hover:bg-red-500'
+                  ? 'bg-blue-600 hover:bg-blue-500'
                   : 'bg-orange-600 hover:bg-orange-500'
               }`}
             >
@@ -679,7 +867,7 @@ export function EnsureButtons0x({
                   <span>Processing...</span>
                 </div>
               ) : (
-                tradeType === 'buy' ? 'ENSURE' : tradeType === 'sell' ? 'UN-ENSURE' : 'BURN'
+                tradeType === 'buy' ? 'ENSURE' : tradeType === 'sell' ? 'TRANSFORM' : 'BURN'
               )}
             </Button>
           </div>

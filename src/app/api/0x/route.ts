@@ -55,17 +55,19 @@ export async function GET(request: Request) {
           taker,
           swapFeeRecipient: '0xa187F8CBdd36D63967c33f5BD4dD4B9ECA51270e',
           swapFeeBps: 100,
-          swapFeeToken: sellToken, // Use the sell token as the fee token
+          swapFeeToken: sellToken,
           slippageBps: 100
         };
 
         console.log('Requesting permit2 quote with parameters:', quoteParams);
         
+        // Get quote first
         const quote = await client.swap.permit2.getQuote.query(quoteParams, {
           signal: AbortSignal.timeout(10000)
         });
         
         console.log('Permit2 quote successful:', quote);
+
         return NextResponse.json(quote);
       } catch (sdkError: any) {
         // Enhanced error logging for v2 API responses
