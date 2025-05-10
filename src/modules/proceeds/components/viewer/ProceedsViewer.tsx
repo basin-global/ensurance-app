@@ -112,12 +112,18 @@ const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 1.5;
 const ZOOM_STEP = 0.1;
 
+interface AddressInfo {
+  name: string;
+  type: string;
+  description?: string;
+}
+
 export function FlowViewer({ address, chainId }: FlowViewerProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [addressNames, setAddressNames] = useState<Record<string, { name: string; type: string }>>({});
+  const [addressNames, setAddressNames] = useState<Record<string, AddressInfo>>({});
 
   // Memoize node types and edge types
   const nodeTypes = useMemo(() => ({ flowNode: FlowNode }), []);
@@ -245,7 +251,7 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
       console.log('Looking up address:', normalizedAddress, 'Found:', addressInfo); // Debug log
 
       // Add node
-      const nodePercentage = level === 0 ? '100' : childPercentage?.toString();
+      const nodePercentage = level === 0 ? undefined : childPercentage?.toString();
 
       console.log('Creating node:', {
         address: normalizedAddress,
@@ -257,6 +263,60 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
         }))
       });
 
+      // If this is a headwaters node (level 0), add source nodes above it
+      if (level === 0) {
+        // Get all sources
+        const sources = Object.entries(addressNames)
+          .filter(([_, info]) => info.type === 'source')
+          .map(([_, info]) => ({
+            name: info.name,
+            description: info.description
+          }));
+
+        // Create a single source node
+        const sourceNode = {
+          id: 'sources',
+          type: 'flowNode',
+          data: {
+            label: 'SOURCES',
+            fullAddress: 'sources',
+            isSource: true,
+            type: 'source',
+            sources: sources
+          },
+          position: {
+            x: 0, // Center horizontally
+            y: -350 // Fixed distance above HEADWATERS
+          },
+          draggable: true
+        };
+
+        // Add source node
+        newNodes.push(sourceNode);
+
+        // Create edge from sources to headwaters
+        newEdges.push({
+          id: `sources-${normalizedAddress}`,
+          source: 'sources',
+          target: normalizedAddress,
+          sourceHandle: 'source', // Bottom handle of SOURCES
+          targetHandle: 'target', // Top handle of HEADWATERS
+          type: 'fluid',
+          animated: true,
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            width: 20,
+            height: 20,
+            color: '#60A5FA'
+          },
+          style: { 
+            stroke: '#60A5FA',
+            strokeWidth: 2,
+            opacity: 0.6
+          }
+        });
+      }
+
       newNodes.push({
         id: normalizedAddress,
         type: 'flowNode',
@@ -265,7 +325,7 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
           fullAddress: splitAddress,
           recipients: splitMetadata?.recipients || [],
           isSplit: Boolean(splitMetadata?.recipients?.length),
-          isSource: level === 0,
+          isSource: false,
           type: addressInfo?.type || 'account',
           percentage: nodePercentage
         },

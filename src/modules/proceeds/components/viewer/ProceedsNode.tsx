@@ -19,6 +19,11 @@ interface FlowNodeProps {
     isSource?: boolean;
     isReoccurring?: boolean;
     percentage?: string;
+    type?: string;
+    sources?: Array<{
+      name: string;
+      description: string | null;
+    }>;
   };
 }
 
@@ -51,9 +56,9 @@ export function FlowNode({ data }: FlowNodeProps) {
   return (
     <div 
       className={`
-        relative p-4
+        relative p-3
         rounded-xl
-        w-[240px]
+        ${data.isSource ? 'w-[360px]' : 'w-[240px]'}
         flex flex-col items-center
         ${data.isSource 
           ? 'ring-2 ring-yellow-500 ring-opacity-50'
@@ -66,18 +71,20 @@ export function FlowNode({ data }: FlowNodeProps) {
         transition-all duration-300 ease-in-out
         group
       `}>
-      {/* Top handle with glow effect */}
-      <Handle 
-        type="target" 
-        position={Position.Top} 
-        className="w-3 h-3 !bg-blue-500/80 !border-2 !border-blue-300/30"
-        style={{ top: '-6px' }}
-      />
+      {/* Top handle with glow effect - only show for non-source nodes */}
+      {!data.isSource && (
+        <Handle 
+          type="target" 
+          position={Position.Top} 
+          className="w-3 h-3 !bg-blue-500/80 !border-2 !border-blue-300/30"
+          style={{ top: '-6px' }}
+        />
+      )}
       
-      <div className="flex flex-col items-center w-full gap-3">
+      <div className="flex flex-col items-center w-full gap-2">
         {/* Status indicator */}
         {data.isReoccurring && (
-          <div className="absolute top-4 left-4 w-2 h-2 rounded-full bg-green-500" />
+          <div className="absolute top-3 left-3 w-2 h-2 rounded-full bg-green-500" />
         )}
 
         {/* Address and name labels */}
@@ -90,16 +97,43 @@ export function FlowNode({ data }: FlowNodeProps) {
               )}
             </div>
           )}
-          <a 
-            href={`/proceeds/${data.fullAddress}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-gray-400 font-mono text-xs text-center hover:text-blue-300 transition-colors relative z-50 cursor-pointer px-2 py-1 hover:bg-gray-700/50 rounded"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {shortAddress}
-          </a>
+          {data.fullAddress && !data.isSource && (
+            <a 
+              href={`/proceeds/${data.fullAddress}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-400 font-mono text-xs text-center hover:text-blue-300 transition-colors relative z-50 cursor-pointer px-2 py-1 hover:bg-gray-700/50 rounded"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {shortAddress}
+            </a>
+          )}
         </div>
+        
+        {/* Sources display */}
+        {data.isSource && data.sources && (
+          <div className="w-full grid grid-cols-2 gap-1">
+            {data.sources.map((source, index) => {
+              const colorIndex = index % colors.length;
+              return (
+                <div 
+                  key={source.name}
+                  className="relative bg-gray-800/50 rounded-lg p-1.5 text-xs hover:bg-gray-800/70 transition-colors group"
+                  style={{
+                    borderLeft: `3px solid ${colors[colorIndex]}`
+                  }}
+                >
+                  <div className="font-medium text-gray-200 truncate">{source.name}</div>
+                  {source.description && (
+                    <div className="absolute left-0 right-0 top-full mt-1 p-2 bg-gray-900/95 rounded-lg shadow-lg text-gray-300 text-xs opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none whitespace-normal w-[400px] break-words">
+                      {source.description}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
         
         {/* Recipients bar */}
         {data.isSplit && data.recipients && data.recipients.length > 0 && (
@@ -124,7 +158,7 @@ export function FlowNode({ data }: FlowNodeProps) {
         )}
 
         {/* Show single bar for non-split nodes */}
-        {!data.isSplit && (
+        {!data.isSplit && !data.isSource && (
           <div className="w-full h-8 rounded-lg overflow-hidden bg-gray-900/50">
             <div className="w-full h-full bg-blue-400/70" />
           </div>
