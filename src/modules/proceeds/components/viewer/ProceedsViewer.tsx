@@ -268,10 +268,16 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
         // Get all sources
         const sources = Object.entries(addressNames)
           .filter(([_, info]) => info.type === 'source')
-          .map(([_, info]) => ({
+          .map(([address, info]) => ({
+            id: parseInt(address.replace('source_', '')),
             name: info.name,
             description: info.description
-          }));
+          }))
+          .sort((a, b) => {
+            // Define the order of IDs
+            const order = [4, 2, 3, 7, 6, 1, 5];
+            return order.indexOf(a.id) - order.indexOf(b.id);
+          });
 
         // Create a single source node
         const sourceNode = {
@@ -282,11 +288,11 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
             fullAddress: 'sources',
             isSource: true,
             type: 'source',
-            sources: sources
+            sources: sources.map(s => ({ name: s.name, description: s.description }))
           },
           position: {
-            x: 0, // Center horizontally
-            y: -350 // Fixed distance above HEADWATERS
+            x: -800, // Position on the left
+            y: -400 // Move up higher
           },
           draggable: true
         };
