@@ -657,7 +657,9 @@ export function EnsureButtons0x({
           await publicClient.waitForTransactionReceipt({ hash: txHash })
           
           toast.update(pendingToast, {
-            render: `Successfully transformed to ${isToEth ? 'ETH' : selectedToken.symbol}!`,
+            render: tradeType === 'buy' 
+              ? 'success! you have ensured what matters'
+              : `success! ${tokenSymbol} transformed to ${isToEth ? 'ETH' : selectedToken.symbol}`,
             type: 'success',
             isLoading: false,
             autoClose: 5000
@@ -965,7 +967,12 @@ export function EnsureButtons0x({
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2
                           })
-                        : estimatedOutput // Already formatted in getQuote
+                        : selectedToken?.symbol === 'ETH' || selectedToken?.symbol === 'WETH'
+                          ? Number(estimatedOutput).toLocaleString('en-US', {
+                              minimumFractionDigits: 0,
+                              maximumFractionDigits: 6
+                            })
+                          : estimatedOutput // Already formatted in getQuote
                     )} {selectedToken?.symbol || 'tokens'}
                   </div>
                 </div>

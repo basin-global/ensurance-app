@@ -1,6 +1,6 @@
 import { PlusCircle, MinusCircle, Flame } from 'lucide-react'
 import { usePrivy, useWallets } from '@privy-io/react-auth'
-import { useGeneralService } from '@/modules/general/service/hooks'
+import { useGeneralService, useEthPrice } from '@/modules/general/service/hooks'
 import { useState, useEffect } from 'react'
 import { 
   createPublicClient, 
@@ -56,6 +56,7 @@ export function EnsureButtons({
   const { login, authenticated } = usePrivy()
   const { wallets } = useWallets()
   const { getBuyConfig, getSellConfig, userAddress, getCoinDetails } = useGeneralService()
+  const { price: ethPrice } = useEthPrice()
   const [isLoading, setIsLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [tradeType, setTradeType] = useState<'buy' | 'sell' | 'burn'>('buy')
@@ -64,27 +65,12 @@ export function EnsureButtons({
   const [estimatedTokens, setEstimatedTokens] = useState<string>('0')
   const [ethBalance, setEthBalance] = useState<bigint>(BigInt(0))
   const [tokenBalance, setTokenBalance] = useState<bigint>(BigInt(0))
-  const [ethPriceInUsd, setEthPriceInUsd] = useState<number>(0)
   const [isSimulating, setIsSimulating] = useState(false)
   const [coinDetails, setCoinDetails] = useState<{ 
     symbol: string,
     price?: string,
     decimals?: number 
   } | null>(null)
-
-  // Fetch ETH price in USD
-  useEffect(() => {
-    const fetchEthPrice = async () => {
-      try {
-        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd')
-        const data = await response.json()
-        setEthPriceInUsd(data.ethereum.usd)
-      } catch (error) {
-        console.error('Error fetching ETH price:', error)
-      }
-    }
-    fetchEthPrice()
-  }, [])
 
   const handleOpenModal = async (type: 'buy' | 'sell' | 'burn') => {
     if (!authenticated) {
@@ -457,6 +443,7 @@ export function EnsureButtons({
       } catch (error) {
         console.error('Error calculating tokens:', error)
         if (mounted && coinDetails?.price) {
+          // Fallback to using coin details price if pool calculation fails
           const ethValue = Number(debouncedEthAmount)
           const pricePerToken = Number(coinDetails.price)
           const tokens = ethValue / pricePerToken
@@ -573,9 +560,9 @@ export function EnsureButtons({
                     step={tradeType === 'buy' ? "0.000001" : Number(tokenBalance) < 1 ? "0.000001" : "0.01"}
                   />
                 </div>
-                {tradeType === 'buy' && ethPriceInUsd > 0 && (
+                {tradeType === 'buy' && ethPrice > 0 && (
                   <div className="text-sm text-gray-400">
-                    ${(Number(ethAmount) * ethPriceInUsd).toFixed(2)} USD
+                    ${(Number(ethAmount) * ethPrice).toFixed(2)} USD
                   </div>
                 )}
                 <div className="text-sm text-gray-400 whitespace-nowrap">

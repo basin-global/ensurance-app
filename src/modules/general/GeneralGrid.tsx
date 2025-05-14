@@ -57,6 +57,78 @@ export default function GeneralGrid({
 }: GeneralGridProps) {
   const [certificates, setCertificates] = useState<GeneralCertificate[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [prices, setPrices] = useState<Record<string, number>>({})
+  const [lastPriceUpdate, setLastPriceUpdate] = useState<number>(0)
+  const PRICE_UPDATE_INTERVAL = 60000 // 1 minute in milliseconds
+
+  // Fetch certificates
+  useEffect(() => {
+    const fetchCertificates = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch('/api/general')
+        if (!response.ok) {
+          throw new Error('Failed to fetch certificates')
+        }
+        const data = await response.json()
+        
+        // Filter out any certificates that failed to fetch market data
+        const validCertificates = (data || []).filter(cert => cert && cert.contract_address)
+        
+        // Fetch metadata for each valid certificate
+        const certificatesWithMetadata = await Promise.all(
+          validCertificates.map(fetchMetadata)
+        )
+        
+        setCertificates(certificatesWithMetadata)
+        onDataChange(certificatesWithMetadata)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch certificates')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCertificates()
+  }, [onDataChange])
+
+  // Fetch prices with caching
+  useEffect(() => {
+    const fetchPrices = async () => {
+      const now = Date.now()
+      if (now - lastPriceUpdate < PRICE_UPDATE_INTERVAL) {
+        return // Skip if last update was less than 1 minute ago
+      }
+
+      try {
+        // Fetch ETH price once since all tokens are ETH-based
+        const response = await fetch('/api/eth-price')
+        if (!response.ok) {
+          console.warn('Failed to fetch ETH price')
+          return
+        }
+        const data = await response.json()
+        if (data.price) {
+          // Store the same ETH price for all contract addresses
+          const newPrices: Record<string, number> = {}
+          certificates.forEach(cert => {
+            if (cert.contract_address) {
+              newPrices[cert.contract_address] = data.price
+            }
+          })
+          setPrices(newPrices)
+          setLastPriceUpdate(now)
+        }
+      } catch (err) {
+        console.error('Error updating prices:', err)
+      }
+    }
+
+    if (certificates.length > 0) {
+      fetchPrices()
+    }
+  }, [certificates, lastPriceUpdate])
 
   // Fetch metadata from token URI
   const fetchMetadata = async (cert: GeneralCertificate) => {
@@ -92,36 +164,6 @@ export default function GeneralGrid({
       }
     }
   }
-
-  const fetchCertificates = useCallback(async () => {
-    setLoading(true)
-    try {
-      const response = await fetch('/api/general')
-      if (!response.ok) throw new Error('Failed to fetch certificates')
-      const data = await response.json()
-      
-      // Filter out any certificates that failed to fetch market data
-      const validCertificates = (data || []).filter(cert => cert && cert.contract_address)
-      
-      // Fetch metadata for each valid certificate
-      const certificatesWithMetadata = await Promise.all(
-        validCertificates.map(fetchMetadata)
-      )
-      
-      setCertificates(certificatesWithMetadata)
-      onDataChange(certificatesWithMetadata)
-    } catch (error) {
-      console.error('Error fetching certificates:', error)
-      setCertificates([])
-      onDataChange([])
-    } finally {
-      setLoading(false)
-    }
-  }, [onDataChange])
-
-  useEffect(() => {
-    fetchCertificates()
-  }, [fetchCertificates])
 
   // Filter certificates based on search query
   const filteredCertificates = certificates.filter(cert => {
