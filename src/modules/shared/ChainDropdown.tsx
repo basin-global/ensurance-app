@@ -19,16 +19,16 @@ function ChainDropdown({
     // Filter for Ensurance contracts if needed
     .filter(chain => !filterEnsurance) // TODO: Add ensurance contract check when implementing assets feature
     // For exchange variant, only show exchange-enabled chains
-    .filter(chain => !filterEnsurance || EXCHANGE_ENABLED_CHAINS.includes(chain.simplehashName as typeof EXCHANGE_ENABLED_CHAINS[number]))
+    .filter(chain => !filterEnsurance || EXCHANGE_ENABLED_CHAINS.includes(chain.viemName as typeof EXCHANGE_ENABLED_CHAINS[number]))
     .sort((a, b) => {
-      const aIndex = chainOrder.indexOf(a.simplehashName);
-      const bIndex = chainOrder.indexOf(b.simplehashName);
+      const aIndex = chainOrder.indexOf(a.viemName);
+      const bIndex = chainOrder.indexOf(b.viemName);
       return aIndex - bIndex;
     });
 
   const chainOptions = filterEnsurance
     ? EXCHANGE_ENABLED_CHAINS
-    : chains.map(chain => chain.simplehashName);
+    : chains.map(chain => chain.viemName);
 
   const getChainIconPath = (chainName: string) => {
     const svgPath = `/assets/icons/${chainName}.svg`;
@@ -62,14 +62,14 @@ function ChainDropdown({
           <div className="flex items-center">
             <ChainIcon chainName={selectedChain} />
             <span className="hidden lg:inline">
-              {chains.find(c => c.simplehashName === selectedChain)?.name || selectedChain}
+              {chains.find(c => c.viemName === selectedChain)?.name || selectedChain}
             </span>
           </div>
         </SelectValue>
       </SelectTrigger>
       <SelectContent className="bg-[#111] border-gray-700 text-gray-200">
         {chainOptions.map((chainName) => {
-          const chain = chains.find(c => c.simplehashName === chainName);
+          const chain = chains.find(c => c.viemName === chainName);
           return (
             <SelectItem 
               key={chainName} 

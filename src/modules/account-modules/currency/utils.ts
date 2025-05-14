@@ -1,4 +1,4 @@
-import { getChainBySimplehashName } from '@/config/chains'
+import { getChainByName } from '@/config/chains'
 import { Asset } from '@/types'
 
 // Format numbers with appropriate commas and decimals
@@ -23,7 +23,7 @@ export const getAppropriateDecimals = (value: number): number => {
 
 // Get block explorer URL for token
 export const getExplorerUrl = (chain: string, address: string) => {
-  const chainConfig = getChainBySimplehashName(chain)
+  const chainConfig = getChainByName(chain)
   if (!chainConfig?.blockExplorers?.default?.url) {
     return '#'
   }
@@ -34,7 +34,7 @@ export const getExplorerUrl = (chain: string, address: string) => {
 
 // Get Uniswap URL for token
 export const getUniswapUrl = (chain: string, address: string) => {
-  const chainConfig = getChainBySimplehashName(chain)
+  const chainConfig = getChainByName(chain)
   if (!chainConfig) return '#'
   
   const cleanAddress = address.includes('.') ? address.split('.')[1] : address
@@ -43,7 +43,7 @@ export const getUniswapUrl = (chain: string, address: string) => {
 
 // Get display name for chain
 export const getChainDisplayName = (chain: string): string => {
-  const chainConfig = getChainBySimplehashName(chain)
+  const chainConfig = getChainByName(chain)
   return chainConfig ? chainConfig.name : chain
 }
 

@@ -42,7 +42,9 @@ export function HeaderSearch() {
     'b': 'https://binder.ensurance.app', // g b - binder
     'd': '/docs',              // g d - docs
     'h': '/' // g h home
-  }
+  } as const
+
+  type ShortcutKey = keyof typeof shortcuts
 
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -59,7 +61,8 @@ export function HeaderSearch() {
         
         // If 'g' was pressed in the last 500ms, check for shortcuts
         if (lastKey === 'g' && (now - lastKeyTime) < 500) {
-          const shortcutPath = shortcuts[event.key.toLowerCase()]
+          const key = event.key.toLowerCase() as ShortcutKey
+          const shortcutPath = shortcuts[key]
           if (shortcutPath) {
             event.preventDefault()
             if (shortcutPath.includes('coinbase.com') || shortcutPath.includes('binder.ensurance.app')) {
@@ -189,8 +192,8 @@ export function HeaderSearch() {
         if (abortControllerRef.current) {
           setResults(Array.isArray(data) ? data : [])
         }
-      } catch (error) {
-        if (error.name !== 'AbortError') {
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name !== 'AbortError') {
           console.error('Search failed:', error)
           setResults([])
         }
@@ -220,8 +223,13 @@ export function HeaderSearch() {
         account: a.is_ensurance ? 2 : (a.is_agent ? 3 : 4),
         certificate: 5,
         doc: 6
-      }
-      return (typeOrder[a.type] || 99) - (typeOrder[b.type] || 99)
+      } as const
+
+      type ResultType = keyof typeof typeOrder
+      const aType = a.type as ResultType
+      const bType = b.type as ResultType
+      
+      return (typeOrder[aType] || 99) - (typeOrder[bType] || 99)
     })
   }, [results])
 

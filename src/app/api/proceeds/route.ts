@@ -29,13 +29,15 @@ async function getWithCache(type: 'names' | 'address', address?: string) {
     const data = await proceeds.getNames();
     // Convert to map format for frontend compatibility
     const addressMap = data.reduce((acc, row) => {
-      acc[row.address.toLowerCase()] = {
-        name: row.name,
-        type: row.type,
-        description: row.description
-      };
+      if (typeof row.address === 'string') {
+        acc[row.address.toLowerCase()] = {
+          name: row.name,
+          type: row.type,
+          description: row.description
+        };
+      }
       return acc;
-    }, {});
+    }, {} as Record<string, { name: string | null; type: string; description: string | null }>);
 
     cache.names = {
       data: addressMap,
@@ -81,13 +83,15 @@ export async function GET(request: Request) {
     // Convert to map format for frontend compatibility
     const addressMap = rawData.reduce((acc, row) => {
       console.log('Processing row:', row);
-      acc[row.address.toLowerCase()] = {
-        name: row.name,
-        type: row.type,
-        description: row.description
-      };
+      if (typeof row.address === 'string') {
+        acc[row.address.toLowerCase()] = {
+          name: row.name,
+          type: row.type,
+          description: row.description
+        };
+      }
       return acc;
-    }, {});
+    }, {} as Record<string, { name: string | null; type: string; description: string | null }>);
 
     console.log('Final address map:', addressMap);
     return NextResponse.json(addressMap);

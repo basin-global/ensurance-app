@@ -6,14 +6,12 @@ import { AssetMetadata } from './AssetMetadata';
 
 interface AssetDetailViewProps {
   asset: Asset;
-  isSpam?: boolean;
   children?: React.ReactNode; // For additional components like Ensure button
   className?: string;
 }
 
 export function AssetDetailView({ 
   asset, 
-  isSpam,
   children,
   className = ''
 }: AssetDetailViewProps) {
@@ -35,14 +33,6 @@ export function AssetDetailView({
             <span>Back</span>
           </button>
         </div>
-
-        {/* Spam Warning */}
-        {isSpam && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
-            <strong className="font-bold">Warning!</strong>
-            <span className="block sm:inline"> This contract has been marked as spam.</span>
-          </div>
-        )}
         
         {/* Two Column Layout */}
         <div className="flex flex-col lg:flex-row gap-6 mx-auto">

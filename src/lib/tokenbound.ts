@@ -1,7 +1,7 @@
 // @keep Core TokenBound functionality and types
 import { TokenboundClient } from "@tokenbound/sdk";
 import { getTokenBoundClientConfig } from '@/config/tokenbound';
-import { getChainBySimplehashName } from '@/config/chains';
+import { getChainByName } from '@/config/chains';
 import type { Asset } from '@/types/index';
 
 export interface TokenboundActions {
@@ -28,7 +28,7 @@ export const createTokenboundActions = (activeWallet: any, tbaAddress: string): 
       throw new Error("Please connect your wallet first");
     }
 
-    const chainConfig = getChainBySimplehashName(asset.chain);
+    const chainConfig = getChainByName(asset.chain);
     if (!chainConfig) {
       throw new Error(`Unsupported chain: ${asset.chain}`);
     }
@@ -55,11 +55,11 @@ export const createTokenboundActions = (activeWallet: any, tbaAddress: string): 
 
     const tx = await client.transferNFT({
       account: tbaAddress as `0x${string}`,
-      tokenType: asset.contract.type === 'ERC1155' ? 'ERC1155' : 'ERC721',
+      tokenType: asset.contract?.type === 'ERC1155' ? 'ERC1155' : 'ERC721',
       tokenContract: asset.contract_address as `0x${string}`,
       tokenId: asset.token_id,
       recipientAddress: toAddress,
-      amount: asset.contract.type === 'ERC1155' ? amount : undefined,
+      amount: asset.contract?.type === 'ERC1155' ? amount : undefined,
       chainId: chainConfig.id
     });
 
@@ -71,7 +71,7 @@ export const createTokenboundActions = (activeWallet: any, tbaAddress: string): 
   
   isAccountDeployed: async (asset: Asset): Promise<boolean> => {
     try {
-      const chainConfig = getChainBySimplehashName(asset.chain);
+      const chainConfig = getChainByName(asset.chain);
       if (!chainConfig) {
         console.warn(`Chain ${asset.chain} not supported for tokenbound operations`);
         return false;

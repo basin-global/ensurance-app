@@ -12,7 +12,7 @@ interface CreatorEarning {
   // Add other fields if needed
 }
 
-interface GeneralCertificate {
+export interface GeneralCertificate {
   contract_address: string
   name: string
   token_uri: string
@@ -74,7 +74,7 @@ export default function GeneralGrid({
         const data = await response.json()
         
         // Filter out any certificates that failed to fetch market data
-        const validCertificates = (data || []).filter(cert => cert && cert.contract_address)
+        const validCertificates = (data || []).filter((cert: GeneralCertificate) => cert && cert.contract_address)
         
         // Fetch metadata for each valid certificate
         const certificatesWithMetadata = await Promise.all(

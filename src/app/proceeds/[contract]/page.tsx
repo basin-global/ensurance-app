@@ -51,9 +51,13 @@ export default function ContractPage({ params }: ContractPageProps) {
           chainId: base.id,
           includeEnsNames: false,
           apiConfig: {
-            apiKey: process.env.NEXT_PUBLIC_SPLITS_API_KEY
+            apiKey: process.env.NEXT_PUBLIC_SPLITS_API_KEY as string
           }
         }).dataClient;
+
+        if (!client) {
+          throw new Error('Failed to initialize Splits client');
+        }
 
         const [splitMetadata, namesResponse] = await Promise.all([
           client.getSplitMetadata({

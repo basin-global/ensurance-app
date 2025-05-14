@@ -15,7 +15,12 @@ export const accounts = {
                 ORDER BY group_name
             `;
             
-            let allAccounts = [];
+            let allAccounts: Array<{
+                full_account_name: string;
+                token_id: string;
+                is_agent: boolean;
+                group_name: string;
+            }> = [];
             
             // Query each active group's table
             for (const group of groups.rows) {
@@ -31,8 +36,10 @@ export const accounts = {
                         FROM members.${tableName}`
                     );
                     allAccounts = [...allAccounts, ...result.rows];
-                } catch (error) {
-                    console.error(`Error querying ${tableName}:`, error.message);
+                } catch (error: unknown) {
+                    if (error instanceof Error) {
+                        console.error(`Error querying ${tableName}:`, error.message);
+                    }
                     continue;
                 }
             }
@@ -49,8 +56,10 @@ export const accounts = {
                 return a.full_account_name.localeCompare(b.full_account_name);
             });
             
-        } catch (error) {
-            console.error('Database query error:', error);
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                console.error('Database query error:', error);
+            }
             throw error;
         }
     },
@@ -66,7 +75,11 @@ export const accounts = {
                 ORDER BY group_name
             `;
             
-            let allAccounts = [];
+            let allAccounts: Array<{
+                full_account_name: string;
+                is_agent: boolean;
+                group_name: string;
+            }> = [];
             
             // Query each active group's table
             for (const group of groups.rows) {
@@ -81,8 +94,10 @@ export const accounts = {
                         WHERE is_active = true`
                     );
                     allAccounts = [...allAccounts, ...result.rows];
-                } catch (error) {
-                    console.error(`Error querying ${tableName}:`, error.message);
+                } catch (error: unknown) {
+                    if (error instanceof Error) {
+                        console.error(`Error querying ${tableName}:`, error.message);
+                    }
                     continue; // Skip failed tables and continue with others
                 }
             }
@@ -98,8 +113,10 @@ export const accounts = {
                 if (!b.full_account_name) return -1;
                 return a.full_account_name.localeCompare(b.full_account_name);
             });
-        } catch (error) {
-            console.error('Error fetching search results:', error);
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                console.error('Error fetching search results:', error);
+            }
             return [];
         }
     },
@@ -208,9 +225,11 @@ export const accounts = {
                 return a.full_account_name.localeCompare(b.full_account_name);
             });
             
-        } catch (error) {
-            console.error(`Error fetching accounts for group ${groupName}:`, error);
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                console.error(`Error fetching accounts for group ${groupName}:`, error);
+            }
             throw error;
         }
     }
-}; 
+};

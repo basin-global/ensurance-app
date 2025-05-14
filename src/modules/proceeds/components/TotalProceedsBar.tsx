@@ -36,13 +36,19 @@ export function TotalProceedsBar({ address, title, description, onClick }: Total
   // Reference: See ProceedsNode.tsx implementation
 
   // Initialize splits client
-  const splitsClient = useMemo(() => new SplitsClient({
-    chainId: base.id,
-    includeEnsNames: false,
-    apiConfig: {
-      apiKey: process.env.NEXT_PUBLIC_SPLITS_API_KEY
+  const splitsClient = useMemo(() => {
+    const apiKey = process.env.NEXT_PUBLIC_SPLITS_API_KEY;
+    if (!apiKey) {
+      console.warn('NEXT_PUBLIC_SPLITS_API_KEY is not set');
     }
-  }).dataClient, []);
+    return new SplitsClient({
+      chainId: base.id,
+      includeEnsNames: false,
+      apiConfig: {
+        apiKey: apiKey || ''
+      }
+    }).dataClient;
+  }, []) as any; // TODO: Replace with proper type when available
 
   // Helper function to get all recipients recursively
   const getAllRecipients = async (
@@ -125,6 +131,10 @@ export function TotalProceedsBar({ address, title, description, onClick }: Total
       try {
         setLoading(true);
         setError(null);
+
+        if (!splitsClient) {
+          throw new Error('Splits client not initialized');
+        }
 
         // Get all recipients recursively with a fresh processedAddresses set
         const allRecipients = await getAllRecipients(address, 100, 0, new Set());

@@ -31,7 +31,7 @@ export default function Header() {
     }
 
     // Default - no sub-navigation
-    return { show: false }
+    return { show: false, type: 'accounts' as const } // Provide default type even when not shown
   }
 
   const navConfig = getSubNavConfig()

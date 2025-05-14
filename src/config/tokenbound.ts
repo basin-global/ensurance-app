@@ -28,7 +28,7 @@ export const tokenboundConfig: TokenBoundConfig = {
   // @keep:chain These are chains where TBAs can execute transactions via bridge
   activeChains: getActiveChains().map(chain => ({
     id: chain.id,
-    name: chain.simplehashName
+    name: chain.viemName
   }))
 };
 

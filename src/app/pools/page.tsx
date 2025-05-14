@@ -60,7 +60,7 @@ export default function PoolsPage() {
       (pool.tokens && pool.tokens.some(token => 
         token.toLowerCase().includes(searchTerm)
       )) ||
-      dexType.toLowerCase().includes(searchTerm);
+      (dexType?.toLowerCase() || '').includes(searchTerm);
   });
 
   return (

@@ -7,11 +7,10 @@ import { Skeleton } from "@/components/ui/skeleton"
 // import { ensuranceContracts, isEnsuranceToken } from '@/modules/specific/contract'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import { usePrivy, useWallets } from '@privy-io/react-auth';
-import { getChainBySimplehashName, getActiveChains } from '@/config/chains';
+import { getActiveChains } from '@/config/chains';
 import { TokenboundClient } from "@tokenbound/sdk";
 import { getTokenBoundClientConfig } from '@/config/tokenbound';
 import { createTokenboundActions } from '@/lib/tokenbound';
-import { fetchNFTsByContract } from '@/lib/simplehash';
 import { BaseModuleProps, Asset } from '@/types/index';
 
 // Update TokenboundActions interface
@@ -71,7 +70,7 @@ export default function AssetsModule({
   // Get available chains based on tab
   const availableChains = isEnsuranceTab 
     ? [] // TODO: Add ensurance contracts when implementing assets feature
-    : getActiveChains().map(c => c.simplehashName);
+    : getActiveChains().map(c => c.viemName);
 
   // Modify fetchAssets to handle pagination
   const fetchAssets = useCallback(async (pageNum = 1) => {

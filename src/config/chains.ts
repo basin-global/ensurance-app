@@ -1,7 +1,6 @@
 import { Chain } from 'viem';
 
 interface PrivyChain extends Chain {
-  simplehashName: string;
   isTestnet: boolean;
   isActive: boolean;
   iconPath: string;
@@ -14,7 +13,6 @@ export const supportedChains: PrivyChain[] = [
   {
     id: 8453,
     name: 'Base',
-    simplehashName: 'base',
     viemName: 'base',
     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     rpcUrls: {
@@ -30,7 +28,6 @@ export const supportedChains: PrivyChain[] = [
   {
     id: 1,
     name: 'Ethereum',
-    simplehashName: 'ethereum',
     viemName: 'mainnet',
     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     rpcUrls: {
@@ -47,7 +44,6 @@ export const supportedChains: PrivyChain[] = [
   {
     id: 10,
     name: 'Optimism',
-    simplehashName: 'optimism',
     viemName: 'optimism',
     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     rpcUrls: {
@@ -63,7 +59,6 @@ export const supportedChains: PrivyChain[] = [
   {
     id: 42161,
     name: 'Arbitrum',
-    simplehashName: 'arbitrum',
     viemName: 'arbitrum',
     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     rpcUrls: {
@@ -79,7 +74,6 @@ export const supportedChains: PrivyChain[] = [
   {
     id: 7777777,
     name: 'Zora',
-    simplehashName: 'zora',
     viemName: 'zora',
     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     rpcUrls: {
@@ -95,7 +89,6 @@ export const supportedChains: PrivyChain[] = [
   {
     id: 42220,
     name: 'Celo',
-    simplehashName: 'celo',
     viemName: 'celo',
     nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
     rpcUrls: {
@@ -111,7 +104,6 @@ export const supportedChains: PrivyChain[] = [
   {
     id: 137,
     name: 'Polygon',
-    simplehashName: 'polygon',
     viemName: 'polygon',
     nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
     rpcUrls: {
@@ -127,22 +119,22 @@ export const supportedChains: PrivyChain[] = [
 ];
 
 export const getChainById = (id: number) => supportedChains.find(chain => chain.id === id);
-export const getChainBySimplehashName = (name: string) => supportedChains.find(chain => chain.simplehashName === name);
+export const getChainByName = (name: string) => supportedChains.find(chain => chain.viemName === name);
 
 export const getActiveChains = () => {
   const activeChains = supportedChains.filter(chain => chain.isActive);
   return activeChains;
 }
 
-export const getActiveChainNames = () => getActiveChains().map(chain => chain.simplehashName).join(',');
+export const getActiveChainNames = () => getActiveChains().map(chain => chain.viemName).join(',');
 
 export const getOrderedActiveChains = () => {
   const activeChains = getActiveChains();
-  return chainOrder.filter(chain => activeChains.some(ac => ac.simplehashName === chain));
+  return chainOrder.filter(chain => activeChains.some(ac => ac.viemName === chain));
 }
 
 export const getChainIcon = (chain: string): string => {
-  const chainConfig = getChainBySimplehashName(chain);
+  const chainConfig = getChainByName(chain);
   return chainConfig ? chainConfig.iconPath : '';
 };
 

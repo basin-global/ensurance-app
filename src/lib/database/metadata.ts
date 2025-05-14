@@ -179,7 +179,7 @@ export const metadata = {
         } catch (error) {
             console.error('Error in getMetadata:', error);
             return {
-                error: error.message,
+                error: error instanceof Error ? error.message : 'Unknown error',
                 status: 500
             };
         }

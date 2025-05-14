@@ -110,18 +110,21 @@ async function syncGroups(): Promise<SyncOperationResult> {
         `
 
         results.push({
+          id: groupName,
           group: groupName,
-          status: 'success',
+          status: 'success' as const,
           data: { 
-            contractAddress,
-            totalSupply: Number(totalSupply)
+            contract_address: contractAddress,
+            group_name: groupName,
+            total_supply: Number(totalSupply)
           }
         })
         success++
       } catch (err: any) {
         results.push({
+          id: groupName,
           group: groupName,
-          status: 'failed',
+          status: 'failed' as const,
           error: err.message
         })
         failed++
@@ -253,13 +256,17 @@ async function syncAccounts(group_name?: string, token_id?: number): Promise<Syn
             )
 
             results.push({
+              id: `${group.group_name}-${id}`,
               group: group.group_name,
               token: id,
-              status: 'success',
+              status: 'success' as const,
               data: {
-                accountName: fullAccountName,
-                tbaAddress,
-                isDeployed
+                token_id: id,
+                account_name: accountName as string,
+                full_account_name: fullAccountName,
+                holder: '', // Not available here
+                group_name: group.group_name,
+                tba_address: tbaAddress
               }
             })
             success++
@@ -272,9 +279,10 @@ async function syncAccounts(group_name?: string, token_id?: number): Promise<Syn
 
           } catch (err: any) {
             results.push({
+              id: `${group.group_name}-${id}`,
               group: group.group_name,
               token: id,
-              status: 'failed',
+              status: 'failed' as const,
               error: err.message
             })
             failed++
@@ -286,8 +294,9 @@ async function syncAccounts(group_name?: string, token_id?: number): Promise<Syn
 
       } catch (err: any) {
         results.push({
+          id: group.group_name,
           group: group.group_name,
-          status: 'failed',
+          status: 'failed' as const,
           error: err.message
         })
         failed++
@@ -400,7 +409,7 @@ async function syncGeneralCertificatesMarketData(): Promise<SyncOperationResult>
             });
             results.push({
               id: cert.contract_address,
-              status: 'failed',
+              status: 'failed' as const,
               error: 'No market data available'
             });
             failed++;
@@ -432,7 +441,7 @@ async function syncGeneralCertificatesMarketData(): Promise<SyncOperationResult>
           console.log(`✓ Updated ${cert.contract_address}`);
           results.push({
             id: cert.contract_address,
-            status: 'success',
+            status: 'success' as const,
             data: {
               contract_address: cert.contract_address,
               chain: cert.chain,
@@ -457,7 +466,7 @@ async function syncGeneralCertificatesMarketData(): Promise<SyncOperationResult>
           console.error(`❌ Failed to process ${cert.contract_address}:`, err);
           results.push({
             id: cert.contract_address,
-            status: 'failed',
+            status: 'failed' as const,
             error: err.message
           });
           failed++;
@@ -564,12 +573,12 @@ async function syncGeneralCertificatesMarketDataBatch(): Promise<SyncOperationRe
                 unique_holders: tokenData.uniqueHolders || 0
               });
 
-              console.log(`✓ Updated ${cert.contract_address}`);
+              console.log(`✓ Updated ${tokenData.address}`);
               results.push({
-                id: cert.contract_address,
-                status: 'success',
+                id: tokenData.address,
+                status: 'success' as const,
                 data: {
-                  contract_address: cert.contract_address,
+                  contract_address: tokenData.address,
                   chain: cert.chain,
                   name: cert.name || '',
                   symbol: cert.symbol || '',
@@ -588,39 +597,39 @@ async function syncGeneralCertificatesMarketDataBatch(): Promise<SyncOperationRe
               console.error(`❌ Failed to process ${tokenData.address}:`, err);
               results.push({
                 id: tokenData.address,
-                status: 'failed',
+                status: 'failed' as const,
                 error: err.message
               });
               failed++;
             }
           }
         }
+
+        // Add delay between batches
+        if (i + BATCH_SIZE < certificates.length) {
+          console.log(`\nWaiting ${BATCH_DELAY/1000} seconds before next batch...`);
+          await sleep(BATCH_DELAY);
+        }
+
+        // Log progress
+        const progress = Math.min(i + BATCH_SIZE, certificates.length);
+        const percentage = ((progress / certificates.length) * 100).toFixed(1);
+        console.log('\n-------------------');
+        console.log(`Progress: ${progress}/${certificates.length} (${percentage}%)`);
+        console.log(`Success: ${success}, Failed: ${failed}`);
       } catch (err: any) {
-        console.error('❌ Batch API call failed:', err);
-        failed += addresses.length;
+        console.error('❌ Batch processing error:', err);
+        failed += batch.length;
       }
-
-      // Add delay between batches
-      if (i + BATCH_SIZE < certificates.length) {
-        console.log(`\nWaiting ${BATCH_DELAY/1000} seconds before next batch...`);
-        await sleep(BATCH_DELAY);
-      }
-
-      // Log progress
-      const progress = Math.min(i + BATCH_SIZE, certificates.length);
-      const percentage = ((progress / certificates.length) * 100).toFixed(1);
-      console.log('\n-------------------');
-      console.log(`Progress: ${progress}/${certificates.length} (${percentage}%)`);
-      console.log(`Success: ${success}, Failed: ${failed}`);
     }
 
     const duration = ((Date.now() - startTime)/1000).toFixed(1);
-    console.log('\n=== Batch Market Data Sync Complete ===');
+    console.log('\n=== Market Data Sync Complete ===');
     console.log(`Duration: ${duration}s`);
     console.log(`Final Stats - Total: ${results.length}, Success: ${success}, Failed: ${failed}`);
 
     return {
-      options: { entity: 'general_certificates', market_data: true, batch_process: true },
+      options: { entity: 'general_certificates', market_data: true },
       timestamp: startTime,
       stats: { total: results.length, success, failed },
       results
@@ -628,33 +637,39 @@ async function syncGeneralCertificatesMarketDataBatch(): Promise<SyncOperationRe
 
   } catch (err: any) {
     console.error('❌ Fatal error:', err);
-    throw new Error(`Batch market data sync failed: ${err.message}`);
+    throw new Error(`Market data sync failed: ${err.message}`);
   }
 }
 
-// Main sync function
+// Main sync function that handles all sync operations
 export async function sync(entity: SyncEntity, options: Omit<SyncOptions, 'entity'> = {}): Promise<SyncOperationResult> {
-  console.log('Starting sync operation:', { entity, options });
-  
+  const { group_name, token_id, empty_only, market_data, batch_process } = options;
+
   switch (entity) {
     case 'groups':
-      return syncGroups()
+      return syncGroups();
+    
     case 'accounts':
-      return syncAccounts(options.group_name, options.token_id)
+      return syncAccounts(group_name, token_id);
+    
     case 'general_certificates':
-      if (options.market_data) {
-        if (options.batch_process) {
-          console.log('Starting batch market data sync...');
-          return syncGeneralCertificatesMarketDataBatch();
-        } else {
-          console.log('Starting individual market data sync...');
-          return syncGeneralCertificatesMarketData();
-        }
-      } else {
-        console.log('Starting regular sync...');
-        return syncGeneralCertificates(options.empty_only);
+      if (market_data) {
+        return batch_process 
+          ? syncGeneralCertificatesMarketDataBatch()
+          : syncGeneralCertificatesMarketData();
       }
+      return syncGeneralCertificates(empty_only);
+    
     default:
-      throw new Error(`Unknown entity type: ${entity}`)
+      throw new Error(`Unknown entity: ${entity}`);
   }
-} 
+}
+
+// Export all sync functions
+export {
+  syncGroups,
+  syncAccounts,
+  syncGeneralCertificates,
+  syncGeneralCertificatesMarketData,
+  syncGeneralCertificatesMarketDataBatch
+};

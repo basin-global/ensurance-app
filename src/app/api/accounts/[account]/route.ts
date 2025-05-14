@@ -21,7 +21,10 @@ export async function GET(
     } catch (error) {
         console.error('Error fetching account:', error);
         return NextResponse.json(
-            { error: 'Failed to fetch account', details: error.message },
+            { 
+                error: 'Failed to fetch account', 
+                details: error instanceof Error ? error.message : 'Unknown error'
+            },
             { status: 500 }
         );
     }

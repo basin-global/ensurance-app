@@ -7,6 +7,10 @@ import { Card, CardContent } from '@/components/ui/card'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { EnsureButtons0x } from '@/components/layout/EnsureButtons0x'
 import { Proceeds } from '@/modules/proceeds/components/Proceeds'
+import { createPublicClient, http } from 'viem'
+import { base } from 'viem/chains'
+import ZORA_COIN_ABI from '@/abi/ZoraCoin.json'
+import { formatEther } from 'viem'
 
 const FALLBACK_IMAGE = '/assets/no-image-found.png'
 
@@ -77,7 +81,7 @@ const parseTokenAmount = (amount: string): number => {
 
 export default function Details({ 
   contractAddress,
-  name,
+  name = '',
   tokenUri,
   payout_recipient,
   provenance,
@@ -86,11 +90,18 @@ export default function Details({
   const [metadata, setMetadata] = useState<any>(null)
   const [certificateData, setCertificateData] = useState<CertificateData | null>(null)
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
+  const [maxSupply, setMaxSupply] = useState<bigint>(BigInt(0))
+  const [currentSupply, setCurrentSupply] = useState<bigint>(BigInt(0))
+  const [isLoadingSupply, setIsLoadingSupply] = useState(false)
 
-  // Fetch data from DB
+  // Helper function to delay execution
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+  // Fetch data from DB and contract
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Fetch from DB
         const response = await fetch('/api/general')
         if (!response.ok) throw new Error('Failed to fetch data')
         const data = await response.json()
@@ -98,8 +109,34 @@ export default function Details({
         if (certificate) {
           setCertificateData(certificate)
         }
+
+        // Fetch from contract
+        setIsLoadingSupply(true)
+        const publicClient = createPublicClient({
+          chain: base,
+          transport: http('https://base.blockpi.network/v1/rpc/public')
+        })
+
+        // Get max supply and current supply
+        const [max, current] = await Promise.all([
+          publicClient.readContract({
+            address: contractAddress,
+            abi: ZORA_COIN_ABI,
+            functionName: 'MAX_TOTAL_SUPPLY'
+          }),
+          publicClient.readContract({
+            address: contractAddress,
+            abi: ZORA_COIN_ABI,
+            functionName: 'totalSupply'
+          })
+        ])
+
+        setMaxSupply(max as bigint)
+        setCurrentSupply(current as bigint)
       } catch (error) {
-        console.error('Error fetching certificate data:', error)
+        console.error('Error fetching data:', error)
+      } finally {
+        setIsLoadingSupply(false)
       }
     }
     fetchData()
@@ -109,7 +146,7 @@ export default function Details({
   useEffect(() => {
     const fetchMetadata = async () => {
       try {
-        const response = await fetch(convertIpfsUrl(tokenUri))
+        const response = await fetch(convertIpfsUrl(tokenUri ?? ''))
         if (response.ok) {
           const data = await response.json()
           setMetadata(data)
@@ -121,8 +158,8 @@ export default function Details({
     fetchMetadata()
   }, [tokenUri])
 
-  const imageUrl = convertIpfsUrl(metadata?.image) || FALLBACK_IMAGE
-  const videoUrl = metadata?.animation_url ? convertIpfsUrl(metadata.animation_url) : null
+  const imageUrl = convertIpfsUrl((metadata && typeof metadata.image === 'string' ? metadata.image : '')) || FALLBACK_IMAGE
+  const videoUrl = metadata?.animation_url ? convertIpfsUrl((metadata && typeof metadata.animation_url === 'string' ? metadata.animation_url : '')) : null
 
   const renderDescription = (description: string) => {
     if (!description) return null;
@@ -177,7 +214,7 @@ export default function Details({
             ) : (
               <Image
                 src={imageUrl}
-                alt={name}
+                alt={name || ''}
                 fill
                 sizes="(max-width: 768px) 100vw, 50vw"
                 priority
@@ -201,7 +238,7 @@ export default function Details({
         {metadata?.description && (
           <div className="prose dark:prose-invert max-w-none">
             <div className="text-base leading-relaxed text-gray-200">
-              {renderDescription(metadata.description)}
+              {renderDescription(metadata.description ?? '')}
             </div>
           </div>
         )}
@@ -233,15 +270,14 @@ export default function Details({
                   <div>
                     <h3 className="text-sm text-gray-400 mb-1">burned</h3>
                     <p className="text-xl font-semibold">
-                      {(() => {
-                        const totalSupply = Number(certificateData.total_supply || '1000000000')
-                        const burned = 1000000000 - totalSupply
-                        console.log('Burn calculation:', {
-                          totalSupply,
-                          burned
-                        })
-                        return formatToHumanReadable(Math.max(0, burned))
-                      })()}
+                      {isLoadingSupply ? (
+                        <span className="text-gray-400">loading...</span>
+                      ) : (
+                        (() => {
+                          const burned = maxSupply - currentSupply
+                          return formatToHumanReadable(Number(formatEther(burned)))
+                        })()
+                      )}
                     </p>
                   </div>
                 </div>
@@ -253,7 +289,7 @@ export default function Details({
               <div className="w-full flex flex-col items-center gap-4">
                 <EnsureButtons0x
                   contractAddress={contractAddress}
-                  imageUrl={convertIpfsUrl(metadata?.image) || FALLBACK_IMAGE}
+                  imageUrl={String(convertIpfsUrl(metadata?.image ?? '') || FALLBACK_IMAGE)}
                   showBurn={true}
                 />
               </div>
@@ -263,7 +299,7 @@ export default function Details({
             {(payout_recipient || provenance || initial_supply) && (
               <div className="pt-6">
                 <Proceeds 
-                  payout_recipient={payout_recipient}
+                  payout_recipient={payout_recipient ?? ''}
                   provenance={provenance}
                   initial_supply={initial_supply}
                 />

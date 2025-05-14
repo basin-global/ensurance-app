@@ -132,18 +132,20 @@ export class ImageGenerator {
                 );
                 console.info(`Generated overlay image for ${fullAccountName}`);
                 return url;
-            } catch (blobError) {
+            } catch (blobError: unknown) {
+                const errorMessage = blobError instanceof Error ? blobError.message : 'Unknown error';
                 console.error(`Failed to store overlay image for ${fullAccountName}:`, {
-                    error: blobError.message,
+                    error: errorMessage,
                     groupName,
                     tokenId,
                     path: `${groupName}/generated/${tokenId}.png`
                 });
                 throw new Error(`Failed to store overlay image for ${fullAccountName}`);
             }
-        } catch (error) {
+        } catch (error: unknown) {
             // Check for cache size limit error
-            if (error.message?.includes('fetch for over 2MB of data can not be cached')) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            if (errorMessage.includes('fetch for over 2MB of data can not be cached')) {
                 console.warn(`Cache size limit exceeded for ${fullAccountName} - this is expected for large images and won't affect functionality`, {
                     groupName,
                     tokenId,
@@ -155,7 +157,7 @@ export class ImageGenerator {
 
             // Handle other errors
             console.error(`Image generation failed for ${fullAccountName}:`, {
-                error: error.message,
+                error: errorMessage,
                 groupName,
                 tokenId
             });

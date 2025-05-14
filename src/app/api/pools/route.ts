@@ -8,9 +8,12 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const contractAddress = searchParams.get('contract');
-    const poolType = searchParams.get('type') as 'uniswap' | 'balancer' | null;
-    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')) : undefined;
-    const page = searchParams.get('page') ? parseInt(searchParams.get('page')) : 1;
+    const poolTypeParam = searchParams.get('type');
+    const poolType = poolTypeParam !== null ? poolTypeParam as 'uniswap' | 'balancer' | 'ensure' : undefined;
+    const limitParam = searchParams.get('limit');
+    const limit = limitParam !== null ? parseInt(limitParam) : undefined;
+    const pageParam = searchParams.get('page');
+    const page = pageParam !== null ? parseInt(pageParam) : 1;
     const offset = page ? (page - 1) * (limit || 20) : undefined;
 
     // If contract address is provided, get specific pool

@@ -53,7 +53,9 @@ export function HeaderLogo() {
   const homeUrl = '/'
   const groupUrl = isNaturalCapital
     ? '/natural-capital'
-    : groupName && `/groups/${groupName.replace(/^\./, '')}`
+    : groupName 
+      ? `/groups/${groupName.replace(/^\./, '')}`
+      : '/'
 
   return (
     <div className="flex items-center gap-2.5 font-mono font-bold text-base tracking-wide">

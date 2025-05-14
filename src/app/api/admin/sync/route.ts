@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
   try {
     // Check admin access
     const headersList = headers();
-    const address = headersList.get('x-address');
+    const address = headersList.get('x-address') || undefined;
     if (!isAppAdmin(address)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

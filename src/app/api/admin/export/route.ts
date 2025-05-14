@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   try {
     // Check admin access
     const headersList = headers()
-    const address = headersList.get('x-address')
+    const address = headersList.get('x-address') || undefined
     if (!isAppAdmin(address)) {
       return new NextResponse('Unauthorized', { status: 401 })
     }
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
   try {
     // Check admin access
     const headersList = headers()
-    const address = headersList.get('x-address')
+    const address = headersList.get('x-address') || undefined
     if (!isAppAdmin(address)) {
       return new NextResponse('Unauthorized', { status: 401 })
     }

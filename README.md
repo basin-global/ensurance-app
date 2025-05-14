@@ -57,7 +57,6 @@ yarn install
 ```bash
 NEXT_PUBLIC_PRIVY_APP_ID=your_privy_app_id
 NEXT_PUBLIC_SPLITS_API_KEY=your_splits_api_key
-SIMPLEHASH_API_KEY=your_simplehash_api_key
 ```
 
 4. Start the development server:
@@ -74,7 +73,6 @@ Required environment variables:
 - `NEXT_PUBLIC_PRIVY_APP_ID`: Privy authentication app ID
 - `PRIVY_APP_SECRET`: Privy app secret for server operations
 - `NEXT_PUBLIC_SPLITS_API_KEY`: API key for Splits integration
-- `SIMPLEHASH_API_KEY`: API key for SimpleHash NFT data
 
 ## Architecture
 

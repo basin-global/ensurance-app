@@ -118,8 +118,8 @@ export async function GET(request: NextRequest) {
         );
 
         // Only fetch and search other data if we have a search query
-        let groupsData = [];
-        let accountsData = [];
+        let groupsData: { group_name: string; name_front: string | null }[] = [];
+        let accountsData: { full_account_name: string; is_agent: boolean; group_name: string }[] = [];
 
         // Initialize from cache if valid
         groupsData = await getDataWithCache('groups', () => groups.getSearchResults());

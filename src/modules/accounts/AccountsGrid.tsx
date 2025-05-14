@@ -44,7 +44,7 @@ export default function AccountsGrid({
 
             // For "mine" view: fetch wallet's NFTs filtered by contract(s)
             if (walletAddress) {
-                let contractAddresses;
+                let contractAddresses: string[];
                 let groups;
                 
                 // First get all groups data

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { isSpamContract } from '@/config/spamContracts';
 import { Asset } from '@/types';
 import { AssetDetailView } from '@/modules/assets/details/AssetDetailView';
 // TODO: Implement isEnsuranceToken check when completing assets feature
@@ -23,8 +22,6 @@ export default function AssetPage({ params }: AssetPageProps) {
   const [assetDetails, setAssetDetails] = useState<Asset | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const isSpam = isSpamContract(params.chain, params.contract);
 
   useEffect(() => {
     // Early return if we're already on a certificate page
@@ -75,7 +72,6 @@ export default function AssetPage({ params }: AssetPageProps) {
   return (
     <AssetDetailView
       asset={assetDetails}
-      isSpam={isSpam}
     />
   );
 } 

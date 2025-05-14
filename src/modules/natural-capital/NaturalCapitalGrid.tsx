@@ -132,11 +132,11 @@ export default function NaturalCapitalGrid({
                 const data = await response.json()
                 
                 // Filter out situs.ensurance if this is the ensurance group
-                const filteredAccounts = data.filter(account => 
+                const filteredAccounts = data.filter((account: Account) => 
                     account.full_account_name !== 'situs.ensurance'
                 )
                 
-                const sortedAccounts = filteredAccounts.sort((a, b) => {
+                const sortedAccounts = filteredAccounts.sort((a: Account, b: Account) => {
                     const aName = a.display_name || a.full_account_name;
                     const bName = b.display_name || b.full_account_name;
                     return aName.localeCompare(bName);

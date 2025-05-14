@@ -22,11 +22,11 @@ export async function GET(
         console.error('Metadata API error:', {
             contract: params.contract,
             tokenId: params.tokenId,
-            error: error.message,
-            stack: error.stack
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined
         });
         return NextResponse.json(
-            { error: error.message || 'Failed to get metadata' },
+            { error: error instanceof Error ? error.message : 'Failed to get metadata' },
             { status: 500 }
         );
     }

@@ -19,7 +19,6 @@ const nextConfig = {
       },
     ],
     domains: [
-      'cdn.simplehash.com',
       'openseauserdata.com',
       'i.seadn.io',
       'ipfs.io',

@@ -2,10 +2,10 @@
 
 import { useState } from 'react'
 import { PageHeader } from '@/components/layout/PageHeader'
-import GeneralGrid from '@/modules/general/GeneralGrid'
+import GeneralGrid, { GeneralCertificate } from '@/modules/general/GeneralGrid'
 
 export default function MarketsPage() {
-  const [marketData, setMarketData] = useState([])
+  const [marketData, setMarketData] = useState<GeneralCertificate[]>([])
   const [searchQuery, setSearchQuery] = useState('')
 
   return (

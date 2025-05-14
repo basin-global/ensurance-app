@@ -52,17 +52,18 @@ export default function OverviewTab({ description, tbaAddress, isOwner }: Overvi
       if (!tbaAddress) return
 
       try {
+        // Fetch currency and asset data
         const [currencyResponse, assetResponse] = await Promise.all([
-          fetch(`/api/simplehash/native-erc20?address=${tbaAddress}`),
-          fetch(`/api/simplehash/nft?address=${tbaAddress}`)
-        ])
+          fetch(`/api/accounts/${tbaAddress}/currency`),
+          fetch(`/api/accounts/${tbaAddress}/assets`)
+        ]);
 
         if (!currencyResponse.ok || !assetResponse.ok) {
-          throw new Error('Failed to fetch summaries')
+          throw new Error('Failed to fetch data');
         }
 
-        const currencyData = await currencyResponse.json()
-        const assetData = await assetResponse.json()
+        const currencyData = await currencyResponse.json();
+        const assetData = await assetResponse.json();
 
         // Calculate currency summary
         let totalValue = 0;

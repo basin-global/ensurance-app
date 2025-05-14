@@ -36,18 +36,8 @@ export default function AssetGrid({
     if (!address) return
     setLoading(true)
     try {
-      const response = await fetch(`/api/simplehash/nft?address=${address}${
-        selectedChain !== 'all' ? `&chain=${selectedChain}` : ''
-      }`)
-      if (!response.ok) throw new Error('Failed to fetch assets')
-      const data = await response.json()
-      
-      if (data.message) {
-        setMessage(data.message)
-      } else {
-        setMessage(null)
-        setAssets(data.nfts || [])
-      }
+      // Remove or update any fetch calls to /api/simplehash
+      // ... existing code ...
     } catch (error) {
       console.error('Error fetching assets:', error)
       setMessage("Failed to load assets")
