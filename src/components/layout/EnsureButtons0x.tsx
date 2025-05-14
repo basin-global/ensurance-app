@@ -53,6 +53,7 @@ interface Token {
   address: Address
   decimals: number
   balance?: string
+  type?: 'native' | 'currency' | 'certificate'
 }
 
 interface EnsureButtons0xProps {
@@ -100,6 +101,8 @@ export function EnsureButtons0x({
   const [estimatedOutput, setEstimatedOutput] = useState<string>('0')
   const [isSimulating, setIsSimulating] = useState(false)
   const [isApproving, setIsApproving] = useState(false)
+  const [isLoadingTokens, setIsLoadingTokens] = useState(false)
+  const [amountError, setAmountError] = useState<string>('')
 
   // Add effect to fetch token details
   useEffect(() => {
@@ -154,16 +157,131 @@ export function EnsureButtons0x({
     fetchTokenBalance()
   }, [authenticated, userAddress, contractAddress, modalOpen])
 
-  // Handle amount input with comma formatting
+  const handleOpenModal = async (type: 'buy' | 'sell' | 'burn') => {
+    if (!authenticated) {
+      login()
+      return
+    }
+    
+    setTradeType(type)
+    setModalOpen(true)
+    
+    // For burn, set the amount to the current balance
+    if (type === 'burn') {
+      setAmount(formatEther(tokenBalance))
+      setFormattedAmount(formatEther(tokenBalance))
+    }
+    
+    // Load available tokens for buy/transform
+    if ((type === 'buy' || type === 'sell') && authenticated && userAddress) {
+      setIsLoadingTokens(true)
+      try {
+        // For transform, fetch currencies and certificates
+        if (type === 'sell') {
+          const [currenciesRes, certificatesRes] = await Promise.all([
+            fetch('/api/currencies'),
+            fetch('/api/general')
+          ])
+
+          if (!currenciesRes.ok || !certificatesRes.ok) {
+            throw new Error('Failed to fetch tokens')
+          }
+
+          const [currencies, certificates] = await Promise.all([
+            currenciesRes.json(),
+            certificatesRes.json()
+          ])
+
+          // Combine all tokens
+          const tokens: Token[] = [
+            // Add native ETH
+            {
+              symbol: 'ETH',
+              address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE' as Address,
+              decimals: 18,
+              type: 'native'
+            },
+            // Add currencies
+            ...currencies.map((c: any) => ({
+              symbol: c.symbol,
+              address: c.address as Address,
+              decimals: c.decimals,
+              type: 'currency'
+            })),
+            // Add certificates
+            ...certificates.map((c: any) => ({
+              symbol: c.symbol,
+              address: c.contract_address as Address,
+              decimals: 18, // Certificates are always 18 decimals
+              type: 'certificate'
+            }))
+          ]
+
+          setAvailableTokens(tokens)
+          
+          // Set initial selected token to ETH
+          setSelectedToken(tokens[0])
+        } else {
+          // For buy, fetch user's tokens
+          const response = await fetch(`/api/alchemy/fungible?address=${userAddress}`)
+          if (!response.ok) throw new Error('Failed to fetch tokens')
+          
+          const data = await response.json()
+          // Map Alchemy response to our token format
+          const tokens = data.data.tokens
+            .filter((t: any) => t.tokenMetadata?.decimals != null && t.tokenMetadata?.symbol)
+            .map((t: any) => ({
+              symbol: t.tokenMetadata.symbol,
+              address: t.tokenAddress as Address,
+              decimals: t.tokenMetadata.decimals,
+              balance: t.tokenBalance
+            }))
+          
+          setAvailableTokens(tokens)
+        }
+      } catch (error) {
+        console.error('Error fetching tokens:', error)
+        toast.error('Failed to load available tokens')
+      } finally {
+        setIsLoadingTokens(false)
+      }
+    }
+  }
+
+  // Add validation for amount against balance
+  const validateAmount = (value: string) => {
+    if (!value) {
+      setAmountError('')
+      return
+    }
+    
+    try {
+      const inputAmount = parseEther(value)
+      if (inputAmount > tokenBalance) {
+        setAmountError('Insufficient balance')
+      } else {
+        setAmountError('')
+      }
+    } catch (error) {
+      setAmountError('Invalid amount')
+    }
+  }
+
+  // Modify handleAmountChange to format with commas while typing
   const handleAmountChange = (value: string) => {
-    // Remove commas and non-numeric characters except decimal point
-    const cleanValue = value.replace(/,/g, '').replace(/[^\d.]/g, '')
+    // Remove existing commas first
+    const withoutCommas = value.replace(/,/g, '')
+    
+    // Only allow numbers and one decimal point
+    const cleanValue = withoutCommas.replace(/[^\d.]/g, '')
     
     // Prevent multiple decimal points
     const decimalCount = (cleanValue.match(/\./g) || []).length
     if (decimalCount > 1) return
 
+    // Store the clean value for calculations
     setAmount(cleanValue)
+    validateAmount(cleanValue)
 
     // Format with commas for display
     if (cleanValue) {
@@ -178,7 +296,20 @@ export function EnsureButtons0x({
     }
   }
 
-  // Get quote when amount or selected token changes
+  // Add helper function for token decimals
+  const getTokenDecimals = (token: Token | null) => {
+    if (!token) return 18 // Default to 18 decimals
+    if (token.symbol === 'USDC') return 6
+    if (token.decimals) return token.decimals
+    return 18 // Default for most tokens
+  }
+
+  // Add helper function to check if address is ETH
+  const isEthAddress = (address: string): boolean => {
+    return address.toLowerCase() === '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'.toLowerCase()
+  }
+
+  // Modify getQuote useEffect
   useEffect(() => {
     const getQuote = async () => {
       if (!authenticated || !selectedToken || !debouncedAmount || !userAddress) return
@@ -221,27 +352,71 @@ export function EnsureButtons0x({
           } else {
             toast.error(details.message || errorData.error || 'Failed to get quote')
           }
+          setEstimatedOutput('0')
           return
         }
         
         const data = await response.json()
         console.log('Quote response:', data)
+
+        // Check for liquidity first
+        if (!data.liquidityAvailable) {
+          console.log('No liquidity available for this trade')
+          toast.error('Insufficient liquidity for this trade amount')
+          setEstimatedOutput('0')
+          return
+        }
         
         // Handle v2 API response format
         if (data.buyAmount) {
-          const formattedAmount = Number(formatEther(BigInt(data.buyAmount)))
-            .toLocaleString('en-US', { 
-              maximumFractionDigits: 0,
-              minimumFractionDigits: 0 
+          // Get the decimals for the output token
+          const decimals = tradeType === 'buy' ? 18 : getTokenDecimals(selectedToken)
+          
+          // Convert to proper decimal representation
+          const rawAmount = BigInt(data.buyAmount)
+          const amount = Number(rawAmount) / Math.pow(10, decimals)
+          
+          console.log('Raw amount:', rawAmount.toString())
+          console.log('Decimals:', decimals)
+          console.log('Converted amount:', amount)
+          
+          // Format the amount based on size and token type
+          let formattedAmount
+          if (selectedToken.symbol === 'USDC' && tradeType !== 'buy') {
+            formattedAmount = amount.toLocaleString('en-US', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2
             })
+          } else if (amount < 0.000001) {
+            formattedAmount = amount.toExponential(6)
+          } else if (amount < 1) {
+            formattedAmount = amount.toLocaleString('en-US', {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 6
+            })
+          } else if (amount < 1000) {
+            formattedAmount = amount.toLocaleString('en-US', {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 4
+            })
+          } else {
+            formattedAmount = amount.toLocaleString('en-US', {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2
+            })
+          }
+          
+          console.log('Final formatted amount:', formattedAmount)
           setEstimatedOutput(formattedAmount)
         } else {
           console.error('Unexpected quote response format:', data)
           toast.error('Received invalid quote response')
+          setEstimatedOutput('0')
         }
       } catch (error) {
         console.error('Error getting quote:', error)
         toast.error(error instanceof Error ? error.message : 'Failed to get price quote')
+        setEstimatedOutput('0')
       } finally {
         setIsSimulating(false)
       }
@@ -250,55 +425,10 @@ export function EnsureButtons0x({
     getQuote()
   }, [debouncedAmount, selectedToken, authenticated, userAddress, contractAddress, tradeType])
 
-  const handleOpenModal = async (type: 'buy' | 'sell' | 'burn') => {
-    if (!authenticated) {
-      login()
-      return
-    }
-    
-    setTradeType(type)
-    setModalOpen(true)
-    
-    // For burn, set the amount to the current balance
-    if (type === 'burn') {
-      setAmount(formatEther(tokenBalance))
-      setFormattedAmount(formatEther(tokenBalance))
-    }
-    
-    // Load available tokens for buy
-    if (type === 'buy' && authenticated && userAddress) {
-      try {
-        const response = await fetch(`/api/alchemy/fungible?address=${userAddress}`)
-        if (!response.ok) throw new Error('Failed to fetch tokens')
-        
-        const data = await response.json()
-        // Map Alchemy response to our token format
-        const tokens = data.data.tokens
-          .filter((t: any) => t.tokenMetadata?.decimals != null && t.tokenMetadata?.symbol)
-          .map((t: any) => ({
-            symbol: t.tokenMetadata.symbol,
-            address: t.tokenAddress as Address,
-            decimals: t.tokenMetadata.decimals,
-            balance: t.tokenBalance
-          }))
-        
-        setAvailableTokens(tokens)
-      } catch (error) {
-        console.error('Error fetching tokens:', error)
-        toast.error('Failed to load available tokens')
-      }
-    }
-    
-    // Set initial token selection for sell
-    if (type === 'sell') {
-      const usdc = SUPPORTED_TOKENS.USDC
-      setSelectedToken({
-        symbol: usdc.symbol,
-        address: usdc.address,
-        decimals: usdc.decimals
-      })
-    }
-  }
+  // Add a useEffect to monitor estimatedOutput changes
+  useEffect(() => {
+    console.log('estimatedOutput changed:', estimatedOutput)
+  }, [estimatedOutput])
 
   const handleTrade = async () => {
     if (!authenticated || !userAddress) {
@@ -390,7 +520,16 @@ export function EnsureButtons0x({
           return
         }
 
-        const sellAmountWei = parseEther(amount).toString()
+        // Convert amount to wei based on the selling token's decimals
+        const sellTokenDecimals = tradeType === 'buy' ? 
+          getTokenDecimals(selectedToken) : 18 // Our token is always 18 decimals
+        const sellAmountRaw = tradeType === 'buy' ? 
+          amount : 
+          amount.replace(/,/g, '') // Remove commas for parsing
+        const sellAmountWei = (sellTokenDecimals === 18) ?
+          parseEther(sellAmountRaw).toString() :
+          (BigInt(Math.floor(Number(sellAmountRaw) * Math.pow(10, sellTokenDecimals)))).toString()
+
         const sellTokenAddress = tradeType === 'buy' ? selectedToken.address : contractAddress
 
         // 1. Get initial quote
@@ -403,7 +542,7 @@ export function EnsureButtons0x({
           swapFeeToken: sellTokenAddress
         })
 
-        let quoteResponse = await fetch(`/api/0x?${params}`)
+        const quoteResponse = await fetch(`/api/0x?${params}`)
         if (!quoteResponse.ok) {
           const errorData = await quoteResponse.json()
           console.error('Quote error details:', errorData)
@@ -425,7 +564,7 @@ export function EnsureButtons0x({
           return
         }
 
-        let quoteData = await quoteResponse.json()
+        const quoteData = await quoteResponse.json()
         console.log('Trade quote data:', quoteData)
 
         // Handle permit signing and execute transaction
@@ -493,6 +632,14 @@ export function EnsureButtons0x({
           // Add another small delay before transaction
           await new Promise(resolve => setTimeout(resolve, 500))
 
+          // Check if we're transforming to ETH or ERC20
+          const isToEth = isEthAddress(selectedToken.address)
+          console.log('Transform target:', {
+            address: selectedToken.address,
+            isEth: isToEth,
+            symbol: selectedToken.symbol
+          })
+
           const tx = {
             from: userAddress,
             to: quoteData.transaction.to,
@@ -510,7 +657,7 @@ export function EnsureButtons0x({
           await publicClient.waitForTransactionReceipt({ hash: txHash })
           
           toast.update(pendingToast, {
-            render: 'transaction successful!',
+            render: `Successfully transformed to ${isToEth ? 'ETH' : selectedToken.symbol}!`,
             type: 'success',
             isLoading: false,
             autoClose: 5000
@@ -562,7 +709,7 @@ export function EnsureButtons0x({
     } else {
       return num.toLocaleString('en-US', {
         minimumFractionDigits: 0,
-        maximumFractionDigits: 2
+        maximumFractionDigits: 0
       })
     }
   }
@@ -576,6 +723,11 @@ export function EnsureButtons0x({
       return num.toLocaleString('en-US', {
         minimumFractionDigits: 0,
         maximumFractionDigits: 6
+      })
+    } else if (num < 1000) {
+      return num.toLocaleString('en-US', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 4
       })
     } else {
       return num.toLocaleString('en-US', {
@@ -616,7 +768,7 @@ export function EnsureButtons0x({
                 </button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>transform</p>
+                <p>transform (swap)</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -639,6 +791,11 @@ export function EnsureButtons0x({
             </Tooltip>
           </TooltipProvider>
         )}
+      </div>
+
+      {/* Add balance display */}
+      <div className="mt-2 text-sm text-gray-400 text-center">
+        balance: {formatBalance(tokenBalance)} {tokenSymbol}
       </div>
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
@@ -665,7 +822,26 @@ export function EnsureButtons0x({
           </DialogHeader>
 
           <div className="py-6">
-            {tradeType === 'burn' ? (
+            {tokenBalance === BigInt(0) && tradeType !== 'buy' ? (
+              // Show guidance when no balance
+              <div className="space-y-6 text-center">
+                <div className="text-lg text-gray-300">
+                  {tradeType === 'sell' 
+                    ? 'buy to transform' 
+                    : 'buy to burn'}
+                </div>
+                <Button
+                  onClick={() => {
+                    setTradeType('buy')
+                    setAmount('')
+                    setFormattedAmount('')
+                  }}
+                  className="bg-green-600 hover:bg-green-500"
+                >
+                  ENSURE NOW
+                </Button>
+              </div>
+            ) : tradeType === 'burn' ? (
               // Burn UI
               <div className="space-y-6">
                 <div className="space-y-3">
@@ -700,18 +876,22 @@ export function EnsureButtons0x({
                   </label>
                   <div className="flex items-center gap-4">
                     <Input
-                      type="number"
-                      value={amount}
-                      onChange={(e) => {
-                        setAmount(e.target.value)
-                        setFormattedAmount(e.target.value)
-                      }}
+                      type="text"
+                      value={formattedAmount}
+                      onChange={(e) => handleAmountChange(e.target.value)}
                       placeholder="enter amount"
-                      className="bg-gray-900/50 border-gray-800 text-white placeholder:text-gray-500 h-12 text-lg font-medium w-36"
+                      className={`bg-gray-900/50 border-gray-800 text-white placeholder:text-gray-500 h-12 text-lg font-medium w-36 ${
+                        amountError ? 'border-red-500' : ''
+                      }`}
                       min="0"
                       step={Number(tokenBalance) < 1 ? "0.000001" : "0.01"}
                     />
                   </div>
+                  {amountError && (
+                    <div className="text-sm text-red-500">
+                      {amountError}
+                    </div>
+                  )}
                   <div className="text-sm text-gray-400 whitespace-nowrap">
                     your balance: {formatBalance(tokenBalance)}
                   </div>
@@ -722,29 +902,71 @@ export function EnsureButtons0x({
                     transform to
                   </label>
                   <Select
-                    value={SUPPORTED_TOKENS.USDC.address}
+                    value={selectedToken?.address}
                     onValueChange={(value) => {
-                      const token = Object.values(SUPPORTED_TOKENS).find(t => t.address === value)
+                      const token = availableTokens.find(t => t.address === value)
                       if (token) {
                         setSelectedToken(token)
+                        // Don't reset amount anymore
                       }
                     }}
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue>USDC</SelectValue>
+                      <SelectValue placeholder={isLoadingTokens ? "Loading tokens..." : "Select token"} />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-900 border border-gray-800">
-                      <SelectItem 
-                        value={SUPPORTED_TOKENS.USDC.address}
-                        className="hover:bg-gray-800"
-                      >
-                        USDC
-                      </SelectItem>
+                      {isLoadingTokens ? (
+                        <SelectItem value="loading" disabled>
+                          Loading tokens...
+                        </SelectItem>
+                      ) : (
+                        <>
+                          <SelectItem 
+                            value="0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+                            className="hover:bg-gray-800"
+                          >
+                            ETH
+                          </SelectItem>
+                          
+                          {availableTokens
+                            .filter(t => t.type === 'currency')
+                            .map(token => (
+                              <SelectItem 
+                                key={token.address} 
+                                value={token.address}
+                                className="hover:bg-gray-800"
+                              >
+                                {token.symbol}
+                              </SelectItem>
+                            ))
+                          }
+                          
+                          {availableTokens
+                            .filter(t => t.type === 'certificate')
+                            .map(token => (
+                              <SelectItem 
+                                key={token.address} 
+                                value={token.address}
+                                className="hover:bg-gray-800"
+                              >
+                                {token.symbol}
+                              </SelectItem>
+                            ))
+                          }
+                        </>
+                      )}
                     </SelectContent>
                   </Select>
 
                   <div className="text-sm text-gray-400">
-                    estimated: {isSimulating ? 'calculating...' : formatInputValue(estimatedOutput)} USDC
+                    estimated: {isSimulating ? 'calculating...' : (
+                      selectedToken?.symbol === 'USDC' 
+                        ? Number(estimatedOutput).toLocaleString('en-US', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                          })
+                        : estimatedOutput // Already formatted in getQuote
+                    )} {selectedToken?.symbol || 'tokens'}
                   </div>
                 </div>
               </div>

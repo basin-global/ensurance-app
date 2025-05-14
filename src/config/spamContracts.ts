@@ -1,4 +1,4 @@
-import { ActiveChain } from '@/lib/simplehash';
+// import { ActiveChain } from '@/lib/simplehash'; UPDATE later TODO
 
 type SpamContractConfig = {
   [chain in ActiveChain]?: string[];
