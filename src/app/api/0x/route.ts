@@ -42,7 +42,7 @@ export async function GET(request: Request) {
         taker,
         swapFeeRecipient: '0xa187F8CBdd36D63967c33f5BD4dD4B9ECA51270e',
         swapFeeBps: 100,
-        slippageBps: 500
+        slippageBps: 200
       });
 
       try {
@@ -56,7 +56,7 @@ export async function GET(request: Request) {
           swapFeeRecipient: '0xa187F8CBdd36D63967c33f5BD4dD4B9ECA51270e',
           swapFeeBps: 100,
           swapFeeToken: sellToken,
-          slippageBps: 500
+          slippageBps: 200
         };
 
         console.log('Requesting permit2 quote with parameters:', quoteParams);

@@ -19,11 +19,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Address is required' }, { status: 400 });
     }
 
+    // Add caching headers
+    const headers = {
+      'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400',
+      'CDN-Cache-Control': 'max-age=3600',
+    };
+
     // Handle ETH with direct path
     if (address === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
       return NextResponse.json({ 
         url: 'https://raw.githubusercontent.com/0xsquid/assets/main/images/tokens/eth.svg'
-      });
+      }, { headers });
     }
 
     // 1. Check if it's one of our Zora coins
@@ -31,7 +37,7 @@ export async function GET(request: NextRequest) {
     if (generalCert?.token_uri) {
       const metadata = await fetch(convertIpfsUrl(generalCert.token_uri)).then(res => res.json());
       if (metadata?.image) {
-        return NextResponse.json({ url: convertIpfsUrl(metadata.image) });
+        return NextResponse.json({ url: convertIpfsUrl(metadata.image) }, { headers });
       }
     }
 
@@ -40,18 +46,18 @@ export async function GET(request: NextRequest) {
     const squidChainUrl = `https://raw.githubusercontent.com/0xsquid/assets/main/images/migration/webp/${chainId}_${address.toLowerCase()}.webp`;
     const squidChainResponse = await fetch(squidChainUrl);
     if (squidChainResponse.ok) {
-      return NextResponse.json({ url: squidChainUrl });
+      return NextResponse.json({ url: squidChainUrl }, { headers });
     }
 
     // 3. Try TrustWallet
     const trustWalletUrl = `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/${address}/logo.png`;
     const trustWalletResponse = await fetch(trustWalletUrl);
     if (trustWalletResponse.ok) {
-      return NextResponse.json({ url: trustWalletUrl });
+      return NextResponse.json({ url: trustWalletUrl }, { headers });
     }
 
     // 4. No image found
-    return NextResponse.json({ url: null });
+    return NextResponse.json({ url: null }, { headers });
 
   } catch (error) {
     console.error('Error fetching token image:', error);

@@ -71,6 +71,7 @@ export function EnsureButtons({
     price?: string,
     decimals?: number 
   } | null>(null)
+  const ethAmountInWei = ethAmount ? parseEther(ethAmount) : BigInt(0)
 
   const handleOpenModal = async (type: 'buy' | 'sell' | 'burn') => {
     if (!authenticated) {
@@ -341,19 +342,16 @@ export function EnsureButtons({
   // Format input value with appropriate decimals
   const formatInputValue = (value: string) => {
     const num = Number(value)
-    if (num === 0 || isNaN(num)) return value
+    if (num === 0 || isNaN(num)) return '0'
     
-    if (num < 1) {
-      return num.toLocaleString('en-US', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 6
-      })
-    } else {
-      return num.toLocaleString('en-US', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2
-      })
+    if (num < 0.000001) return '< 0.000001'
+    if (num < 0.01) return num.toFixed(6)
+    if (num < 1) return num.toFixed(4)
+    if (num < 1000) {
+      const fixed = num.toFixed(2)
+      return fixed.endsWith('.00') ? fixed.slice(0, -3) : fixed
     }
+    return num.toLocaleString('en-US', { maximumFractionDigits: 0 })
   }
 
   // Calculate price and conversion details
@@ -540,92 +538,182 @@ export function EnsureButtons({
               </div>
             </div>
           </DialogHeader>
+
           <div className="py-6">
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <label htmlFor="amount" className="text-sm font-medium text-gray-300">
-                  {tradeType === 'buy' ? 'ensure with eth' : 
-                   tradeType === 'sell' ? 'tokens to un-ensure' : 
-                   'tokens to burn'}
-                </label>
-                <div className="flex items-center gap-4">
+            {/* Token flow header */}
+            <div className="space-y-6">
+              {/* Header showing token flow */}
+              <div className="flex items-center justify-between">
+                <div className="text-lg font-bold text-white flex items-center gap-2">
+                  {tradeType === 'burn' ? (
+                    <>
+                      <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
+                        <Image
+                          src={imageUrl}
+                          alt={coinDetails?.symbol || 'Token'}
+                          width={24}
+                          height={24}
+                          className="object-cover"
+                        />
+                      </div>
+                      {coinDetails?.symbol}
+                    </>
+                  ) : tradeType === 'buy' ? (
+                    <>
+                      <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
+                        <Image
+                          src="https://raw.githubusercontent.com/0xsquid/assets/main/images/tokens/eth.svg"
+                          alt="ETH"
+                          width={24}
+                          height={24}
+                          className="object-cover"
+                        />
+                      </div>
+                      ETH
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
+                        <Image
+                          src={imageUrl}
+                          alt={coinDetails?.symbol || 'Token'}
+                          width={24}
+                          height={24}
+                          className="object-cover"
+                        />
+                      </div>
+                      {coinDetails?.symbol}
+                    </>
+                  )}
+                </div>
+                {tradeType !== 'burn' && (
+                  <div className="flex items-center gap-3">
+                    <div className="text-4xl font-black text-gray-400 hover:text-gray-300 transition-colors">→</div>
+                    <div className="text-lg font-bold text-white flex items-center gap-2">
+                      {tradeType === 'buy' ? (
+                        <>
+                          <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
+                            <Image
+                              src={imageUrl}
+                              alt={coinDetails?.symbol || 'Token'}
+                              width={24}
+                              height={24}
+                              className="object-cover"
+                            />
+                          </div>
+                          {coinDetails?.symbol}
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
+                            <Image
+                              src="https://raw.githubusercontent.com/0xsquid/assets/main/images/tokens/eth.svg"
+                              alt="ETH"
+                              width={24}
+                              height={24}
+                              className="object-cover"
+                            />
+                          </div>
+                          ETH
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Main content grid */}
+              <div className="grid grid-cols-[1fr,1fr] gap-4 items-start">
+                <div className="space-y-3">
+                  <label htmlFor="amount" className="text-sm font-medium text-gray-300">
+                    {tradeType === 'buy' ? 'ensure with eth' : 
+                     tradeType === 'sell' ? 'tokens to un-ensure' : 
+                     'tokens to burn'}
+                  </label>
                   <Input
                     id="amount"
                     type="number"
                     value={tradeType === 'buy' ? ethAmount : estimatedTokens}
                     onChange={(e) => tradeType === 'buy' ? setEthAmount(e.target.value) : setEstimatedTokens(e.target.value)}
                     placeholder="enter amount"
-                    className="bg-gray-900/50 border-gray-800 text-white placeholder:text-gray-500 h-12 text-lg font-medium w-36"
+                    className={`bg-gray-900/50 border-gray-800 text-white placeholder:text-gray-500 h-12 text-lg font-medium ${
+                      (tradeType === 'buy' && ethAmountInWei > ethBalance) || 
+                      (tradeType !== 'buy' && parseEther(estimatedTokens || '0') > tokenBalance) 
+                        ? 'border-red-500' : ''
+                    }`}
                     min="0"
                     step={tradeType === 'buy' ? "0.000001" : Number(tokenBalance) < 1 ? "0.000001" : "0.01"}
                   />
-                </div>
-                {tradeType === 'buy' && ethPrice > 0 && (
-                  <div className="text-sm text-gray-400">
-                    ${(Number(ethAmount) * ethPrice).toFixed(2)} USD
-                  </div>
-                )}
-                <div className="text-sm text-gray-400 whitespace-nowrap">
-                  your balance: {tradeType === 'buy' ? 
-                    `${formatBalance(ethBalance)} ETH` : 
-                    `${formatBalance(tokenBalance)} ${coinDetails?.symbol?.toLowerCase() || 'tokens'}`}
-                </div>
-              </div>
-
-              {tradeType !== 'burn' && (
-                <div className="space-y-5">
-                  <div className="text-sm font-medium text-gray-300 text-right">
-                    estimated {coinDetails?.symbol?.toLowerCase() || 'tokens'}
-                  </div>
-                  <div className="text-2xl font-medium text-white text-right">
-                    {isSimulating ? 'calculating...' : formatInputValue(estimatedTokens)}
-                  </div>
-                  {tradeType === 'sell' && (
-                    <div className="text-sm text-gray-400 text-right">
-                      your balance: {formatBalance(tokenBalance)} {coinDetails?.symbol?.toLowerCase() || 'tokens'}
+                  {tradeType === 'buy' && ethAmountInWei > ethBalance && (
+                    <div className="text-sm text-red-500">
+                      Insufficient ETH balance
                     </div>
                   )}
+                  {tradeType !== 'buy' && parseEther(estimatedTokens || '0') > tokenBalance && (
+                    <div className="text-sm text-red-500">
+                      Insufficient token balance
+                    </div>
+                  )}
+                  {tradeType === 'buy' && ethPrice > 0 && (
+                    <div className="text-sm text-gray-400">
+                      ${(Number(ethAmount) * ethPrice).toFixed(2)} USD
+                    </div>
+                  )}
+                  <div className="text-sm text-gray-400">
+                    your balance: {tradeType === 'buy' ? 
+                      `${formatBalance(ethBalance)} ETH` : 
+                      `${formatBalance(tokenBalance)} ${coinDetails?.symbol?.toLowerCase() || 'tokens'}`}
+                  </div>
                 </div>
-              )}
+
+                {tradeType !== 'burn' && (
+                  <div className="space-y-3">
+                    <div className="text-right">
+                      <div className="text-2xl font-medium text-white">
+                        {isSimulating ? 'calculating...' : 
+                         (tradeType === 'buy' && ethAmountInWei > ethBalance) ? '0' :
+                         formatInputValue(estimatedTokens)}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
+
           <div className="flex justify-end gap-3 pt-6 border-t border-gray-800">
             <Button 
               variant="ghost" 
               onClick={() => setModalOpen(false)}
-              className="text-gray-400 hover:text-gray-300 hover:bg-gray-800"
+              className="text-gray-400 hover:text-gray-300"
             >
               Cancel
             </Button>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    onClick={handleTrade}
-                    disabled={isLoading || (tradeType === 'burn' ? !estimatedTokens || Number(estimatedTokens) <= 0 : tradeType === 'buy' ? !ethAmount || Number(ethAmount) <= 0 : !estimatedTokens || Number(estimatedTokens) <= 0)}
-                    className={`min-w-[120px] font-bold ${
-                      tradeType === 'buy' 
-                        ? 'bg-green-600 hover:bg-green-500 text-white' 
-                        : tradeType === 'sell'
-                        ? 'bg-red-600 hover:bg-red-500 text-white'
-                        : 'bg-orange-600 hover:bg-orange-500 text-white'
-                    }`}
-                  >
-                    {isLoading ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        <span>processing...</span>
-                      </div>
-                    ) : (
-                      tradeType === 'buy' ? 'ENSURE' : tradeType === 'sell' ? 'UN-ENSURE' : 'BURN'
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{tradeType === 'buy' ? '(Buy)' : tradeType === 'sell' ? '(Sell)' : '(Burn)'}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Button
+              onClick={handleTrade}
+              disabled={
+                isLoading || 
+                (tradeType === 'burn' ? !estimatedTokens || Number(estimatedTokens) <= 0 : 
+                 tradeType === 'buy' ? (!ethAmount || Number(ethAmount) <= 0 || ethAmountInWei > ethBalance) : 
+                 !estimatedTokens || Number(estimatedTokens) <= 0 || parseEther(estimatedTokens) > tokenBalance)
+              }
+              className={`min-w-[120px] ${
+                tradeType === 'buy' 
+                  ? 'bg-green-600 hover:bg-green-500' 
+                  : tradeType === 'sell'
+                  ? 'bg-red-600 hover:bg-red-500'
+                  : 'bg-orange-600 hover:bg-orange-500'
+              }`}
+            >
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Processing...</span>
+                </div>
+              ) : (
+                tradeType === 'buy' ? 'ENSURE' : tradeType === 'sell' ? 'UN-ENSURE' : 'BURN'
+              )}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
