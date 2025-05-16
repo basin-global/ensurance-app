@@ -135,9 +135,9 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
       chainId,
       includeEnsNames: false,
       apiConfig: {
-        apiKey: process.env.NEXT_PUBLIC_SPLITS_API_KEY
+        apiKey: process.env.NEXT_PUBLIC_SPLITS_API_KEY ?? ''
       }
-    }).dataClient;
+    }).dataClient!;
 
     // Add delay between requests to avoid rate limiting
     const originalGetSplitMetadata = client.getSplitMetadata.bind(client);
@@ -257,7 +257,7 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
         address: normalizedAddress,
         level,
         percentage: nodePercentage,
-        splitMetadata: splitMetadata?.recipients?.map(r => ({
+        splitMetadata: splitMetadata?.recipients?.map((r: { recipient: { address: string }, percentAllocation: string }) => ({
           address: r.recipient.address.toLowerCase(),
           percentage: r.percentAllocation
         }))
@@ -342,7 +342,7 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
       if (splitMetadata?.recipients) {
         // First, check all recipients in parallel to identify which ones are splits
         const recipientChecks = await Promise.all(
-          splitMetadata.recipients.map(async (recipient) => {
+          splitMetadata.recipients.map(async (recipient: { recipient: { address: string }, percentAllocation: string }) => {
             const recipientAddress = recipient.recipient.address.toLowerCase();
             
             // If we've already processed this address or have it in knownSplits, use cached info
@@ -427,7 +427,7 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
               .map((r, idx) => {
                 // Get the percentage from the parent's metadata
                 const childPercentage = splitMetadata?.recipients?.find(
-                  recipient => recipient.recipient.address.toLowerCase() === r.address.toLowerCase()
+                  (recipient: { recipient: { address: string }, percentAllocation: string }) => recipient.recipient.address.toLowerCase() === r.address.toLowerCase()
                 )?.percentAllocation;
 
                 return processSplit(

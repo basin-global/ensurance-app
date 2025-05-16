@@ -497,13 +497,16 @@ export function EnsureButtons0x({
           taker: userAddress
         })
 
+        // Use our backend proxy with correct parameter names
         const params = new URLSearchParams({
           action: 'quote',
           sellToken: tradeType === 'buy' ? selectedToken.address : contractAddress,
           buyToken: tradeType === 'buy' ? contractAddress : selectedToken.address,
           sellAmount: sellAmountWei,
           taker: userAddress,
-          swapFeeToken: tradeType === 'buy' ? selectedToken.address : contractAddress
+          swapFeeToken: tradeType === 'buy' ? selectedToken.address : contractAddress,
+          slippageBps: '200', // 2% slippage (uses basis points: 200 = 2%)
+          swapFeeBps: '100'   // 1% fee (uses basis points: 100 = 1%)
         })
 
         const response = await fetch(`/api/0x?${params}`)
@@ -737,6 +740,7 @@ export function EnsureButtons0x({
         const buyToken = tradeType === 'buy' ? contractAddress : selectedToken.address
 
         try {
+          // Execute the swap using our updated function (no direct SDK calls)
           const result = await executeSwap({
             sellToken,
             buyToken,
@@ -751,6 +755,19 @@ export function EnsureButtons0x({
               })
             }
           })
+
+          // Check if result indicates success
+          if (!result.success) {
+            console.error('Swap returned without success flag:', result);
+            toast.update(pendingToast, {
+              render: 'Transaction may have encountered issues',
+              type: 'warning',
+              isLoading: false,
+              autoClose: 5000
+            });
+            setModalOpen(false);
+            return;
+          }
 
           // Get the token symbols for the message
           const toSymbol = String(tradeType === 'buy' ? tokenSymbol : selectedToken?.symbol ?? 'tokens')
@@ -807,11 +824,24 @@ export function EnsureButtons0x({
         } catch (error: any) {
           console.error('Trade failed:', error)
           toast.dismiss(pendingToast)
-          if (error?.code === 4001 || error?.message?.includes('rejected')) {
-            toast.error('Transaction cancelled')
-          } else {
-            toast.error(error?.message || 'Failed to execute trade')
+          
+          // Handle different error types
+          const errorMessage = error?.message || 'Failed to execute trade';
+          
+          // Create a more user-friendly error message
+          let userMessage = errorMessage;
+          
+          if (error?.code === 4001 || errorMessage.includes('rejected')) {
+            userMessage = 'Transaction cancelled';
+          } else if (errorMessage.includes('failed on-chain')) {
+            userMessage = 'Transaction failed on-chain. This may be due to slippage or contract issues.';
+          } else if (errorMessage.includes('insufficient funds')) {
+            userMessage = 'Insufficient funds to complete this transaction';
+          } else if (errorMessage.includes('gas')) {
+            userMessage = 'Transaction failed due to gas estimation issues';
           }
+          
+          toast.error(userMessage);
         }
       }
     } catch (error: any) {
