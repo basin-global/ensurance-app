@@ -3,7 +3,7 @@
 import { PlusCircle, RefreshCw, Flame, ChevronDown } from 'lucide-react'
 import { usePrivy, useWallets } from '@privy-io/react-auth'
 import { useGeneralService } from '@/modules/general/service/hooks'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { 
   parseEther, 
   formatEther,
@@ -64,6 +64,8 @@ interface EnsureButtons0xProps {
   showBurn?: boolean
   size?: 'sm' | 'lg'
   imageUrl?: string
+  showBalance?: boolean
+  tokenName?: string
 }
 
 type TradeType = 'buy' | 'sell' | 'burn'
@@ -147,7 +149,9 @@ export function EnsureButtons0x({
   showMinus = true,
   showBurn = false,
   size = 'lg',
-  imageUrl = '/assets/no-image-found.png'
+  imageUrl = '/assets/no-image-found.png',
+  showBalance = true,
+  tokenName
 }: EnsureButtons0xProps) {
   const { login, authenticated } = usePrivy()
   const { wallets } = useWallets()
@@ -169,17 +173,18 @@ export function EnsureButtons0x({
   const [amountError, setAmountError] = useState<string>('')
   const [tokenImages, setTokenImages] = useState<Record<string, string>>({})
 
+  // Create a single publicClient instance
+  const publicClient = useMemo(() => createPublicClient({
+    chain: base,
+    transport: http()
+  }), [])
+
   // Add effect to fetch token details
   useEffect(() => {
     const fetchTokenDetails = async () => {
-      if (!contractAddress) return
+      if (!contractAddress || !modalOpen) return
       
       try {
-        const publicClient = createPublicClient({
-          chain: base,
-          transport: http()
-        })
-
         const symbol = await publicClient.readContract({
           address: contractAddress,
           abi: ZORA_COIN_ABI,
@@ -193,34 +198,31 @@ export function EnsureButtons0x({
     }
 
     fetchTokenDetails()
-  }, [contractAddress])
+  }, [contractAddress, modalOpen, publicClient])
 
   // Add effect to fetch token balance when needed
   useEffect(() => {
-    const fetchTokenBalance = async () => {
-      if (!authenticated || !userAddress || !contractAddress) return
+    const fetchBalance = async () => {
+      if (!contractAddress || !userAddress || !modalOpen) return
       
-      try {
-        const publicClient = createPublicClient({
-          chain: base,
-          transport: http()
-        })
-
-        const balance = await publicClient.readContract({
-          address: contractAddress,
-          abi: ZORA_COIN_ABI,
-          functionName: 'balanceOf',
-          args: [userAddress]
-        }) as bigint
-        
-        setTokenBalance(balance)
-      } catch (error) {
-        console.error('Error fetching token balance:', error)
+      // Only fetch balance if we're showing it or if it's needed for the modal
+      if (showBalance || tradeType === 'sell' || tradeType === 'burn') {
+        try {
+          const balance = await publicClient.readContract({
+            address: contractAddress,
+            abi: ZORA_COIN_ABI,
+            functionName: 'balanceOf',
+            args: [userAddress]
+          }) as bigint
+          setTokenBalance(balance)
+        } catch (error) {
+          console.error('Error fetching balance:', error)
+        }
       }
     }
 
-    fetchTokenBalance()
-  }, [authenticated, userAddress, contractAddress, modalOpen])
+    fetchBalance()
+  }, [contractAddress, userAddress, modalOpen, showBalance, tradeType, publicClient])
 
   const handleOpenModal = async (type: TradeType) => {
     if (!authenticated) {
@@ -241,12 +243,6 @@ export function EnsureButtons0x({
     setModalOpen(true)
     
     try {
-      // Create public client for reading balances
-      const publicClient = createPublicClient({
-        chain: base,
-        transport: http()
-      })
-
       // Load available tokens for buy/transform
       if ((type === 'buy' || type === 'sell') && authenticated && userAddress) {
         setIsLoadingTokens(true)
@@ -452,7 +448,10 @@ export function EnsureButtons0x({
           !debouncedAmount || 
           !userAddress || 
           Number(debouncedAmount) <= 0 ||
-          !modalOpen) return
+          !modalOpen) {
+        setEstimatedOutput('0')
+        return
+      }
 
       // Check balance before proceeding
       try {
@@ -461,10 +460,6 @@ export function EnsureButtons0x({
           // For buy, check if user has enough of the selected token
           if (selectedToken.address.toLowerCase() === '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'.toLowerCase()) {
             // For ETH, check ETH balance
-            const publicClient = createPublicClient({
-              chain: base,
-              transport: http()
-            })
             const ethBalance = await publicClient.getBalance({ address: userAddress })
             if (amountInWei > ethBalance) {
               setEstimatedOutput('0')
@@ -485,7 +480,7 @@ export function EnsureButtons0x({
         setEstimatedOutput('0')
         return
       }
-      
+
       setIsSimulating(true)
       try {
         const sellAmountWei = parseEther(debouncedAmount).toString()
@@ -586,10 +581,12 @@ export function EnsureButtons0x({
     getQuote()
   }, [debouncedAmount, selectedToken, authenticated, userAddress, contractAddress, tradeType, modalOpen])
 
-  // Add a useEffect to monitor estimatedOutput changes
+  // Only log estimatedOutput changes when modal is open
   useEffect(() => {
-    console.log('estimatedOutput changed:', estimatedOutput)
-  }, [estimatedOutput])
+    if (modalOpen) {
+      console.log('estimatedOutput changed:', estimatedOutput)
+    }
+  }, [estimatedOutput, modalOpen])
 
   // Add these utility functions before the component
   const fetchTokenImage = useCallback(async (address: string): Promise<string | null> => {
@@ -680,11 +677,6 @@ export function EnsureButtons0x({
             render: 'confirming burn...',
             type: 'info',
             isLoading: true
-          })
-
-          const publicClient = createPublicClient({
-            chain: base,
-            transport: http()
           })
 
           const walletClient = createWalletClient({
@@ -945,9 +937,11 @@ export function EnsureButtons0x({
       </div>
 
       {/* Add balance display */}
-      <div className="mt-2 text-sm text-gray-400 text-center">
-        balance: {formatBalance(tokenBalance)} {tokenSymbol}
-      </div>
+      {showBalance && (
+        <div className="mt-2 text-sm text-gray-400 text-center">
+          balance: {formatBalance(tokenBalance)} {tokenSymbol}
+        </div>
+      )}
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="sm:max-w-[500px] bg-black/95 border border-gray-800 shadow-xl backdrop-blur-xl">
@@ -958,7 +952,7 @@ export function EnsureButtons0x({
                   {tradeType === 'buy' ? 'ensure' : tradeType === 'sell' ? 'transform' : 'burn'}
                 </DialogTitle>
                 <div className="text-3xl font-bold text-white">
-                  {tokenSymbol || 'Token'}
+                  {tokenName || tokenSymbol || 'Token'}
                 </div>
               </div>
               <div className="relative w-20 h-20 rounded-lg overflow-hidden mr-4">
@@ -983,9 +977,10 @@ export function EnsureButtons0x({
                 </div>
                 <Button
                   onClick={() => {
-                    setTradeType('buy')
-                    setAmount('')
-                    setFormattedAmount('')
+                    setModalOpen(false)
+                    setTimeout(() => {
+                      handleOpenModal('buy')
+                    }, 100)
                   }}
                   className="bg-green-600 hover:bg-green-500"
                 >

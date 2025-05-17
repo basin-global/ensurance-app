@@ -58,13 +58,13 @@ export function HeaderLogo() {
       : '/'
 
   return (
-    <div className="flex items-center gap-2.5 font-mono font-bold text-base tracking-wide">
+    <div className="flex items-center gap-4 font-grotesk font-bold text-lg tracking-wide">
       <Link href={homeUrl} className="hover:opacity-80 transition-opacity">
         <Image 
           src={logoSrc}
           alt="Logo"
-          width={32}
-          height={32}
+          width={40}
+          height={40}
         />
       </Link>
       <div>
@@ -79,10 +79,10 @@ export function HeaderLogo() {
           <>
             <Link href={homeUrl} className="hover:opacity-80 transition-opacity">
               {headerText}
-              {tagline && (
-                <div className="text-xs opacity-70">{tagline}</div>
-              )}
             </Link>
+            {tagline && (
+              <div className="text-sm opacity-80 mt-1">{tagline}</div>
+            )}
           </>
         )}
       </div>

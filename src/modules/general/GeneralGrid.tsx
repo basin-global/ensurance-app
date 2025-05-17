@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import Link from 'next/link'
 import Image from 'next/image'
-import { EnsureButtons } from '@/components/layout/EnsureButtonsZora'
+import { EnsureButtons0x } from '@/components/layout/EnsureButtons0x'
 
 interface CreatorEarning {
   amountUsd: string
@@ -52,7 +52,7 @@ const formatNumber = (value: string | undefined) => {
 export default function GeneralGrid({ 
   searchQuery = '',
   urlPrefix = '',
-  onDataChange = () => {},
+  onDataChange,
   isMiniApp = false
 }: GeneralGridProps) {
   const [certificates, setCertificates] = useState<GeneralCertificate[]>([])
@@ -82,7 +82,9 @@ export default function GeneralGrid({
         )
         
         setCertificates(certificatesWithMetadata)
-        onDataChange(certificatesWithMetadata)
+        if (onDataChange) {
+          onDataChange(certificatesWithMetadata)
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch certificates')
       } finally {
@@ -242,11 +244,13 @@ export default function GeneralGrid({
                     })}</div>
                   </div>
                   <div onClick={(e) => e.preventDefault()}>
-                    <EnsureButtons 
+                    <EnsureButtons0x 
                       contractAddress={cert.contract_address as `0x${string}`}
                       showMinus={false} 
                       size="sm"
                       imageUrl={cert.image_url}
+                      showBalance={false}
+                      tokenName={cert.name}
                     />
                   </div>
                 </div>

@@ -3,17 +3,19 @@ export function DeclarativeSection() {
     <section className="relative z-10 mt-16">
       <div className="bg-[rgb(var(--background-rgb))]">
         <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="pb-16 text-xl text-[rgba(var(--foreground-rgb),0.8)] leading-relaxed text-center">
-              <p>
-                agents form ensurance syndicates that fund 15 critical ecosystems & 19 vital ecosystem services crucial to all life. 
-                certificates of ensurance properly value natural assets, while the nature-based 
-                currency $ENSURE drives investment into the $1T biodiversity gap. 
-              </p>
-              <p className="text-xl font-bold mt-14 tracking-wide">
-                ⚡ reduced risk · increased resilience · greater wellbeing ⚡
-              </p>
-            </div>
+          <div className="max-w-2xl mx-auto pb-16 text-xl text-[rgba(var(--foreground-rgb),0.85)] leading-relaxed text-center space-y-8">
+            <p>
+              the foundation of all wealth—physical, financial, and spiritual—depends on nature.
+            </p>
+            <p>
+              natural capital ensurance, by basin, transforms how we value and fund nature—securing the benefits it provides to all beings.
+            </p>
+            <p>
+              ensurance investments protect natural assets, fund 15 critical ecosystems, 19 vital ecosystem services, and support the people who care for them.
+            </p>
+            <p className="text-xl font-bold mt-14 tracking-wide">
+              ⚡ reduced risk · increased resilience · greater well-being ⚡
+            </p>
           </div>
         </div>
       </div>
