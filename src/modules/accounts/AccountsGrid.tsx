@@ -70,33 +70,28 @@ export default function AccountsGrid({
 
                 console.log('Using contract addresses:', contractAddresses)
 
-                // Format contract IDs with chain prefix
-                const contractIds = contractAddresses.map(addr => `base.${addr}`)
-                console.log('Formatted contract IDs:', contractIds)
-
-                // Build SimpleHash API URL with comma-separated contract_ids
-                const apiUrl = `/api/simplehash/nft?address=${walletAddress}&contract_ids=${contractIds.join(',')}`
-                console.log('Full SimpleHash API URL:', apiUrl)
-                console.log('Contract IDs parameter:', contractIds.join(','))
+                // Use new Alchemy endpoint with contract filtering
+                const apiUrl = `/api/alchemy/nonfungible?address=${walletAddress}&contractAddresses=${contractAddresses.join(',')}`
+                console.log('Full Alchemy API URL:', apiUrl)
 
                 // Fetch wallet's NFTs filtered by contract(s)
                 const nftResponse = await fetch(apiUrl)
                 if (!nftResponse.ok) throw new Error('Failed to fetch NFTs')
                 const nftData = await nftResponse.json()
-                console.log('Raw SimpleHash response:', nftData)
+                console.log('Raw Alchemy response:', nftData)
 
                 // Transform NFTs to match Account interface
-                const transformedNfts = nftData.nfts.map((nft: any) => {
+                const transformedNfts = nftData.ownedNfts.map((nft: any) => {
                     // Find matching group for group_name
-                    const contractAddress = nft.contract_address.toLowerCase()
+                    const contractAddress = nft.contract.address.toLowerCase()
                     const matchingGroup = groups.find((group: any) => 
                         group.contract_address.toLowerCase() === contractAddress
                     )
-                    const groupName = matchingGroup?.group_name || nft.collection?.name || ''
+                    const groupName = matchingGroup?.group_name || nft.contract.name || ''
 
                     return {
-                        full_account_name: nft.name,
-                        token_id: parseInt(nft.token_id),
+                        full_account_name: nft.name, // Use the name directly from Alchemy
+                        token_id: parseInt(nft.tokenId),
                         group_name: groupName,
                         is_agent: false // TODO: Determine if this is an agent based on metadata
                     }
@@ -104,7 +99,7 @@ export default function AccountsGrid({
 
                 console.log('Transformed NFTs:', transformedNfts)
                 return transformedNfts
-            } 
+            }
             // For regular view: use existing DB accounts endpoint
             else {
                 const endpoint = groupName 
