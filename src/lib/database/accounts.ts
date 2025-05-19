@@ -123,9 +123,11 @@ export const accounts = {
 
     // Get single account by full name (e.g., "alice.earth")
     getByFullName: async (fullAccountName: string) => {
-        const parts = fullAccountName.split('.');
+        // Ensure we're working with the decoded version of the account name
+        const decodedName = decodeURIComponent(fullAccountName);
+        const parts = decodedName.split('.');
         if (parts.length !== 2) {
-            console.log('Invalid account name format:', fullAccountName);
+            console.log('Invalid account name format:', decodedName);
             return null;
         }
 
@@ -147,7 +149,7 @@ export const accounts = {
                 return null;
             }
             
-            // Query by full_account_name
+            // Query by full_account_name - use the decoded name for comparison
             const query = `
                 SELECT 
                     full_account_name,
@@ -163,10 +165,10 @@ export const accounts = {
                 LIMIT 1
             `;
             
-            const result = await sql.query(query, [fullAccountName, groupName]);
+            const result = await sql.query(query, [decodedName, groupName]);
             
             if (!result.rows.length) {
-                console.log('No account found for:', fullAccountName);
+                console.log('No account found for:', decodedName);
                 return null;
             }
             
