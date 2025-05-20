@@ -151,8 +151,8 @@ export async function executeSwap({
     transport: custom(provider)
   })
 
-  // Convert amount to wei
-  const sellAmountWei = parseEther(amount).toString()
+  // Amount is already in correct decimals from the component
+  const sellAmountWei = amount
 
   // Log initial parameters
   console.log('Swap parameters:', {

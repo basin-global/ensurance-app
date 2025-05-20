@@ -291,6 +291,7 @@ export default function Details({
                   contractAddress={contractAddress}
                   imageUrl={String(convertIpfsUrl(metadata?.image ?? '') || FALLBACK_IMAGE)}
                   showBurn={true}
+                  showBalance={true}
                 />
               </div>
             </div>

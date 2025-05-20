@@ -1,5 +1,7 @@
 import { Address } from 'viem'
 
+// NOTE: This module is not fully implemented yet - work in progress
+
 export type TokenType = 'native' | 'erc20' | 'erc721' | 'erc1155'
 export type TokenCategory = 'currency' | 'certificate' | 'general' | 'specific'
 

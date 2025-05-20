@@ -47,7 +47,7 @@ import ZORA_COIN_ABI from '@/abi/ZoraCoin.json'
 import { toast } from 'react-toastify'
 import Image from 'next/image'
 import { useDebounce } from '@/hooks/useDebounce'
-import { executeSwap } from '@/lib/trading/executeSwap'
+import { executeSwap } from '@/modules/0x/executeSwap'
 
 interface TokenInfo {
   symbol: string
@@ -56,6 +56,14 @@ interface TokenInfo {
   balance?: string
   type?: 'native' | 'currency' | 'certificate'
   imageUrl?: string
+}
+
+// Add intermediate type for mapped tokens
+interface MappedToken {
+  symbol: string
+  address: Address
+  decimals: number
+  type: 'currency' | 'certificate'
 }
 
 interface EnsureButtons0xProps {
@@ -72,22 +80,22 @@ type TradeType = 'buy' | 'sell' | 'burn'
 
 const PERMIT2_ADDRESS = '0x000000000022D473030F116dDEE9F6B43aC78BA3'
 
-// Add standard ERC20 approve ABI
-const ERC20_APPROVE_ABI = [{
-  inputs: [
-    { name: 'spender', type: 'address' },
-    { name: 'amount', type: 'uint256' }
-  ],
-  name: 'approve',
-  outputs: [{ name: '', type: 'bool' }],
-  stateMutability: 'nonpayable',
-  type: 'function'
-}] as const
-
 // Add formatNumber helper function at the top level
-const formatNumber = (num: number) => {
+const formatNumber = (num: number, decimals: number = 18) => {
   if (num === 0) return '0'
   if (num < 0.000001) return '< 0.000001'
+  
+  // For tokens with lower decimals (like USDC), show more precise amounts
+  if (decimals <= 8) {
+    if (num < 0.01) return num.toFixed(6)
+    if (num < 1) return num.toFixed(4)
+    return num.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })
+  }
+  
+  // For tokens with high decimals (like ETH)
   if (num < 0.01) return num.toFixed(6)
   if (num < 1) return num.toFixed(4)
   if (num < 1000) {
@@ -95,6 +103,12 @@ const formatNumber = (num: number) => {
     return fixed.endsWith('.00') ? fixed.slice(0, -3) : fixed
   }
   return num.toLocaleString('en-US', { maximumFractionDigits: 0 })
+}
+
+const formatTokenBalance = (balance: string | undefined, decimals: number): number => {
+  if (!balance) return 0
+  const divisor = Math.pow(10, decimals)
+  return Number(BigInt(balance)) / divisor
 }
 
 // Add these utility functions before the component
@@ -142,6 +156,18 @@ const saveToCache = (address: string, url: string) => {
   } catch (error) {
     console.error('Error saving to cache:', error)
   }
+}
+
+// Add parseAmount helper function before executeSwap
+const parseAmount = (amount: string, decimals: number = 18): bigint => {
+  // Remove commas from the amount string
+  const cleanAmount = amount.replace(/,/g, '')
+  // Convert to base units
+  const [whole, fraction = ''] = cleanAmount.split('.')
+  const paddedFraction = fraction.padEnd(decimals, '0')
+  const trimmedFraction = paddedFraction.slice(0, decimals)
+  const combined = whole + trimmedFraction
+  return BigInt(combined)
 }
 
 export function EnsureButtons0x({ 
@@ -203,21 +229,28 @@ export function EnsureButtons0x({
   // Add effect to fetch token balance when needed
   useEffect(() => {
     const fetchBalance = async () => {
-      if (!contractAddress || !userAddress || !modalOpen) return
+      if (!contractAddress || !userAddress) {
+        console.log('Skipping balance fetch - missing address:', { contractAddress, userAddress })
+        return
+      }
       
-      // Only fetch balance if we're showing it or if it's needed for the modal
-      if (showBalance || tradeType === 'sell' || tradeType === 'burn') {
+      // Fetch balance if we're showing it or if it's needed for the modal
+      if (showBalance || (modalOpen && (tradeType === 'sell' || tradeType === 'burn'))) {
         try {
+          console.log('Fetching balance for:', { contractAddress, userAddress, showBalance, modalOpen, tradeType })
           const balance = await publicClient.readContract({
             address: contractAddress,
             abi: ZORA_COIN_ABI,
             functionName: 'balanceOf',
             args: [userAddress]
           }) as bigint
+          console.log('Balance fetched:', formatEther(balance))
           setTokenBalance(balance)
         } catch (error) {
           console.error('Error fetching balance:', error)
         }
+      } else {
+        console.log('Skipping balance fetch - conditions not met:', { showBalance, modalOpen, tradeType })
       }
     }
 
@@ -243,64 +276,49 @@ export function EnsureButtons0x({
     setModalOpen(true)
     
     try {
-      // Load available tokens for buy/transform
-      if ((type === 'buy' || type === 'sell') && authenticated && userAddress) {
+      if (authenticated && userAddress) {
         setIsLoadingTokens(true)
         try {
-          // For transform, fetch currencies and certificates
-          if (type === 'sell') {
-            const [currenciesRes, certificatesRes] = await Promise.all([
-              fetch('/api/currencies'),
-              fetch('/api/general')
+          // Get all supported tokens first (needed for both buy and sell)
+          const [currenciesRes, certificatesRes] = await Promise.all([
+            fetch('/api/currencies'),
+            fetch('/api/general')
+          ])
+
+          if (!currenciesRes.ok || !certificatesRes.ok) {
+            throw new Error('Failed to fetch supported tokens')
+          }
+
+          const [currencies, certificates] = await Promise.all([
+            currenciesRes.json(),
+            certificatesRes.json()
+          ])
+
+          if (type === 'buy') {
+            // Create a map of supported token addresses (lowercase for comparison)
+            const supportedTokens = new Set([
+              ...currencies.map((c: any) => c.address.toLowerCase()),
+              ...certificates.map((c: any) => c.contract_address.toLowerCase())
             ])
 
-            if (!currenciesRes.ok || !certificatesRes.ok) {
-              throw new Error('Failed to fetch tokens')
-            }
-
-            const [currencies, certificates] = await Promise.all([
-              currenciesRes.json(),
-              certificatesRes.json()
-            ])
-
-            // Combine all tokens
-            const tokens: TokenInfo[] = [
-              // Add native ETH
-              {
-                symbol: 'ETH',
-                address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE' as Address,
-                decimals: 18,
-                type: 'native'
-              },
-              // Add currencies
-              ...currencies.map((c: any) => ({
-                symbol: c.symbol,
-                address: c.address as Address,
-                decimals: c.decimals,
-                type: 'currency'
-              })),
-              // Add certificates
-              ...certificates.map((c: any) => ({
-                symbol: c.symbol,
-                address: c.contract_address as Address,
-                decimals: 18, // Certificates are always 18 decimals
-                type: 'certificate'
-              }))
-            ]
-
-            setAvailableTokens(tokens)
+            // Get operator's wallet balances from Alchemy
+            const alchemyRes = await fetch(`/api/alchemy/fungible?address=${userAddress}`)
+            if (!alchemyRes.ok) throw new Error('Failed to fetch wallet balances')
             
-            // Set initial selected token to ETH
-            setSelectedToken(tokens[0])
-          } else {
-            // For buy, fetch user's tokens
-            const response = await fetch(`/api/alchemy/fungible?address=${userAddress}`)
-            if (!response.ok) throw new Error('Failed to fetch tokens')
+            const alchemyData = await alchemyRes.json()
             
-            const data = await response.json()
-            // Map Alchemy response to our token format, handling ETH specially
-            const tokens = data.data.tokens
-              .map((t: any) => {
+            // Filter and map tokens
+            const tokens: TokenInfo[] = alchemyData.data.tokens
+              .filter((t: any) => {
+                // Always include ETH
+                if (!t.tokenAddress) return true
+                // For other tokens:
+                // 1. Must be in supported list
+                // 2. Must not be the destination token
+                return supportedTokens.has(t.tokenAddress.toLowerCase()) &&
+                       t.tokenAddress.toLowerCase() !== contractAddress.toLowerCase()
+              })
+              .map((t: any): TokenInfo | null => {
                 // Handle native ETH
                 if (!t.tokenAddress) {
                   return {
@@ -313,38 +331,84 @@ export function EnsureButtons0x({
                 }
                 // Handle other tokens
                 if (t.tokenMetadata?.decimals != null && t.tokenMetadata?.symbol) {
+                  // Find token type from supported lists
+                  const isCurrency = currencies.some((c: any) => 
+                    c.address.toLowerCase() === t.tokenAddress.toLowerCase()
+                  )
                   return {
                     symbol: t.tokenMetadata.symbol,
                     address: t.tokenAddress as Address,
                     decimals: t.tokenMetadata.decimals,
-                    balance: t.tokenBalance
+                    balance: t.tokenBalance,
+                    type: isCurrency ? 'currency' : 'certificate'
                   }
                 }
                 return null
               })
-              .filter(Boolean)
+              .filter((t: TokenInfo | null): t is TokenInfo => t !== null)
               .sort((a: TokenInfo, b: TokenInfo) => {
-                // Always put ETH first by checking its address
-                const ETH_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'.toLowerCase();
-                if (a.address.toLowerCase() === ETH_ADDRESS) return -1;
-                if (b.address.toLowerCase() === ETH_ADDRESS) return 1;
-                // Then sort by balance if in buy mode
-                if (tradeType === 'buy') {
-                  const hasBalance = (t: any): t is { balance: string } => 
-                    'balance' in t && typeof t.balance === 'string';
-                  const balanceA = hasBalance(a) ? Number(formatEther(BigInt(a.balance))) : 0
-                  const balanceB = hasBalance(b) ? Number(formatEther(BigInt(b.balance))) : 0
+                // Always put ETH first
+                const ETH_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'.toLowerCase()
+                if (a.address.toLowerCase() === ETH_ADDRESS) return -1
+                if (b.address.toLowerCase() === ETH_ADDRESS) return 1
+
+                // Then sort by type: currencies before certificates
+                if (a.type !== b.type) {
+                  if (a.type === 'currency') return -1
+                  if (b.type === 'currency') return 1
+                }
+
+                // Within same type, sort by balance first
+                const balanceA = formatTokenBalance(a.balance, a.decimals)
+                const balanceB = formatTokenBalance(b.balance, b.decimals)
+                if (Math.abs(balanceB - balanceA) > 0.000001) { // Use small epsilon for float comparison
                   return balanceB - balanceA
                 }
-                return 0;
+
+                // If balances are effectively equal, sort by symbol
+                return a.symbol.localeCompare(b.symbol)
               })
-            
+
             setAvailableTokens(tokens)
             // Set initial selected token to ETH if available
-            const ethToken = tokens.find((t: TokenInfo) => t.type === 'native')
+            const ethToken = tokens.find((t) => t.type === 'native')
             if (ethToken) {
               setSelectedToken(ethToken)
             }
+          } else if (type === 'sell') {
+            // For sell/transform, show all supported tokens as targets
+            const tokens: TokenInfo[] = [
+              // Add native ETH first
+              {
+                symbol: 'ETH',
+                address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE' as Address,
+                decimals: 18,
+                type: 'native'
+              },
+              // Add currencies sorted by symbol
+              ...currencies
+                .map((c: any) => ({
+                  symbol: c.symbol,
+                  address: c.address as Address,
+                  decimals: c.decimals,
+                  type: 'currency' as const
+                }))
+                .sort((a: MappedToken, b: MappedToken) => a.symbol.localeCompare(b.symbol)),
+              // Add certificates (except the current one) sorted by symbol
+              ...certificates
+                .filter((c: any) => c.contract_address.toLowerCase() !== contractAddress.toLowerCase())
+                .map((c: any) => ({
+                  symbol: c.symbol,
+                  address: c.contract_address as Address,
+                  decimals: 18, // Certificates are always 18 decimals
+                  type: 'certificate' as const
+                }))
+                .sort((a: MappedToken, b: MappedToken) => a.symbol.localeCompare(b.symbol))
+            ]
+
+            setAvailableTokens(tokens)
+            // Set initial selected token to ETH
+            setSelectedToken(tokens[0])
           }
         } catch (error) {
           console.error('Error fetching tokens:', error)
@@ -369,7 +433,8 @@ export function EnsureButtons0x({
     try {
       if (tradeType === 'buy' && selectedToken?.balance) {
         // For buy, check selected token's balance
-        const inputAmount = parseEther(value)
+        const decimals = getTokenDecimals(selectedToken)
+        const inputAmount = BigInt(Math.floor(Number(value) * Math.pow(10, decimals)))
         const currentBalance = BigInt(selectedToken.balance)
         
         if (inputAmount > currentBalance) {
@@ -398,7 +463,7 @@ export function EnsureButtons0x({
     }
   }, [selectedToken, amount])
 
-  // Modify handleAmountChange to format with commas while typing
+  // Modify handleAmountChange to respect token decimals
   const handleAmountChange = (value: string) => {
     // Remove existing commas first
     const withoutCommas = value.replace(/,/g, '')
@@ -409,6 +474,18 @@ export function EnsureButtons0x({
     // Prevent multiple decimal points
     const decimalCount = (cleanValue.match(/\./g) || []).length
     if (decimalCount > 1) return
+
+    // Get max decimals based on token
+    const maxDecimals = tradeType === 'buy' && selectedToken 
+      ? selectedToken.decimals 
+      : 18
+
+    // Handle decimal places
+    if (cleanValue.includes('.')) {
+      const [whole, fraction] = cleanValue.split('.')
+      // Limit decimal places to token's decimals
+      if (fraction.length > maxDecimals) return
+    }
 
     // Store the clean value for calculations
     setAmount(cleanValue)
@@ -455,126 +532,131 @@ export function EnsureButtons0x({
 
       // Check balance before proceeding
       try {
-        const amountInWei = parseEther(debouncedAmount)
+        // Convert amount based on token decimals
+        const rawAmount = Number(debouncedAmount.replace(/[^\d.]/g, ''))
+        if (isNaN(rawAmount)) {
+          setEstimatedOutput('0')
+          return
+        }
+
+        let sellAmountWei: string
+        if (tradeType === 'buy' && selectedToken) {
+          // For buy, use selected token's decimals
+          const multiplier = Math.pow(10, selectedToken.decimals)
+          sellAmountWei = BigInt(Math.floor(rawAmount * multiplier)).toString()
+        } else {
+          // For selling our token (always 18 decimals)
+          sellAmountWei = parseEther(debouncedAmount).toString()
+        }
+
+        // Balance checks
         if (tradeType === 'buy') {
-          // For buy, check if user has enough of the selected token
           if (selectedToken.address.toLowerCase() === '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'.toLowerCase()) {
-            // For ETH, check ETH balance
             const ethBalance = await publicClient.getBalance({ address: userAddress })
-            if (amountInWei > ethBalance) {
+            if (BigInt(sellAmountWei) > ethBalance) {
               setEstimatedOutput('0')
               return
             }
-          } else if (selectedToken.balance && BigInt(selectedToken.balance) < amountInWei) {
-            // For other tokens, check token balance
+          } else if (selectedToken.balance && BigInt(selectedToken.balance) < BigInt(sellAmountWei)) {
             setEstimatedOutput('0')
             return
           }
-        } else if (tradeType === 'sell' && amountInWei > tokenBalance) {
-          // For sell, check if user has enough tokens to sell
+        } else if (tradeType === 'sell' && BigInt(sellAmountWei) > tokenBalance) {
           setEstimatedOutput('0')
           return
+        }
+
+        setIsSimulating(true)
+        try {
+          console.log('Quote request:', {
+            tradeType,
+            sellToken: tradeType === 'buy' ? selectedToken?.address : contractAddress,
+            buyToken: tradeType === 'buy' ? contractAddress : selectedToken?.address,
+            sellAmount: sellAmountWei,
+            taker: userAddress,
+            tokenSymbol: selectedToken?.symbol,
+            decimals: selectedToken?.decimals
+          })
+
+          // Use our backend proxy with correct parameter names
+          const params = new URLSearchParams({
+            action: 'quote',
+            sellToken: tradeType === 'buy' ? selectedToken?.address : contractAddress,
+            buyToken: tradeType === 'buy' ? contractAddress : selectedToken?.address,
+            sellAmount: sellAmountWei,
+            taker: userAddress,
+            swapFeeToken: tradeType === 'buy' ? selectedToken?.address : contractAddress,
+            slippageBps: '200', // 2% slippage
+            swapFeeBps: '100'   // 1% fee
+          })
+
+          const response = await fetch(`/api/0x?${params}`)
+          if (!response.ok) {
+            const errorData = await response.json()
+            console.error('Quote error details:', errorData)
+            
+            // Handle v2 API error structure
+            const details = errorData.details || {};
+            if (details.validationErrors?.length > 0) {
+              toast.error(`Invalid trade parameters: ${details.validationErrors[0]}`);
+            } else if (details.code === 'INSUFFICIENT_LIQUIDITY') {
+              toast.error('Insufficient liquidity for this trade.');
+            } else if (details.code === 'INVALID_TOKEN') {
+              toast.error('One or more tokens are not supported.');
+            } else if (details.code === 'INSUFFICIENT_BALANCE') {
+              toast.error('Insufficient balance for this trade.');
+            } else {
+              toast.error(details.message || errorData.error || 'Failed to get quote')
+            }
+            setEstimatedOutput('0')
+            return
+          }
+          
+          const data = await response.json()
+          console.log('Quote response:', data)
+
+          // Check for liquidity first
+          if (!data.liquidityAvailable) {
+            console.log('No liquidity available for this trade')
+            toast.error('Insufficient liquidity for this trade amount')
+            setEstimatedOutput('0')
+            return
+          }
+          
+          // Handle v2 API response format
+          if (data.buyAmount) {
+            // Get the decimals for the output token
+            const decimals = tradeType === 'buy' ? 18 : selectedToken.decimals
+            
+            // Convert to proper decimal representation
+            const rawAmount = BigInt(data.buyAmount)
+            const amount = Number(rawAmount) / Math.pow(10, decimals)
+            
+            console.log('Raw amount:', rawAmount.toString())
+            console.log('Decimals:', decimals)
+            console.log('Converted amount:', amount)
+            
+            // Format the amount using our new utility
+            const formattedAmount = formatNumber(amount, decimals)
+            
+            console.log('Final formatted amount:', formattedAmount)
+            setEstimatedOutput(formattedAmount)
+          } else {
+            console.error('Unexpected quote response format:', data)
+            toast.error('Received invalid quote response')
+            setEstimatedOutput('0')
+          }
+        } catch (error) {
+          console.error('Error getting quote:', error)
+          toast.error(error instanceof Error ? error.message : 'Failed to get price quote')
+          setEstimatedOutput('0')
+        } finally {
+          setIsSimulating(false)
         }
       } catch (error) {
         console.error('Error checking balance:', error)
         setEstimatedOutput('0')
         return
-      }
-
-      setIsSimulating(true)
-      try {
-        const sellAmountWei = parseEther(debouncedAmount).toString()
-        console.log('Preparing quote request:', {
-          tradeType,
-          sellToken: tradeType === 'buy' ? selectedToken.address : contractAddress,
-          buyToken: tradeType === 'buy' ? contractAddress : selectedToken.address,
-          sellAmount: sellAmountWei,
-          taker: userAddress
-        })
-
-        // Use our backend proxy with correct parameter names
-        const params = new URLSearchParams({
-          action: 'quote',
-          sellToken: tradeType === 'buy' ? selectedToken.address : contractAddress,
-          buyToken: tradeType === 'buy' ? contractAddress : selectedToken.address,
-          sellAmount: sellAmountWei,
-          taker: userAddress,
-          swapFeeToken: tradeType === 'buy' ? selectedToken.address : contractAddress,
-          slippageBps: '200', // 2% slippage (uses basis points: 200 = 2%)
-          swapFeeBps: '100'   // 1% fee (uses basis points: 100 = 1%)
-        })
-
-        const response = await fetch(`/api/0x?${params}`)
-        if (!response.ok) {
-          const errorData = await response.json()
-          console.error('Quote error details:', errorData)
-          
-          // Handle v2 API error structure
-          const details = errorData.details || {};
-          if (details.validationErrors?.length > 0) {
-            toast.error(`Invalid trade parameters: ${details.validationErrors[0]}`);
-          } else if (details.code === 'INSUFFICIENT_LIQUIDITY') {
-            toast.error('Insufficient liquidity for this trade.');
-          } else if (details.code === 'INVALID_TOKEN') {
-            toast.error('One or more tokens are not supported.');
-          } else if (details.code === 'INSUFFICIENT_BALANCE') {
-            toast.error('Insufficient balance for this trade.');
-          } else {
-            toast.error(details.message || errorData.error || 'Failed to get quote')
-          }
-          setEstimatedOutput('0')
-          return
-        }
-        
-        const data = await response.json()
-        console.log('Quote response:', data)
-
-        // Check for liquidity first
-        if (!data.liquidityAvailable) {
-          console.log('No liquidity available for this trade')
-          toast.error('Insufficient liquidity for this trade amount')
-          setEstimatedOutput('0')
-          return
-        }
-        
-        // Handle v2 API response format
-        if (data.buyAmount) {
-          // Get the decimals for the output token
-          const decimals = tradeType === 'buy' ? 18 : getTokenDecimals(selectedToken)
-          
-          // Convert to proper decimal representation
-          const rawAmount = BigInt(data.buyAmount)
-          const amount = Number(rawAmount) / Math.pow(10, decimals)
-          
-          console.log('Raw amount:', rawAmount.toString())
-          console.log('Decimals:', decimals)
-          console.log('Converted amount:', amount)
-          
-          // Format the amount based on size and token type
-          let formattedAmount
-          if (selectedToken.symbol === 'USDC' && tradeType !== 'buy') {
-            // Always show 2 decimals for USDC
-            formattedAmount = amount.toLocaleString('en-US', {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2
-            })
-          } else {
-            formattedAmount = formatNumber(amount)
-          }
-          
-          console.log('Final formatted amount:', formattedAmount)
-          setEstimatedOutput(formattedAmount)
-        } else {
-          console.error('Unexpected quote response format:', data)
-          toast.error('Received invalid quote response')
-          setEstimatedOutput('0')
-        }
-      } catch (error) {
-        console.error('Error getting quote:', error)
-        toast.error(error instanceof Error ? error.message : 'Failed to get price quote')
-        setEstimatedOutput('0')
-      } finally {
-        setIsSimulating(false)
       }
     }
 
@@ -736,7 +818,11 @@ export function EnsureButtons0x({
           const result = await executeSwap({
             sellToken,
             buyToken,
-            amount,
+            amount: tradeType === 'buy' 
+              ? (selectedToken?.decimals 
+                ? parseAmount(amount, selectedToken.decimals).toString()
+                : parseEther(amount).toString())
+              : parseEther(amount).toString(), // For selling, we use 18 decimals as it's our token
             userAddress,
             provider,
             onStatus: (message, type = 'info') => {
@@ -1131,10 +1217,13 @@ export function EnsureButtons0x({
                           </div>
                         )}
                         <div className="text-sm text-gray-400">
-                          {selectedToken && tradeType === 'buy' && (
-                            <>your balance: {formatBalance(BigInt(selectedToken.balance || '0'))}</>
+                          {selectedToken?.balance && (
+                            <>your balance: {formatNumber(
+                              formatTokenBalance(selectedToken.balance, selectedToken.decimals),
+                              selectedToken.decimals
+                            )}</>
                           )}
-                          {tradeType === 'sell' && (
+                          {!selectedToken?.balance && tradeType === 'sell' && (
                             <>your balance: {formatBalance(tokenBalance)}</>
                           )}
                         </div>
@@ -1190,7 +1279,9 @@ export function EnsureButtons0x({
                                     const hasBalance = (t: any): t is { balance: string } => 
                                       'balance' in t && typeof t.balance === 'string';
                                     if (!hasBalance(token)) return false;
-                                    const balance = Number(formatEther(BigInt(token.balance)))
+                                    // Handle different token decimals
+                                    const decimals = getTokenDecimals(token)
+                                    const balance = Number(token.balance) / Math.pow(10, decimals)
                                     return balance >= 0.000001;
                                   })
                                   .map((token) => (
@@ -1220,7 +1311,7 @@ export function EnsureButtons0x({
                                         </div>
                                         {'balance' in token && token.balance && (
                                           <span className="text-gray-400 text-sm">
-                                            {formatBalance(BigInt(token.balance))}
+                                            {formatNumber(formatTokenBalance(token.balance, token.decimals), token.decimals)}
                                           </span>
                                         )}
                                       </div>
