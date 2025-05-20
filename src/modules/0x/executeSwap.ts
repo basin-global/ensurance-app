@@ -86,6 +86,8 @@ type Quote = {
     value?: string;
     gas?: string;
     gasPrice?: string;
+    maxFeePerGas?: string;
+    maxPriorityFeePerGas?: string;
   }
 };
 
@@ -309,76 +311,125 @@ export async function executeSwap({
 
         console.log('Permit signature obtained:', signature.slice(0, 20) + '...');
 
-        // For 0x v2 API: prepare the transaction from the transaction object
-        // Make a copy of the transaction data to manipulate
-        const tx = {
-          from: userAddress,
-          to: quoteData.transaction.to,
-          data: quoteData.transaction.data || '0x',
-          value: quoteData.transaction.value || '0',
-          gas: quoteData.transaction.gas,
-        };
+        // Add ERC-4337 smart wallet detection helper
+        const isERC4337Wallet = async (address: string, provider: any): Promise<boolean> => {
+          try {
+            // Check various provider properties that indicate a smart wallet
+            const providerObj = provider?.provider || provider
+            const isCoinbase = !!(
+              providerObj?.isCoinbaseWallet || 
+              providerObj?.provider?.isCoinbaseWallet ||
+              providerObj?.isCoinbaseBrowser
+            )
+            const isAA = !!(
+              providerObj?.isAccountAbstraction ||
+              providerObj?.provider?.isAccountAbstraction ||
+              providerObj?.isSmartContractWallet ||
+              providerObj?.provider?.isSmartContractWallet
+            )
 
-        // Format signature following 0x v2 specs - this is where the previous error occurred
-        // The signature needs to be appended to the transaction data
-        const signatureLength = 65; // Standard size for an ECDSA signature
-        const signatureLengthInHex = numberToHex(signatureLength, {
-          size: 32,
-          signed: false,
-        });
+            // Also check if the address is a contract as fallback
+            const code = await publicClient.getBytecode({ address: address as `0x${string}` })
+            const isContract = code !== undefined && code !== '0x'
 
-        // IMPORTANT: Only append the signature if using Permit2 flow
-        // In 0x v2, the signature should be appended to the transaction.data
-        if (quoteData.permit2?.type === 'Permit2' && tx.data) {
-          console.log('Appending Permit2 signature to transaction data');
-          tx.data = concat([
-            tx.data,
-            signatureLengthInHex,
-            signature
-          ]) as string;
+            const result = isCoinbase || isAA || isContract
+            console.log('Wallet detection:', {
+              isCoinbase,
+              isAA,
+              isContract,
+              provider: providerObj?.constructor?.name,
+              result
+            })
+            
+            return result
+          } catch (error) {
+            console.error('Error checking if wallet is ERC-4337:', error)
+            // If we can't determine, assume it's a smart wallet to be safe
+            return true
+          }
         }
 
-        // Execute the swap with full permit2 data
-        onStatus('Executing swap with permit...', 'info');
-        
-        // Use a properly formatted TX object directly from 0x
-        console.log('Executing transaction:', {
-          to: tx.to,
-          dataLength: tx.data.length,
-          value: tx.value,
-          gas: tx.gas
-        });
-
-        // Send transaction
-        const txHash = await provider.request({
-          method: 'eth_sendTransaction',
-          params: [tx]
-        });
-
-        console.log('Transaction sent with hash:', txHash);
-        
-        // Wait for receipt with longer timeout
-        const receipt = await publicClient.waitForTransactionReceipt({ 
-          hash: txHash,
-          timeout: 180_000 // 3 minute timeout
-        });
-        
-        console.log('Transaction receipt:', {
-          status: receipt.status,
-          blockNumber: receipt.blockNumber,
-          gasUsed: receipt.gasUsed.toString(),
-          logs: receipt.logs.length
-        });
-        
-        if (!receipt.status) {
-          throw new Error('Transaction failed on-chain');
+        // Add transaction simulation helper
+        const simulateTransaction = async (tx: any, provider: any): Promise<boolean> => {
+          try {
+            const result = await provider.request({
+              method: 'eth_call',
+              params: [{
+                from: tx.from,
+                to: tx.to,
+                data: tx.data,
+                value: tx.value
+              }, 'latest']
+            })
+            return true
+          } catch (error) {
+            console.error('Simulation failed:', error)
+            return false
+          }
         }
-        
-        return {
-          success: true,
-          txHash
-        };
-      } catch (error) {
+
+        // Modify the transaction preparation section
+        try {
+          // Check if the user is using an ERC-4337 wallet
+          const isAA = await isERC4337Wallet(userAddress, provider)
+          console.log('Wallet type:', isAA ? 'ERC-4337 Smart Wallet' : 'Regular Wallet')
+
+          // Format signature following 0x v2 specs - EXACTLY as per documentation
+          const signatureLengthHex = numberToHex(signature.length / 2 - 1, {
+            size: 32,
+            signed: false,
+          })
+
+          // For 0x v2 API: prepare the transaction from the transaction object
+          const tx = {
+            from: userAddress,
+            to: quoteData.transaction.to,
+            data: concat([quoteData.transaction.data, signatureLengthHex, signature]),
+            value: quoteData.transaction.value || '0x0',
+          }
+
+          // Log transaction details for debugging
+          console.log('Executing transaction:', {
+            to: tx.to,
+            dataLength: tx.data.length,
+            value: tx.value,
+            isAA
+          })
+
+          // Send transaction without any gas parameters for smart contract wallets
+          const txHash = await provider.request({
+            method: 'eth_sendTransaction',
+            params: [tx]
+          })
+
+          console.log('Transaction sent with hash:', txHash)
+          
+          // Wait for receipt with longer timeout
+          const receipt = await publicClient.waitForTransactionReceipt({ 
+            hash: txHash,
+            timeout: 180_000 // 3 minute timeout
+          })
+          
+          console.log('Transaction receipt:', {
+            status: receipt.status,
+            blockNumber: receipt.blockNumber,
+            gasUsed: receipt.gasUsed.toString(),
+            logs: receipt.logs.length
+          });
+          
+          if (!receipt.status) {
+            throw new Error('Transaction failed on-chain');
+          }
+          
+          return {
+            success: true,
+            txHash
+          };
+        } catch (error) {
+          console.error('Signing or swap error:', error);
+          throw error;
+        }
+      } catch (error: any) {
         console.error('Signing or swap error:', error);
         throw error;
       }
@@ -520,13 +571,15 @@ async function executeEthSwap({
       to: quoteResponse.transaction.to,
       data: quoteResponse.transaction.data,
       value: `0x${BigInt(quoteResponse.transaction.value || 0).toString(16)}`,
-      gas: `0x${Math.floor(Number(quoteResponse.transaction.gas) * 1.2).toString(16)}`, // 20% buffer
+      // Remove explicit gas setting to let smart contract wallet handle it
+      // gas: `0x${Math.floor(Number(quoteResponse.transaction.gas) * 1.2).toString(16)}`, // 20% buffer
     }
 
     console.log('ETH swap transaction:', {
       to: tx.to,
       value: tx.value,
-      gasEstimate: quoteResponse.transaction.gas
+      // Log original gas estimate for reference
+      originalGasEstimate: quoteResponse.transaction.gas
     })
 
     // Send transaction
