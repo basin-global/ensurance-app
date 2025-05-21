@@ -42,6 +42,8 @@
     "axios": "^1.7.9",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.0.0",
+    "d3": "^7.9.0",
+    "d3-sankey": "^0.12.3",
     "dotenv": "^16.4.7",
     "flexsearch": "^0.7.43",
     "framer-motion": "^12.0.1",
@@ -64,6 +66,8 @@
     "viem": "^2.23.15"
   },
   "devDependencies": {
+    "@types/d3": "^7.4.3",
+    "@types/d3-sankey": "^0.12.4",
     "@types/mdx": "^2.0.11",
     "@types/node": "^20.17.16",
     "@types/react": "^18.3.17",
