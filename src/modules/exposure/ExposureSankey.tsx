@@ -66,10 +66,33 @@ const getNodeHeight = (magnitude: number) => {
   return minHeight + (magnitude * (maxHeight - minHeight));
 };
 
+// Helper function to get node category and type
+function getNodeCategory(name: string): { type: string; category: string } {
+  if (['Food & Agriculture', 'Energy & Power', 'Manufacturing & Materials', 'Infrastructure & Construction', 'Finance & Insurance', 'Retail', 'Transportation & Logistics'].includes(name)) {
+    return { type: 'SECTOR', category: 'industry sector' };
+  }
+  if (['Rivers & Lakes', 'Tropical Forest', 'Temperate Forest', 'Boreal Forest', 'Coastal Systems', 'Inland Wetlands', 'Cultivated & Developed', 'Urban Open Space', 'Rural Open Space', 'Marine Systems', 'Grasslands', 'Shrublands', 'Polar & Alpine', 'Desert', 'Subterranean'].includes(name)) {
+    return { type: 'STOCK', category: 'ecosystem' };
+  }
+  return { type: 'FLOW', category: 'ecosystem service' };
+}
+
 export default function ExposureSankey({ data }: ExposureSankeyProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+  const [selectedNode, setSelectedNode] = useState<string | null>(null);
+  const [processedLinks, setProcessedLinks] = useState<SankeyLink[]>([]);
+  const [overviewMagnitudes, setOverviewMagnitudes] = useState<Map<string, number>>(new Map());
+  
+  // Handle click outside to reset selection
+  const handleContainerClick = (e: React.MouseEvent) => {
+    // Only reset if clicking directly on the container, not its children
+    if (e.target === containerRef.current) {
+      setSelectedNode(null);
+      setHoveredNode(null);
+    }
+  };
   
   // Create and update the Sankey diagram
   useEffect(() => {
@@ -110,8 +133,8 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
         layer: getNodeLayer(name)
       }));
       
-      // Calculate magnitude for each node
-      const nodeMagnitudes = new Map<string, number>();
+      // Calculate magnitudes for overview mode (all connections)
+      const magnitudes = new Map<string, number>();
       const rowMagnitudes = new Map<number, { min: number, max: number }>();
       
       // First pass: calculate raw magnitudes and find min/max for each row
@@ -130,7 +153,7 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
           magnitude = incomingSum;
         }
         
-        nodeMagnitudes.set(node.name, magnitude);
+        magnitudes.set(node.name, magnitude);
         
         // Update row min/max
         const row = rowMagnitudes.get(node.layer) || { min: Infinity, max: -Infinity };
@@ -138,15 +161,78 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
         row.max = Math.max(row.max, magnitude);
         rowMagnitudes.set(node.layer, row);
       });
-      
-      // Second pass: normalize magnitudes within each row
+
+      // Normalize overview magnitudes
       nodes.forEach(node => {
         const row = rowMagnitudes.get(node.layer)!;
-        const rawMagnitude = nodeMagnitudes.get(node.name)!;
+        const rawMagnitude = magnitudes.get(node.name)!;
         const normalizedMagnitude = (rawMagnitude - row.min) / (row.max - row.min);
-        nodeMagnitudes.set(node.name, normalizedMagnitude);
+        magnitudes.set(node.name, normalizedMagnitude);
       });
-      
+
+      // Store overview magnitudes for later use
+      setOverviewMagnitudes(magnitudes);
+
+      // Function to calculate hover state magnitudes
+      const getHoverMagnitudes = (activeNode: string | null) => {
+        if (!activeNode) return magnitudes;
+        
+        const hoverMagnitudes = new Map<string, number>();
+        const activeLinks = processedLinks.filter(
+          l => l.source.name === activeNode || l.target.name === activeNode
+        );
+        
+        // Calculate magnitudes based on active connections
+        nodes.forEach(node => {
+          const incomingSum = activeLinks
+            .filter(l => l.target.name === node.name)
+            .reduce((sum, l) => sum + l.value, 0);
+          
+          let magnitude;
+          if (node.layer === 1) {
+            // For ecosystem services, consider both incoming and outgoing
+            const outgoingSum = activeLinks
+              .filter(l => l.source.name === node.name)
+              .reduce((sum, l) => sum + l.value, 0);
+            magnitude = Math.max(incomingSum, outgoingSum); // Use max instead of sum
+          } else {
+            magnitude = incomingSum;
+          }
+          
+          // Ensure minimum magnitude to prevent nodes from disappearing
+          hoverMagnitudes.set(node.name, Math.max(magnitude, 0.1));
+        });
+
+        // Normalize hover magnitudes within each row
+        const rowHoverMagnitudes = new Map<number, { min: number, max: number }>();
+        
+        // First pass: find min/max for each row
+        nodes.forEach(node => {
+          const magnitude = hoverMagnitudes.get(node.name)!;
+          const row = rowHoverMagnitudes.get(node.layer) || { min: Infinity, max: -Infinity };
+          row.min = Math.min(row.min, magnitude);
+          row.max = Math.max(row.max, magnitude);
+          rowHoverMagnitudes.set(node.layer, row);
+        });
+
+        // Second pass: normalize within each row
+        nodes.forEach(node => {
+          const row = rowHoverMagnitudes.get(node.layer)!;
+          const rawMagnitude = hoverMagnitudes.get(node.name)!;
+          const normalizedMagnitude = (rawMagnitude - row.min) / (row.max - row.min);
+          hoverMagnitudes.set(node.name, normalizedMagnitude);
+        });
+
+        return hoverMagnitudes;
+      };
+
+      // Update node height scaling to use current magnitudes
+      const getNodeHeight = (magnitude: number) => {
+        const minHeight = 30;
+        const maxHeight = 80;
+        return minHeight + (magnitude * (maxHeight - minHeight));
+      };
+
       // Create links array
       const links: SankeyLink[] = data.map(d => ({
         source: nodes.find(n => n.name === d.source)!,
@@ -166,6 +252,9 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
         links
       });
       
+      // Store processed links for the side panel
+      setProcessedLinks(processedLinks);
+      
       // Force vertical layout with better spacing
       processedNodes.forEach(node => {
         // Calculate vertical positions for each layer
@@ -180,7 +269,7 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
         
         // Calculate position based on layer
         let layerY;
-        const magnitude = nodeMagnitudes.get(node.name) || 0;
+        const magnitude = magnitudes.get(node.name) || 0;
         const nodeHeight = getNodeHeight(magnitude);
         
         if (node.layer === 0) {
@@ -247,27 +336,64 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
         .style('filter', 'drop-shadow(0 2px 3px rgba(0,0,0,0.2))')
         .on('mouseover', (event, d) => {
           setHoveredNode(d.name);
+          const hoverMagnitudes = getHoverMagnitudes(d.name);
+          
+          // Update node heights based on hover state
+          node.transition()
+            .duration(300)
+            .attr('height', n => getNodeHeight(hoverMagnitudes.get(n.name) || 0));
+          
+          // Update link opacity
           link.style('opacity', l => 
             l.source.name === d.name || l.target.name === d.name ? 1 : 0.1
           );
+          
+          // Update node opacity
           node.style('opacity', n => 
             n.name === d.name || 
             processedLinks.some(l => (l.source.name === d.name && l.target.name === n.name) || 
                            (l.target.name === d.name && l.source.name === n.name)) ? 1 : 0.1
           );
-          node.style('filter', n => 
-            n.name === d.name || 
-            processedLinks.some(l => (l.source.name === d.name && l.target.name === n.name) || 
-                           (l.target.name === d.name && l.source.name === n.name)) 
-            ? 'drop-shadow(0 4px 6px rgba(0,0,0,0.3))' 
-            : 'drop-shadow(0 2px 3px rgba(0,0,0,0.2))'
-          );
         })
         .on('mouseout', () => {
-          setHoveredNode(null);
-          link.style('opacity', 1);
-          node.style('opacity', 1);
-          node.style('filter', 'drop-shadow(0 2px 3px rgba(0,0,0,0.2))');
+          // Clear any pending hover timeout
+          if (hoverTimeout) clearTimeout(hoverTimeout);
+          
+          // Only reset hover state if no node is selected
+          if (!selectedNode) {
+            setHoveredNode(null);
+            
+            // Reset node heights to overview state
+            node.transition()
+              .duration(300)
+              .attr('height', n => getNodeHeight(overviewMagnitudes.get(n.name) || 0));
+            
+            // Reset opacities
+            link.style('opacity', 1);
+            node.style('opacity', 1);
+          }
+        })
+        .on('click', (event, d) => {
+          // Set the selected node
+          setSelectedNode(d.name);
+          
+          // Update node heights based on selected state
+          const selectedMagnitudes = getHoverMagnitudes(d.name);
+          node.transition()
+            .duration(300)
+            .attr('height', n => getNodeHeight(selectedMagnitudes.get(n.name) || 0));
+          
+          // Update link opacity
+          link.style('opacity', l => 
+            l.source.name === d.name || l.target.name === d.name ? 1 : 0.1
+          );
+          
+          // Update node opacity
+          node.style('opacity', n => 
+            n.name === d.name || 
+            processedLinks.some(l => (l.source.name === d.name && l.target.name === n.name) || 
+                           (l.target.name === d.name && l.source.name === n.name)) ? 1 : 0.1
+          );
         });
       
       // Add labels
@@ -297,28 +423,53 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
         .style('opacity', 0.6)
         .style('transition', 'opacity 0.3s');
       
-      // Update node hover effects
+      // Update node hover effects with debouncing
+      let hoverTimeout: NodeJS.Timeout;
+      
       node.on('mouseover', (event, d) => {
-        setHoveredNode(d.name);
-        link.style('opacity', l => 
-          l.source.name === d.name || l.target.name === d.name ? 1 : 0.1
-        );
-        node.style('opacity', n => 
-          n.name === d.name || 
-          processedLinks.some(l => (l.source.name === d.name && l.target.name === n.name) || 
-                         (l.target.name === d.name && l.source.name === n.name)) ? 1 : 0.1
-        );
-        labels.style('opacity', n => 
-          n.name === d.name || 
-          processedLinks.some(l => (l.source.name === d.name && l.target.name === n.name) || 
-                         (l.target.name === d.name && l.source.name === n.name)) ? 1 : 0
-        );
+        // Clear any pending hover timeout
+        if (hoverTimeout) clearTimeout(hoverTimeout);
+        
+        // Set a small delay to prevent rapid recalculations
+        hoverTimeout = setTimeout(() => {
+          setHoveredNode(d.name);
+          const hoverMagnitudes = getHoverMagnitudes(d.name);
+          
+          // Update node heights based on hover state
+          node.transition()
+            .duration(300)
+            .attr('height', n => getNodeHeight(hoverMagnitudes.get(n.name) || 0));
+          
+          // Update link opacity
+          link.style('opacity', l => 
+            l.source.name === d.name || l.target.name === d.name ? 1 : 0.1
+          );
+          
+          // Update node opacity
+          node.style('opacity', n => 
+            n.name === d.name || 
+            processedLinks.some(l => (l.source.name === d.name && l.target.name === n.name) || 
+                           (l.target.name === d.name && l.source.name === n.name)) ? 1 : 0.1
+          );
+        }, 50); // 50ms delay
       })
       .on('mouseout', () => {
-        setHoveredNode(null);
-        link.style('opacity', 1);
-        node.style('opacity', 1);
-        labels.style('opacity', 0.6);
+        // Clear any pending hover timeout
+        if (hoverTimeout) clearTimeout(hoverTimeout);
+        
+        // Only reset hover state if no node is selected
+        if (!selectedNode) {
+          setHoveredNode(null);
+          
+          // Reset node heights to overview state
+          node.transition()
+            .duration(300)
+            .attr('height', n => getNodeHeight(overviewMagnitudes.get(n.name) || 0));
+          
+          // Reset opacities
+          link.style('opacity', 1);
+          node.style('opacity', 1);
+        }
       });
     };
     
@@ -332,34 +483,127 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
     return () => {
       window.removeEventListener('resize', redrawChart);
     };
-  }, [data]);
+  }, [data, selectedNode]);
   
   return (
-    <div 
-      ref={containerRef} 
-      className="w-full h-full" 
-      style={{
-        position: 'absolute', 
-        top: 0, 
-        left: 0, 
-        width: '100%', 
-        height: '100%'
-      }}
-    >
-      <svg 
-        ref={svgRef} 
+    <div className="flex w-full h-full">
+      <div 
+        ref={containerRef} 
+        className="w-3/4 h-full" 
         style={{
-          display: 'block',
-          width: '100%',
-          height: '100%'
-        }} 
-      />
-      {hoveredNode && (
-        <div className="absolute top-4 right-4 bg-black/80 text-white p-4 rounded-lg">
-          <h3 className="font-bold mb-2">{hoveredNode}</h3>
-          <p>Click to see details</p>
-        </div>
-      )}
+          position: 'relative'
+        }}
+        onClick={handleContainerClick}
+      >
+        <svg 
+          ref={svgRef} 
+          style={{
+            display: 'block',
+            width: '100%',
+            height: '100%'
+          }} 
+        />
+      </div>
+      
+      <div 
+        className="w-1/4 h-full bg-black/5 border-l border-gray-200 p-4 overflow-y-auto"
+        style={{
+          backdropFilter: 'blur(4px)'
+        }}
+      >
+        {(hoveredNode || selectedNode) ? (
+          <div className="space-y-4">
+            {selectedNode && (
+              <button
+                onClick={() => {
+                  setSelectedNode(null);
+                  setHoveredNode(null);
+                }}
+                className="absolute top-4 right-4 w-6 h-6 flex items-center justify-center text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+                aria-label="Clear selection"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            )}
+            <div className="border-b border-gray-200 pb-4">
+              <h3 className="font-bold text-xl mb-1">{selectedNode || hoveredNode}</h3>
+              {(() => {
+                const nodeName = selectedNode || hoveredNode;
+                if (!nodeName) return null;
+                const { type, category } = getNodeCategory(nodeName);
+                return (
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <span className="font-medium">{type}</span>
+                    <span className="text-gray-400">|</span>
+                    <span>{category}</span>
+                  </div>
+                );
+              })()}
+              {!selectedNode && (
+                <p className="text-sm text-gray-600 mt-2">Click to see details</p>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <h4 className="font-semibold text-sm text-gray-700">Connections</h4>
+              <div className="space-y-1">
+                {processedLinks
+                  .filter((l: SankeyLink) => l.source.name === (selectedNode || hoveredNode) || l.target.name === (selectedNode || hoveredNode))
+                  .map((link: SankeyLink, i: number) => (
+                    <div key={i} className="text-sm">
+                      {link.source.name === (selectedNode || hoveredNode) ? (
+                        <span>
+                          {selectedNode || hoveredNode} → {link.target.name} 
+                          <span className="text-gray-500 ml-2">(Value: {link.value})</span>
+                        </span>
+                      ) : (
+                        <span>
+                          {link.source.name} → {selectedNode || hoveredNode}
+                          <span className="text-gray-500 ml-2">(Value: {link.value})</span>
+                        </span>
+                      )}
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="font-semibold text-sm text-gray-700">Totals</h4>
+              <div className="text-sm">
+                <div>Incoming: {
+                  processedLinks
+                    .filter((l: SankeyLink) => l.target.name === (selectedNode || hoveredNode))
+                    .reduce((sum: number, l: SankeyLink) => sum + l.value, 0)
+                }</div>
+                <div>Outgoing: {
+                  processedLinks
+                    .filter((l: SankeyLink) => l.source.name === (selectedNode || hoveredNode))
+                    .reduce((sum: number, l: SankeyLink) => sum + l.value, 0)
+                }</div>
+              </div>
+            </div>
+
+            {selectedNode && (
+              <button
+                onClick={() => {
+                  setSelectedNode(null);
+                  setHoveredNode(null);
+                }}
+                className="mt-4 px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm font-medium transition-colors"
+              >
+                Clear Selection
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="text-gray-500 text-sm">
+            Hover over a node to see details
+          </div>
+        )}
+      </div>
     </div>
   );
 } 
