@@ -44,6 +44,9 @@ export function HeaderLogo() {
   } else if (pathname.includes('/proceeds')) {
     headerText = 'ensurance proceeds'
     tagline = 'perpetual funding for what matters'
+  } else if (pathname.includes('/exposure')) {
+    headerText = 'ensurance exposure'
+    tagline = 'nature risk by economic sector'
   } else if (groupName) {
     headerText = `${groupName} ensurance agents`
     tagline = ''

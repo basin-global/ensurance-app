@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import ExposureSankey from '@/modules/exposure/ExposureSankey'
+import Link from 'next/link'
 
 // Test data - this will be replaced with data from your database
 const testData = [
@@ -25,6 +26,44 @@ const testData = [
   { source: 'Food & Agriculture', target: 'Aesthetic & Sensory', value: 3 },
   { source: 'Food & Agriculture', target: 'Art & Inspiration', value: 3 },
   { source: 'Food & Agriculture', target: 'Existence & Legacy', value: 3 },
+  { source: 'Manufacturing & Materials', target: 'Raw Materials', value: 3 },
+  { source: 'Manufacturing & Materials', target: 'Food', value: 1 },
+  { source: 'Manufacturing & Materials', target: 'Energy', value: 3 },
+  { source: 'Manufacturing & Materials', target: 'Water Abundance', value: 2 },
+  { source: 'Manufacturing & Materials', target: 'Healthy Soils', value: 1 },
+  { source: 'Manufacturing & Materials', target: 'Medicinal & Genetic', value: 3 },
+  { source: 'Manufacturing & Materials', target: 'Climate Stability', value: 1 },
+  { source: 'Manufacturing & Materials', target: 'Clean Air', value: 1 },
+  { source: 'Manufacturing & Materials', target: 'Clean Water', value: 3 },
+  { source: 'Manufacturing & Materials', target: 'Risk Resilience', value: 2 },
+  { source: 'Manufacturing & Materials', target: 'Pollination', value: 1 },
+  { source: 'Manufacturing & Materials', target: 'Erosion Control', value: 2 },
+  { source: 'Manufacturing & Materials', target: 'Pest & Disease Control', value: 1 },
+  { source: 'Manufacturing & Materials', target: 'Habitat', value: 2 },
+  { source: 'Manufacturing & Materials', target: 'Recreation & Experiences', value: 1 },
+  { source: 'Manufacturing & Materials', target: 'Research & Learning', value: 3 },
+  { source: 'Manufacturing & Materials', target: 'Aesthetic & Sensory', value: 1 },
+  { source: 'Manufacturing & Materials', target: 'Art & Inspiration', value: 3 },
+  { source: 'Manufacturing & Materials', target: 'Existence & Legacy', value: 2 },
+  { source: 'Raw Materials', target: 'Rivers & Lakes', value: 2 },
+  { source: 'Food', target: 'Rivers & Lakes', value: 3 },
+  { source: 'Energy', target: 'Rivers & Lakes', value: 2 },
+  { source: 'Water Abundance', target: 'Rivers & Lakes', value: 3 },
+  { source: 'Healthy Soils', target: 'Rivers & Lakes', value: 2 },
+  { source: 'Medicinal & Genetic', target: 'Rivers & Lakes', value: 2 },
+  { source: 'Climate Stability', target: 'Rivers & Lakes', value: 2 },
+  { source: 'Clean Air', target: 'Rivers & Lakes', value: 1 },
+  { source: 'Clean Water', target: 'Rivers & Lakes', value: 3 },
+  { source: 'Risk Resilience', target: 'Rivers & Lakes', value: 3 },
+  { source: 'Pollination', target: 'Rivers & Lakes', value: 1 },
+  { source: 'Erosion Control', target: 'Rivers & Lakes', value: 2 },
+  { source: 'Pest & Disease Control', target: 'Rivers & Lakes', value: 2 },
+  { source: 'Habitat', target: 'Rivers & Lakes', value: 3 },
+  { source: 'Recreation & Experiences', target: 'Rivers & Lakes', value: 3 },
+  { source: 'Research & Learning', target: 'Rivers & Lakes', value: 3 },
+  { source: 'Aesthetic & Sensory', target: 'Rivers & Lakes', value: 3 },
+  { source: 'Art & Inspiration', target: 'Rivers & Lakes', value: 3 },
+  { source: 'Existence & Legacy', target: 'Rivers & Lakes', value: 3 },
   { source: 'Raw Materials', target: 'Tropical Forest', value: 3 },
   { source: 'Food', target: 'Tropical Forest', value: 3 },
   { source: 'Energy', target: 'Tropical Forest', value: 3 },
@@ -81,31 +120,104 @@ const testData = [
   { source: 'Energy & Power', target: 'Research & Learning', value: 3 },
   { source: 'Energy & Power', target: 'Aesthetic & Sensory', value: 1 },
   { source: 'Energy & Power', target: 'Art & Inspiration', value: 1 },
-  { source: 'Energy & Power', target: 'Existence & Legacy', value: 3 }
+  { source: 'Energy & Power', target: 'Existence & Legacy', value: 3 },
+  { source: 'Infrastructure & Construction', target: 'Raw Materials', value: 1 },
+  { source: 'Infrastructure & Construction', target: 'Food', value: 1 },
+  { source: 'Infrastructure & Construction', target: 'Energy', value: 3 },
+  { source: 'Infrastructure & Construction', target: 'Water Abundance', value: 2 },
+  { source: 'Infrastructure & Construction', target: 'Healthy Soils', value: 2 },
+  { source: 'Infrastructure & Construction', target: 'Medicinal & Genetic', value: 1 },
+  { source: 'Infrastructure & Construction', target: 'Climate Stability', value: 2 },
+  { source: 'Infrastructure & Construction', target: 'Clean Air', value: 2 },
+  { source: 'Infrastructure & Construction', target: 'Clean Water', value: 2 },
+  { source: 'Infrastructure & Construction', target: 'Risk Resilience', value: 2 },
+  { source: 'Infrastructure & Construction', target: 'Pollination', value: 1 },
+  { source: 'Infrastructure & Construction', target: 'Erosion Control', value: 3 },
+  { source: 'Infrastructure & Construction', target: 'Pest & Disease Control', value: 1 },
+  { source: 'Infrastructure & Construction', target: 'Habitat', value: 2 },
+  { source: 'Infrastructure & Construction', target: 'Recreation & Experiences', value: 2 },
+  { source: 'Infrastructure & Construction', target: 'Research & Learning', value: 2 },
+  { source: 'Infrastructure & Construction', target: 'Aesthetic & Sensory', value: 2 },
+  { source: 'Infrastructure & Construction', target: 'Art & Inspiration', value: 1 },
+  { source: 'Infrastructure & Construction', target: 'Existence & Legacy', value: 3 },
+  { source: 'Retail', target: 'Raw Materials', value: 3 },
+  { source: 'Retail', target: 'Food', value: 3 },
+  { source: 'Retail', target: 'Energy', value: 2 },
+  { source: 'Retail', target: 'Water Abundance', value: 2 },
+  { source: 'Retail', target: 'Healthy Soils', value: 2 },
+  { source: 'Retail', target: 'Medicinal & Genetic', value: 2 },
+  { source: 'Retail', target: 'Climate Stability', value: 1 },
+  { source: 'Retail', target: 'Clean Air', value: 1 },
+  { source: 'Retail', target: 'Clean Water', value: 2 },
+  { source: 'Retail', target: 'Risk Resilience', value: 2 },
+  { source: 'Retail', target: 'Pollination', value: 2 },
+  { source: 'Retail', target: 'Erosion Control', value: 2 },
+  { source: 'Retail', target: 'Pest & Disease Control', value: 1 },
+  { source: 'Retail', target: 'Habitat', value: 1 },
+  { source: 'Retail', target: 'Recreation & Experiences', value: 3 },
+  { source: 'Retail', target: 'Research & Learning', value: 2 },
+  { source: 'Retail', target: 'Aesthetic & Sensory', value: 3 },
+  { source: 'Retail', target: 'Art & Inspiration', value: 2 },
+  { source: 'Retail', target: 'Existence & Legacy', value: 3 },
+  { source: 'Transportation & Logistics', target: 'Raw Materials', value: 3 },
+  { source: 'Transportation & Logistics', target: 'Food', value: 1 },
+  { source: 'Transportation & Logistics', target: 'Energy', value: 3 },
+  { source: 'Transportation & Logistics', target: 'Water Abundance', value: 1 },
+  { source: 'Transportation & Logistics', target: 'Healthy Soils', value: 1 },
+  { source: 'Transportation & Logistics', target: 'Medicinal & Genetic', value: 1 },
+  { source: 'Transportation & Logistics', target: 'Climate Stability', value: 2 },
+  { source: 'Transportation & Logistics', target: 'Clean Air', value: 1 },
+  { source: 'Transportation & Logistics', target: 'Clean Water', value: 2 },
+  { source: 'Transportation & Logistics', target: 'Risk Resilience', value: 2 },
+  { source: 'Transportation & Logistics', target: 'Pollination', value: 1 },
+  { source: 'Transportation & Logistics', target: 'Erosion Control', value: 3 },
+  { source: 'Transportation & Logistics', target: 'Pest & Disease Control', value: 1 },
+  { source: 'Transportation & Logistics', target: 'Habitat', value: 1 },
+  { source: 'Transportation & Logistics', target: 'Recreation & Experiences', value: 3 },
+  { source: 'Transportation & Logistics', target: 'Research & Learning', value: 2 },
+  { source: 'Transportation & Logistics', target: 'Aesthetic & Sensory', value: 3 },
+  { source: 'Transportation & Logistics', target: 'Art & Inspiration', value: 1 },
+  { source: 'Transportation & Logistics', target: 'Existence & Legacy', value: 2 },
+  { source: 'Finance & Insurance', target: 'Raw Materials', value: 2 },
+  { source: 'Finance & Insurance', target: 'Food', value: 3 },
+  { source: 'Finance & Insurance', target: 'Energy', value: 3 },
+  { source: 'Finance & Insurance', target: 'Water Abundance', value: 3 },
+  { source: 'Finance & Insurance', target: 'Healthy Soils', value: 2 },
+  { source: 'Finance & Insurance', target: 'Medicinal & Genetic', value: 2 },
+  { source: 'Finance & Insurance', target: 'Climate Stability', value: 3 },
+  { source: 'Finance & Insurance', target: 'Clean Air', value: 3 },
+  { source: 'Finance & Insurance', target: 'Clean Water', value: 3 },
+  { source: 'Finance & Insurance', target: 'Risk Resilience', value: 3 },
+  { source: 'Finance & Insurance', target: 'Pollination', value: 3 },
+  { source: 'Finance & Insurance', target: 'Erosion Control', value: 3 },
+  { source: 'Finance & Insurance', target: 'Pest & Disease Control', value: 3 },
+  { source: 'Finance & Insurance', target: 'Habitat', value: 3 },
+  { source: 'Finance & Insurance', target: 'Recreation & Experiences', value: 2 },
+  { source: 'Finance & Insurance', target: 'Research & Learning', value: 3 },
+  { source: 'Finance & Insurance', target: 'Aesthetic & Sensory', value: 2 },
+  { source: 'Finance & Insurance', target: 'Art & Inspiration', value: 1 },
+  { source: 'Finance & Insurance', target: 'Existence & Legacy', value: 3 }
 ];
 
 export default function ExposurePage() {
-  const [searchQuery, setSearchQuery] = useState('');
-
   return (
-    <div className="min-h-screen flex flex-col">
-      <div className="container mx-auto px-4 py-8 flex-1">
-        <div className="space-y-8">
-          <PageHeader
-            title="exposure"
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            searchPlaceholder="search exposure..."
-            showSearch={true}
-          />
-          <div className="flex flex-col items-center justify-start text-center space-y-2 mb-8">
-            <p className="text-lg font-medium">explore how industries connect to ecosystem services and natural capital</p>
-          </div>
-          <div className="w-full h-[800px] bg-primary-dark rounded-xl p-4">
-            <ExposureSankey data={testData} />
-          </div>
-        </div>
+    <>
+      <div className="h-screen w-screen bg-primary-dark overflow-hidden p-0 m-0">
+        <ExposureSankey data={testData} />
       </div>
-    </div>
+      <div className="fixed bottom-0 left-0 right-0 w-full text-sm text-gray-400 text-center pb-4 bg-primary-dark bg-opacity-80">
+        <p>
+          Data based on industry dependencies and risks mapping from{' '}
+          <Link 
+            href="https://docs.basin.global/appendix/ecosystem-services-dependencies-and-risks" 
+            target="_blank"
+            className="underline hover:text-gray-300"
+          >
+            BASIN Field Manual
+          </Link>
+          . Magnitude represents total nature-related financial risk exposure.
+        </p>
+      </div>
+    </>
   );
 } 
