@@ -52,18 +52,18 @@ function sankeyLinkVertical() {
 // Update link width scaling
 const getLinkWidth = (value: number) => {
   switch (value) {
-    case 3: return 12; // High - make more prominent
-    case 2: return 8;  // Moderate - increase from 4 to 8
-    case 1: return 2;  // Low - keep thin
-    default: return 2;
+    case 3: return 12;  // High - exponential scale
+    case 2: return 4;   // Moderate - exponential scale
+    case 1: return 1;   // Low - exponential scale
+    default: return 1;
   }
 };
 
-// Update node height scaling
+// Update node height scaling to use normalized values
 const getNodeHeight = (magnitude: number) => {
-  const baseHeight = 40; 
-  const scalingFactor = 1 + (magnitude / 30);
-  return baseHeight * scalingFactor;
+  const minHeight = 30;  // Smaller minimum for less important nodes
+  const maxHeight = 80;  // Cap maximum height for better visual balance
+  return minHeight + (magnitude * (maxHeight - minHeight));
 };
 
 export default function ExposureSankey({ data }: ExposureSankeyProps) {
@@ -112,19 +112,39 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
       
       // Calculate magnitude for each node
       const nodeMagnitudes = new Map<string, number>();
+      const rowMagnitudes = new Map<number, { min: number, max: number }>();
+      
+      // First pass: calculate raw magnitudes and find min/max for each row
       nodes.forEach(node => {
         const incomingSum = data
           .filter(d => d.target === node.name)
           .reduce((sum, d) => sum + d.value, 0);
         
+        let magnitude;
         if (node.layer === 1) {
           const outgoingSum = data
             .filter(d => d.source === node.name)
             .reduce((sum, d) => sum + d.value, 0);
-          nodeMagnitudes.set(node.name, incomingSum + outgoingSum);
+          magnitude = incomingSum + outgoingSum;
         } else {
-          nodeMagnitudes.set(node.name, incomingSum);
+          magnitude = incomingSum;
         }
+        
+        nodeMagnitudes.set(node.name, magnitude);
+        
+        // Update row min/max
+        const row = rowMagnitudes.get(node.layer) || { min: Infinity, max: -Infinity };
+        row.min = Math.min(row.min, magnitude);
+        row.max = Math.max(row.max, magnitude);
+        rowMagnitudes.set(node.layer, row);
+      });
+      
+      // Second pass: normalize magnitudes within each row
+      nodes.forEach(node => {
+        const row = rowMagnitudes.get(node.layer)!;
+        const rawMagnitude = nodeMagnitudes.get(node.name)!;
+        const normalizedMagnitude = (rawMagnitude - row.min) / (row.max - row.min);
+        nodeMagnitudes.set(node.name, normalizedMagnitude);
       });
       
       // Create links array
