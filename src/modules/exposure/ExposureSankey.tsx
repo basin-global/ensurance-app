@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import { sankey, sankeyLinkHorizontal } from 'd3-sankey';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface SankeyData {
   source: string;
@@ -89,16 +90,50 @@ function getNodeCategory(name: string): { type: string; category: string } {
 export default function ExposureSankey({ data }: ExposureSankeyProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [processedLinks, setProcessedLinks] = useState<SankeyLink[]>([]);
   const [overviewMagnitudes, setOverviewMagnitudes] = useState<Map<string, number>>(new Map());
   
+  // Update URL when selection changes
+  const updateSelection = (node: string | null) => {
+    setSelectedNode(node);
+    if (node) {
+      const { type } = getNodeCategory(node);
+      const param = type.toLowerCase();
+      // Replace multiple spaces and special chars with single hyphen
+      const cleanName = node.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '');
+      router.push(`/exposure?${param}=${cleanName}`);
+    } else {
+      router.push('/exposure');
+    }
+  };
+
+  // Initialize selected node from URL
+  useEffect(() => {
+    const sector = searchParams.get('sector');
+    const flow = searchParams.get('flow');
+    const stock = searchParams.get('stock');
+    const selected = sector || flow || stock;
+    if (selected) {
+      // Find the original node name from the data
+      const nodeNames = Array.from(new Set(data.flatMap(d => [d.source, d.target])));
+      const originalName = nodeNames.find(name => 
+        name.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '') === selected
+      );
+      if (originalName) {
+        setSelectedNode(originalName);
+      }
+    }
+  }, [searchParams, data]);
+
   // Handle click outside to reset selection
   const handleContainerClick = (e: React.MouseEvent) => {
     // Clear selection if click is on container or SVG background
     if (e.target === containerRef.current || e.target === svgRef.current) {
-      setSelectedNode(null);
+      updateSelection(null);
       setHoveredNode(null);
     }
   };
@@ -415,7 +450,7 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
             .style('opacity', opacity)
             .on('mouseover', () => setHoveredNode(n.name))
             .on('mouseout', () => { if (!selectedNode) setHoveredNode(null); })
-            .on('click', () => setSelectedNode(n.name));
+            .on('click', () => updateSelection(n.name));
           // Add label
           const label = group.append('text')
             .attr('x', (pos.x0 + pos.x1) / 2)
@@ -531,7 +566,7 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
             {selectedNode && (
               <button
                 onClick={() => {
-                  setSelectedNode(null);
+                  updateSelection(null);
                   setHoveredNode(null);
                 }}
                 className="absolute top-4 right-4 w-6 h-6 flex items-center justify-center text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
