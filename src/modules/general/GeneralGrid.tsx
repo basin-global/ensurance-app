@@ -23,6 +23,7 @@ export interface GeneralCertificate {
   total_volume?: string
   market_cap?: string
   creator_earnings?: CreatorEarning[]
+  description?: string
 }
 
 interface GeneralGridProps {
@@ -30,6 +31,11 @@ interface GeneralGridProps {
   urlPrefix?: string
   onDataChange?: (data: GeneralCertificate[]) => void
   isMiniApp?: boolean
+  isOverview?: boolean
+  hideMarketData?: boolean
+  accountContext?: {
+    name: string
+  }
 }
 
 type ViewMode = 'grid' | 'list'
@@ -44,6 +50,18 @@ interface SortConfig {
 const SORT_CYCLES: SortField[] = ['name', 'market_cap', 'total_volume']
 
 const FALLBACK_IMAGE = '/assets/no-image-found.png'
+
+// Default certificates to always show in tend view
+const DEFAULT_CERTIFICATES = [
+  '0xd741057abca8fd4c0b99d2cd4c7a38c138ec4b47',
+  '0xa538934778220c6f4ba55990892a8100b6817a31',
+  '0x472957d852d4360f85fa1e43e0013729f1ade670',
+  '0xb81929101e23af9a5e4c9f91f0dd0eedfad2baec',
+  '0xe6a72264e567dcc38e30258d0c58f3dfb8a15b37',
+  '0x6bc75fcb31207936643d939466ab9b97f6095aee',
+  '0x530f3d8200953e2181fa4cae7317cdd78b0fdd73',
+  '0x267b4b8e8b70522e0dd7ba3805d9068d5a4c5aa7'
+]
 
 // Convert IPFS URL to use a gateway
 const convertIpfsUrl = (url: string) => {
@@ -62,11 +80,31 @@ const formatNumber = (value: string | undefined) => {
   })
 }
 
+// Helper function to normalize text for matching
+const normalizeText = (text: string): string[] => {
+  // Convert to lowercase and split by common separators
+  const words = text.toLowerCase()
+    .replace(/[_-]/g, ' ') // Replace hyphens and underscores with spaces
+    .split(/\s+/) // Split by whitespace
+    .filter(word => word.length > 0) // Remove empty strings
+  
+  // Add the original text as a single term
+  return [...new Set([...words, text.toLowerCase()])]
+}
+
+// Helper function to check if arrays have any common elements
+const hasCommonElements = (arr1: string[], arr2: string[]): boolean => {
+  return arr1.some(item => arr2.includes(item))
+}
+
 export default function GeneralGrid({ 
   searchQuery = '',
   urlPrefix = '',
   onDataChange,
-  isMiniApp = false
+  isMiniApp = false,
+  isOverview = false,
+  hideMarketData = false,
+  accountContext
 }: GeneralGridProps) {
   const [certificates, setCertificates] = useState<GeneralCertificate[]>([])
   const [loading, setLoading] = useState(true)
@@ -170,14 +208,16 @@ export default function GeneralGrid({
       return {
         ...cert,
         image_url: imageUrl,
-        video_url: videoUrl
+        video_url: videoUrl,
+        description: data.description || ''
       }
     } catch (error) {
       console.error('Error fetching metadata:', error)
       return {
         ...cert,
         image_url: FALLBACK_IMAGE,
-        video_url: null
+        video_url: null,
+        description: ''
       }
     }
   }
@@ -207,48 +247,120 @@ export default function GeneralGrid({
 
   // Filter and sort certificates
   const filteredAndSortedCertificates = useMemo(() => {
-    return certificates
+    // First get matched certificates
+    const matchedCertificates = certificates
       .filter(cert => {
-        const searchLower = (searchQuery || '').toLowerCase()
-        return !searchQuery || cert.name?.toLowerCase().includes(searchLower)
-      })
-      .sort((a, b) => {
-        switch (sort.field) {
-          case 'name':
-            const aName = (a.name || '').toLowerCase()
-            const bName = (b.name || '').toLowerCase()
-            return sort.direction === 'asc' ? aName.localeCompare(bName) : bName.localeCompare(aName)
+        // First apply account context filter if present
+        if (accountContext) {
+          const accountTerms = normalizeText(accountContext.name)
+          const certNameTerms = normalizeText(cert.name || '')
+          const certDescTerms = normalizeText(cert.description || '')
           
-          case 'market_cap':
-          case 'total_volume':
-            const aValue = Number(a[sort.field] || '0')
-            const bValue = Number(b[sort.field] || '0')
-            return sort.direction === 'asc' ? aValue - bValue : bValue - aValue
+          // Check for exact matches first
+          if (certNameTerms.some(term => accountTerms.includes(term)) ||
+              certDescTerms.some(term => accountTerms.includes(term))) {
+            return true
+          }
           
-          default:
-            return 0
+          // Check for partial matches in both name and description
+          if (hasCommonElements(accountTerms, certNameTerms) ||
+              hasCommonElements(accountTerms, certDescTerms)) {
+            return true
+          }
+          
+          // Check for reversed matches in both name and description
+          const reversedAccountTerms = accountTerms.reverse()
+          if (hasCommonElements(reversedAccountTerms, certNameTerms) ||
+              hasCommonElements(reversedAccountTerms, certDescTerms)) {
+            return true
+          }
+          
+          return false
         }
+        
+        // Then apply regular search query filter
+        const searchLower = (searchQuery || '').toLowerCase()
+        return !searchQuery || 
+          cert.name?.toLowerCase().includes(searchLower) ||
+          cert.description?.toLowerCase().includes(searchLower)
       })
-  }, [certificates, searchQuery, sort])
+
+    // Then get default certificates that aren't already in matched certificates
+    const defaultCertificates = certificates
+      .filter(cert => 
+        DEFAULT_CERTIFICATES.includes(cert.contract_address.toLowerCase()) &&
+        !matchedCertificates.some(matched => matched.contract_address === cert.contract_address)
+      )
+
+    // Sort matched certificates
+    const sortedMatched = matchedCertificates.sort((a, b) => {
+      switch (sort.field) {
+        case 'name':
+          const aName = (a.name || '').toLowerCase()
+          const bName = (b.name || '').toLowerCase()
+          return sort.direction === 'asc' ? aName.localeCompare(bName) : bName.localeCompare(aName)
+        
+        case 'market_cap':
+        case 'total_volume':
+          const aValue = Number(a[sort.field] || '0')
+          const bValue = Number(b[sort.field] || '0')
+          return sort.direction === 'asc' ? aValue - bValue : bValue - aValue
+        
+        default:
+          return 0
+      }
+    })
+
+    // Sort default certificates
+    const sortedDefaults = defaultCertificates.sort((a, b) => {
+      switch (sort.field) {
+        case 'name':
+          const aName = (a.name || '').toLowerCase()
+          const bName = (b.name || '').toLowerCase()
+          return sort.direction === 'asc' ? aName.localeCompare(bName) : bName.localeCompare(aName)
+        
+        case 'market_cap':
+        case 'total_volume':
+          const aValue = Number(a[sort.field] || '0')
+          const bValue = Number(b[sort.field] || '0')
+          return sort.direction === 'asc' ? aValue - bValue : bValue - aValue
+        
+        default:
+          return 0
+      }
+    })
+
+    // Combine sorted lists with matched certificates first
+    const allCertificates = [...sortedMatched, ...sortedDefaults]
+    
+    // If in overview mode, limit to 4 items
+    if (isOverview) {
+      return allCertificates.slice(0, 4)
+    }
+    
+    return allCertificates
+  }, [certificates, searchQuery, sort, accountContext, isOverview])
 
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-end gap-2">
-          <div className="bg-gray-900/30 rounded-lg p-1 flex gap-1">
-            <button className="p-1.5 rounded-md bg-gray-800 text-white">
-              <Grid className="w-5 h-5" />
-            </button>
-            <button className="p-1.5 rounded-md text-gray-400">
-              <List className="w-5 h-5" />
+        {!isOverview && (
+          <div className="flex items-center justify-end gap-2">
+            <div className="bg-gray-900/30 rounded-lg p-1 flex gap-1">
+              <button className="p-1.5 rounded-md bg-gray-800 text-white">
+                <Grid className="w-5 h-5" />
+              </button>
+              <button className="p-1.5 rounded-md text-gray-400">
+                <List className="w-5 h-5" />
+              </button>
+            </div>
+            <button className="bg-gray-900/30 p-1.5 rounded-lg text-gray-400">
+              <ArrowUpDown className="w-5 h-5" />
             </button>
           </div>
-          <button className="bg-gray-900/30 p-1.5 rounded-lg text-gray-400">
-            <ArrowUpDown className="w-5 h-5" />
-          </button>
-        </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mt-6">
-          {[...Array(4)].map((_, index) => (
+          {[...Array(isOverview ? 4 : 8)].map((_, index) => (
             <Card key={`skeleton-${index}`} className="bg-primary-dark border-gray-800">
               <CardContent className="p-4">
                 <Skeleton className="h-48 w-full mb-4 bg-gray-800" />
@@ -263,47 +375,49 @@ export default function GeneralGrid({
 
   return (
     <div className="space-y-4">
-      {/* Controls Bar */}
-      <div className="flex items-center justify-end gap-2">
-        <div className="bg-gray-900/30 rounded-lg p-1 flex gap-1">
+      {/* Controls Bar - Only show if not in overview mode */}
+      {!isOverview && (
+        <div className="flex items-center justify-end gap-2">
+          <div className="bg-gray-900/30 rounded-lg p-1 flex gap-1">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-1.5 rounded-md transition-colors ${
+                viewMode === 'grid'
+                  ? 'bg-gray-800 text-white'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+              aria-label="Grid view"
+            >
+              <Grid className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-1.5 rounded-md transition-colors ${
+                viewMode === 'list'
+                  ? 'bg-gray-800 text-white'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+              aria-label="List view"
+            >
+              <List className="w-5 h-5" />
+            </button>
+          </div>
+
           <button
-            onClick={() => setViewMode('grid')}
-            className={`p-1.5 rounded-md transition-colors ${
-              viewMode === 'grid'
-                ? 'bg-gray-800 text-white'
-                : 'text-gray-400 hover:text-white'
-            }`}
-            aria-label="Grid view"
+            onClick={handleSortClick}
+            className="bg-gray-900/30 p-1.5 rounded-lg text-gray-400 hover:text-white transition-colors"
+            title={getSortLabel()}
           >
-            <Grid className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => setViewMode('list')}
-            className={`p-1.5 rounded-md transition-colors ${
-              viewMode === 'list'
-                ? 'bg-gray-800 text-white'
-                : 'text-gray-400 hover:text-white'
-            }`}
-            aria-label="List view"
-          >
-            <List className="w-5 h-5" />
+            <ArrowUpDown 
+              className={`w-5 h-5 transition-transform ${sort.direction === 'desc' ? 'rotate-180' : ''}`}
+            />
           </button>
         </div>
-
-        <button
-          onClick={handleSortClick}
-          className="bg-gray-900/30 p-1.5 rounded-lg text-gray-400 hover:text-white transition-colors"
-          title={getSortLabel()}
-        >
-          <ArrowUpDown 
-            className={`w-5 h-5 transition-transform ${sort.direction === 'desc' ? 'rotate-180' : ''}`}
-          />
-        </button>
-      </div>
+      )}
 
       {/* Content */}
       {viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className={`grid grid-cols-1 sm:grid-cols-2 ${isOverview ? 'md:grid-cols-2' : 'md:grid-cols-3 lg:grid-cols-4'} gap-6`}>
           {filteredAndSortedCertificates.map((cert) => (
             <Card key={cert.contract_address} className="bg-primary-dark border-gray-800 hover:border-gray-700 transition-colors">
               <Link href={`${urlPrefix}${isMiniApp ? '/mini-app' : ''}/general/${cert.contract_address}`}>
@@ -339,17 +453,19 @@ export default function GeneralGrid({
                     <div className="text-lg font-semibold text-white text-center">
                       {cert.name || 'Unnamed Certificate'}
                     </div>
-                    <div className="flex items-center justify-between text-sm text-gray-400 px-2">
-                      <div className="flex gap-4">
-                        <div>MC: ${Number(cert.market_cap || '0').toLocaleString(undefined, { 
-                          minimumFractionDigits: Number(cert.market_cap || '0') < 10 ? 2 : 0,
-                          maximumFractionDigits: Number(cert.market_cap || '0') < 10 ? 2 : 0
-                        })}</div>
-                        <div>Vol: ${Number(cert.total_volume || '0').toLocaleString(undefined, { 
-                          minimumFractionDigits: Number(cert.total_volume || '0') < 10 ? 2 : 0,
-                          maximumFractionDigits: Number(cert.total_volume || '0') < 10 ? 2 : 0
-                        })}</div>
-                      </div>
+                    <div className={`flex items-center ${hideMarketData ? 'justify-center' : 'justify-between'} text-sm text-gray-400 px-2`}>
+                      {!hideMarketData && (
+                        <div className="flex gap-4">
+                          <div>MC: ${Number(cert.market_cap || '0').toLocaleString(undefined, { 
+                            minimumFractionDigits: Number(cert.market_cap || '0') < 10 ? 2 : 0,
+                            maximumFractionDigits: Number(cert.market_cap || '0') < 10 ? 2 : 0
+                          })}</div>
+                          <div>Vol: ${Number(cert.total_volume || '0').toLocaleString(undefined, { 
+                            minimumFractionDigits: Number(cert.total_volume || '0') < 10 ? 2 : 0,
+                            maximumFractionDigits: Number(cert.total_volume || '0') < 10 ? 2 : 0
+                          })}</div>
+                        </div>
+                      )}
                       <div onClick={(e) => e.preventDefault()}>
                         <EnsureButtons0x 
                           contractAddress={cert.contract_address as `0x${string}`}

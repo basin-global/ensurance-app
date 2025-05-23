@@ -4,7 +4,7 @@ import { formatUnits } from 'viem';
 
 interface CardProps {
   token: PortfolioToken;
-  variant: 'grid' | 'list';
+  variant: 'list' | 'grid' | 'overview';
 }
 
 export default function Card({ token, variant }: CardProps) {

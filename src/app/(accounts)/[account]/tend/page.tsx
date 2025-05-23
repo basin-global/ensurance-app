@@ -22,16 +22,26 @@ export default function TendPage({ params }: TendPageProps) {
     )
   }
 
+  // Extract account name without suffix
+  const accountName = params.account.split('.')[0]
+  const groupName = params.account.split('.')[1]
+
   return (
     <div className="space-y-6">
-      <div className="bg-gray-900/30 rounded-lg p-3">
-        <h3 className="text-lg font-medium text-gray-200 mb-1">Tend Certificates</h3>
-       </div>
-      <GeneralGrid />
+      <div className="bg-gray-900/30 rounded-lg p-4">
+        <h3 className="text-xl font-medium text-gray-200">
+          Collecting and swapping these assets and currencies funds and ensures {params.account}'s work
+        </h3>
+      </div>
+      <GeneralGrid 
+        accountContext={{
+          name: accountName
+        }}
+      />
       <VerificationSection 
         type="account" 
         name={params.account} 
-        group={params.account.split('.')[1]} 
+        group={groupName} 
       />
     </div>
   )
