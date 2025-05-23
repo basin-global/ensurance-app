@@ -310,6 +310,24 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
       // 3. Draw bars (segments) with isolation effect
       const mainGroup = svg.append('g');
       
+      // Add row labels
+      const rowLabels = ['SECTORS', 'FLOWS', 'STOCKS'];
+      [0, 1, 2].forEach(layer => {
+        const yPos = layerYPositions[layer] + (barHeight / 2) - 25; // Moved up more
+        mainGroup.append('text')
+          .attr('x', margin.left - 10)
+          .attr('y', yPos)
+          .attr('text-anchor', 'end')
+          .attr('transform', `rotate(-90, ${margin.left - 10}, ${yPos})`)
+          .text(rowLabels[layer])
+          .style('font-size', '12px')
+          .style('font-family', 'Inter, system-ui, sans-serif')
+          .style('font-weight', '600')
+          .style('fill', '#666')
+          .style('text-transform', 'uppercase')
+          .style('letter-spacing', '0.05em');
+      });
+
       // Color scale
       const colorScale = d3.scaleOrdinal<string>()
         .domain(nodeNames)
