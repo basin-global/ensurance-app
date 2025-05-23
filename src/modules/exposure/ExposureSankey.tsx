@@ -50,12 +50,21 @@ function sankeyLinkVertical() {
 }
 
 // Update link width scaling
-const getLinkWidth = (value: number) => {
-  switch (value) {
-    case 3: return 12;  // High - exponential scale
-    case 2: return 4;   // Moderate - exponential scale
-    case 1: return 1;   // Low - exponential scale
-    default: return 1;
+const getLinkWidth = (value: number, isActive: boolean = false) => {
+  if (isActive) {
+    switch (value) {
+      case 3: return 16;  // High - even thicker when active
+      case 2: return 8;   // Moderate - thicker when active
+      case 1: return 2;   // Low - slightly thicker when active
+      default: return 2;
+    }
+  } else {
+    switch (value) {
+      case 3: return 12;  // High
+      case 2: return 4;   // Moderate
+      case 1: return 1;   // Low
+      default: return 1;
+    }
   }
 };
 
@@ -69,7 +78,7 @@ const getNodeHeight = (magnitude: number) => {
 // Helper function to get node category and type
 function getNodeCategory(name: string): { type: string; category: string } {
   if (['Food & Agriculture', 'Energy & Power', 'Manufacturing & Materials', 'Infrastructure & Construction', 'Finance & Insurance', 'Retail', 'Transportation & Logistics'].includes(name)) {
-    return { type: 'SECTOR', category: 'industry sector' };
+    return { type: 'SECTOR', category: 'economic sector' };
   }
   if (['Rivers & Lakes', 'Tropical Forest', 'Temperate Forest', 'Boreal Forest', 'Coastal Systems', 'Inland Wetlands', 'Cultivated & Developed', 'Urban Open Space', 'Rural Open Space', 'Marine Systems', 'Grasslands', 'Shrublands', 'Polar & Alpine', 'Desert', 'Subterranean'].includes(name)) {
     return { type: 'STOCK', category: 'ecosystem' };
@@ -87,8 +96,8 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
   
   // Handle click outside to reset selection
   const handleContainerClick = (e: React.MouseEvent) => {
-    // Only reset if clicking directly on the container, not its children
-    if (e.target === containerRef.current) {
+    // Clear selection if click is on container or SVG background
+    if (e.target === containerRef.current || e.target === svgRef.current) {
       setSelectedNode(null);
       setHoveredNode(null);
     }
@@ -142,19 +151,21 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
         const incomingSum = data
           .filter(d => d.target === node.name)
           .reduce((sum, d) => sum + d.value, 0);
-        
-        let magnitude;
-        if (node.layer === 1) {
           const outgoingSum = data
             .filter(d => d.source === node.name)
             .reduce((sum, d) => sum + d.value, 0);
+        let magnitude;
+        if (node.layer === 0) {
+          // For industry nodes, use outgoing sum
+          magnitude = outgoingSum;
+        } else if (node.layer === 1) {
+          // For ES nodes, use both
           magnitude = incomingSum + outgoingSum;
         } else {
+          // For stock nodes, use incoming sum
           magnitude = incomingSum;
         }
-        
         magnitudes.set(node.name, magnitude);
-        
         // Update row min/max
         const row = rowMagnitudes.get(node.layer) || { min: Infinity, max: -Infinity };
         row.min = Math.min(row.min, magnitude);
@@ -226,13 +237,6 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
         return hoverMagnitudes;
       };
 
-      // Update node height scaling to use current magnitudes
-      const getNodeHeight = (magnitude: number) => {
-        const minHeight = 30;
-        const maxHeight = 80;
-        return minHeight + (magnitude * (maxHeight - minHeight));
-      };
-
       // Create links array
       const links: SankeyLink[] = data.map(d => ({
         source: nodes.find(n => n.name === d.source)!,
@@ -255,222 +259,173 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
       // Store processed links for the side panel
       setProcessedLinks(processedLinks);
       
-      // Force vertical layout with better spacing
-      processedNodes.forEach(node => {
-        // Calculate vertical positions for each layer
-        const topRowY = margin.top + innerHeight * 0.1;    // Top row at 10% of height
-        const middleRowY = margin.top + innerHeight * 0.4;  // Middle row at 40% of height
-        const bottomRowY = margin.top + innerHeight * 0.7;  // Bottom row at 70% of height
+      // --- TRUE BAR LAYOUT LOGIC ---
+      // 1. Calculate total magnitude for each layer
+      const layerTotals = [0, 1, 2].map(layer =>
+        nodes.filter(n => n.layer === layer).reduce((sum, n) => sum + (magnitudes.get(n.name) || 0), 0)
+      );
 
-        // Get the number of nodes in each layer for horizontal spacing
-        const sectorsCount = nodes.filter(n => n.layer === 0).length;
-        const servicesCount = nodes.filter(n => n.layer === 1).length;
-        const stocksCount = nodes.filter(n => n.layer === 2).length;
-        
-        // Calculate position based on layer
-        let layerY;
-        const magnitude = magnitudes.get(node.name) || 0;
-        const nodeHeight = getNodeHeight(magnitude);
-        
-        if (node.layer === 0) {
-          // Sectors at top row
-          const sectorIndex = processedNodes.filter(n => n.layer === 0).findIndex(n => n.name === node.name);
-          layerY = topRowY;
-        } else if (node.layer === 1) {
-          // Ecosystem services in middle row
-          const serviceIndex = processedNodes.filter(n => n.layer === 1).findIndex(n => n.name === node.name);
-          layerY = middleRowY;
-        } else {
-          // Natural capital at bottom row
-          const stockIndex = processedNodes.filter(n => n.layer === 2).findIndex(n => n.name === node.name);
-          layerY = bottomRowY;
-        }
-        
-        // Swap x and y coordinates for vertical layout
-        const tempX0 = node.x0;
-        const tempX1 = node.x1;
-        node.x0 = node.y0;
-        node.x1 = node.y1;
-        node.y0 = layerY;
-        node.y1 = layerY + nodeHeight;
+      // 2. Assign segment widths and positions for each node in each layer
+      const layerYPositions = [
+        margin.top + innerHeight * 0.1,   // Top row
+        margin.top + innerHeight * 0.4,   // Middle row
+        margin.top + innerHeight * 0.7    // Bottom row
+      ];
+      const barHeight = 40;
+      const barGap = 30;
+      const barAreaWidth = innerWidth;
+
+      // For each layer, calculate segment positions
+      const nodePositions = new Map<string, { x0: number, x1: number, y0: number, y1: number }>();
+      [0, 1, 2].forEach(layer => {
+        const layerNodes = nodes.filter(n => n.layer === layer);
+        // Sort for visual consistency
+        layerNodes.sort((a, b) => a.name.localeCompare(b.name));
+        let currentX = margin.left;
+        layerNodes.forEach(n => {
+          const mag = magnitudes.get(n.name) || 0;
+          const width = layerTotals[layer] > 0 ? (mag / layerTotals[layer]) * barAreaWidth : 0;
+          nodePositions.set(n.name, {
+            x0: currentX,
+            x1: currentX + width,
+            y0: layerYPositions[layer],
+            y1: layerYPositions[layer] + barHeight
+          });
+          currentX += width;
+        });
       });
-      
-      // Color scale
-      const colorScale = d3.scaleOrdinal()
-        .domain(nodeNames)
-        .range(d3.schemeCategory10);
-      
-      // Create a group for the Sankey diagram
+
+      // Helper: get set of connected node names for a given node
+      function getConnectedNodes(nodeName: string) {
+        const connected = new Set<string>();
+        links.forEach(l => {
+          if (l.source.name === nodeName) connected.add(l.target.name);
+          if (l.target.name === nodeName) connected.add(l.source.name);
+        });
+        return connected;
+      }
+      const activeNode = selectedNode || hoveredNode;
+      const connectedNodes = activeNode ? getConnectedNodes(activeNode) : new Set();
+
+      // 3. Draw bars (segments) with isolation effect
       const mainGroup = svg.append('g');
       
-      // Draw links with vertical paths
-      const link = mainGroup.append('g')
-        .selectAll('path')
-        .data(processedLinks)
-        .join('path')
-        .attr('d', sankeyLinkVertical())
-        .attr('fill', 'none')
-        .attr('stroke', d => {
-          const sourceNode = processedNodes.find(n => n.name === d.source.name);
-          const color = sourceNode ? colorScale(sourceNode.name) : '#000';
-          return d3.color(color as string)!.copy({ opacity: 0.2 }).toString();
-        })
-        .attr('stroke-width', d => getLinkWidth(d.value))
-        .style('transition', 'opacity 0.3s');
-      
-      // Draw nodes
-      const node = mainGroup.append('g')
-        .selectAll('rect')
-        .data(processedNodes)
-        .join('rect')
-        .attr('x', d => d.x0 || 0)
-        .attr('y', d => d.y0 || 0)
-        .attr('height', d => (d.y1 || 0) - (d.y0 || 0))
-        .attr('width', d => (d.x1 || 0) - (d.x0 || 0))
-        .attr('fill', d => colorScale(d.name) as string)
-        .attr('stroke', '#000')
-        .attr('rx', 6)
-        .attr('ry', 6)
-        .style('cursor', 'pointer')
-        .style('transition', 'opacity 0.3s, filter 0.3s')
-        .style('filter', 'drop-shadow(0 2px 3px rgba(0,0,0,0.2))')
-        .on('mouseover', (event, d) => {
-          setHoveredNode(d.name);
-          const hoverMagnitudes = getHoverMagnitudes(d.name);
-          
-          // Update node heights based on hover state
-          node.transition()
-            .duration(300)
-            .attr('height', n => getNodeHeight(hoverMagnitudes.get(n.name) || 0));
-          
-          // Update link opacity
-          link.style('opacity', l => 
-            l.source.name === d.name || l.target.name === d.name ? 1 : 0.1
-          );
-          
-          // Update node opacity
-          node.style('opacity', n => 
-            n.name === d.name || 
-            processedLinks.some(l => (l.source.name === d.name && l.target.name === n.name) || 
-                           (l.target.name === d.name && l.source.name === n.name)) ? 1 : 0.1
-          );
-        })
-        .on('mouseout', () => {
-          // Clear any pending hover timeout
-          if (hoverTimeout) clearTimeout(hoverTimeout);
-          
-          // Only reset hover state if no node is selected
-          if (!selectedNode) {
-            setHoveredNode(null);
-            
-            // Reset node heights to overview state
-            node.transition()
-              .duration(300)
-              .attr('height', n => getNodeHeight(overviewMagnitudes.get(n.name) || 0));
-            
-            // Reset opacities
-            link.style('opacity', 1);
-            node.style('opacity', 1);
+      // Color scale
+      const colorScale = d3.scaleOrdinal<string>()
+        .domain(nodeNames)
+        .range([
+          '#4A90E2', // Soft blue
+          '#50E3C2', // Mint
+          '#B8E986', // Sage
+          '#F5A623', // Amber
+          '#D0021B', // Burgundy
+          '#9013FE', // Purple
+          '#417505', // Forest
+          '#7ED321', // Lime
+          '#BD10E0', // Magenta
+          '#4A4A4A', // Charcoal
+          '#F8E71C', // Gold
+          '#7B61FF', // Indigo
+          '#50E3C2', // Teal
+          '#F5A623', // Orange
+          '#D0021B'  // Red
+        ]);
+
+      // Adjust link colors to be more subtle
+      const getLinkColor = (source: string): string => {
+        const color = d3.color(colorScale(source));
+        return color ? color.copy({ opacity: 0.15 }).toString() : '#ccc';
+      };
+
+      [0, 1, 2].forEach(layer => {
+        const layerNodes = nodes.filter(n => n.layer === layer);
+        const group = mainGroup.append('g').attr('class', `bar-layer-${layer}`);
+        layerNodes.forEach(n => {
+          const pos = nodePositions.get(n.name)!;
+          // Determine opacity
+          let opacity = 1;
+          if (activeNode) {
+            if (n.name === activeNode || connectedNodes.has(n.name)) {
+              opacity = 1;
+            } else {
+              opacity = 0.1;
+            }
+          } else {
+            // Default state: calm but readable
+            opacity = 0.85;
           }
-        })
-        .on('click', (event, d) => {
-          // Set the selected node
-          setSelectedNode(d.name);
-          
-          // Update node heights based on selected state
-          const selectedMagnitudes = getHoverMagnitudes(d.name);
-          node.transition()
-            .duration(300)
-            .attr('height', n => getNodeHeight(selectedMagnitudes.get(n.name) || 0));
-          
-          // Update link opacity
-          link.style('opacity', l => 
-            l.source.name === d.name || l.target.name === d.name ? 1 : 0.1
-          );
-          
-          // Update node opacity
-          node.style('opacity', n => 
-            n.name === d.name || 
-            processedLinks.some(l => (l.source.name === d.name && l.target.name === n.name) || 
-                           (l.target.name === d.name && l.source.name === n.name)) ? 1 : 0.1
-          );
+          group.append('rect')
+            .attr('x', pos.x0)
+            .attr('y', pos.y0)
+            .attr('width', pos.x1 - pos.x0)
+            .attr('height', barHeight)
+            .attr('fill', colorScale(n.name) as string)
+            .attr('stroke', '#000')
+            .attr('rx', 6)
+            .attr('ry', 6)
+            .style('cursor', 'pointer')
+            .style('opacity', opacity)
+            .on('mouseover', () => setHoveredNode(n.name))
+            .on('mouseout', () => { if (!selectedNode) setHoveredNode(null); })
+            .on('click', () => setSelectedNode(n.name));
+          // Add label
+          const label = group.append('text')
+            .attr('x', (pos.x0 + pos.x1) / 2)
+            .attr('y', pos.y0 - 36)  // Increased spacing slightly more
+            .attr('text-anchor', 'middle')
+            .attr('transform', `rotate(-45, ${(pos.x0 + pos.x1) / 2}, ${pos.y0 - 36})`)
+            .text(n.name)
+            .style('font-size', '11px')
+            .style('font-family', 'Inter, system-ui, sans-serif')
+            .style('font-weight', '500')
+            .style('fill', '#fff')
+            .style('pointer-events', 'none')
+            .style('text-shadow', '0 1px 2px rgba(0,0,0,0.8)')
+            .style('white-space', 'nowrap')
+            .style('opacity', 0.85 * opacity);
+
+          // Add background for better readability
+          const bbox = label.node()?.getBBox();
+          if (bbox) {
+            group.insert('rect', 'text')
+              .attr('x', bbox.x - 4)
+              .attr('y', bbox.y - 2)
+              .attr('width', bbox.width + 8)
+              .attr('height', bbox.height + 4)
+              .attr('rx', 4)
+              .attr('ry', 4)
+              .style('fill', 'rgba(0,0,0,0.4)')
+              .style('opacity', 0.85 * opacity)
+              .style('transform', `translateY(-${bbox.height/2}px)`); // Shift background up to avoid node overlap
+          }
         });
-      
-      // Add labels
-      const labels = mainGroup.append('g')
-        .selectAll('text')
-        .data(processedNodes)
-        .join('text')
-        .attr('x', d => ((d.x1 || 0) + (d.x0 || 0)) / 2)
-        .attr('y', d => {
-          if (d.layer === 1) {
-            return (d.y0 || 0) - 8;
-          }
-          return (d.y0 || 0) - 6;
-        })
-        .attr('dy', '0.35em')
-        .attr('text-anchor', 'middle')
-        .attr('transform', d => {
-          // Angle labels by -45 degrees
-          return `rotate(-45, ${((d.x1 || 0) + (d.x0 || 0)) / 2}, ${d.layer === 1 ? (d.y0 || 0) - 8 : (d.y0 || 0) - 6})`;
-        })
-        .text(d => d.name)
-        .style('font-size', '11px')
-        .style('fill', '#fff')
-        .style('pointer-events', 'none')
-        .style('text-shadow', '1px 1px 2px rgba(0,0,0,0.5)')
-        .style('white-space', 'nowrap')
-        .style('opacity', 0.6)
-        .style('transition', 'opacity 0.3s');
-      
-      // Update node hover effects with debouncing
-      let hoverTimeout: NodeJS.Timeout;
-      
-      node.on('mouseover', (event, d) => {
-        // Clear any pending hover timeout
-        if (hoverTimeout) clearTimeout(hoverTimeout);
-        
-        // Set a small delay to prevent rapid recalculations
-        hoverTimeout = setTimeout(() => {
-          setHoveredNode(d.name);
-          const hoverMagnitudes = getHoverMagnitudes(d.name);
-          
-          // Update node heights based on hover state
-          node.transition()
-            .duration(300)
-            .attr('height', n => getNodeHeight(hoverMagnitudes.get(n.name) || 0));
-          
-          // Update link opacity
-          link.style('opacity', l => 
-            l.source.name === d.name || l.target.name === d.name ? 1 : 0.1
-          );
-          
-          // Update node opacity
-          node.style('opacity', n => 
-            n.name === d.name || 
-            processedLinks.some(l => (l.source.name === d.name && l.target.name === n.name) || 
-                           (l.target.name === d.name && l.source.name === n.name)) ? 1 : 0.1
-          );
-        }, 50); // 50ms delay
-      })
-      .on('mouseout', () => {
-        // Clear any pending hover timeout
-        if (hoverTimeout) clearTimeout(hoverTimeout);
-        
-        // Only reset hover state if no node is selected
-        if (!selectedNode) {
-          setHoveredNode(null);
-          
-          // Reset node heights to overview state
-          node.transition()
-            .duration(300)
-            .attr('height', n => getNodeHeight(overviewMagnitudes.get(n.name) || 0));
-          
-          // Reset opacities
-          link.style('opacity', 1);
-          node.style('opacity', 1);
-        }
       });
+
+      // 4. Draw links using new positions, with isolation effect
+      mainGroup.append('g')
+        .selectAll('path')
+        .data(links)
+        .join('path')
+        .attr('d', d => {
+          const source = nodePositions.get(d.source.name)!;
+          const target = nodePositions.get(d.target.name)!;
+          const sourceX = (source.x0 + source.x1) / 2;
+          const sourceY = source.y1;
+          const targetX = (target.x0 + target.x1) / 2;
+          const targetY = target.y0;
+          return `M${sourceX},${sourceY} C${sourceX},${(sourceY + targetY) / 2} ${targetX},${(sourceY + targetY) / 2} ${targetX},${targetY}`;
+        })
+        .attr('fill', 'none')
+        .attr('stroke', d => getLinkColor(d.source.name))
+        .attr('stroke-width', d => {
+          const isActive = d.source.name === activeNode || d.target.name === activeNode;
+          return getLinkWidth(d.value, isActive);
+        })
+        .style('transition', 'opacity 0.3s, stroke-width 0.3s')
+        .style('opacity', d => {
+          if (!activeNode) return 0.15;
+          return (d.source.name === activeNode || d.target.name === activeNode) ? 1 : 0.1;
+        });
     };
     
     // Initial render
@@ -483,7 +438,7 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
     return () => {
       window.removeEventListener('resize', redrawChart);
     };
-  }, [data, selectedNode]);
+  }, [data, selectedNode, hoveredNode]);
   
   return (
     <div className="flex w-full h-full">
@@ -506,9 +461,11 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
       </div>
       
       <div 
-        className="w-1/4 h-full bg-black/5 border-l border-gray-200 p-4 overflow-y-auto"
+        className="w-1/4 h-full bg-black/5 border-l border-gray-800/60 p-4 overflow-y-auto"
         style={{
-          backdropFilter: 'blur(4px)'
+          backdropFilter: 'blur(4px)',
+          position: 'relative',
+          height: 'auto',
         }}
       >
         {(hoveredNode || selectedNode) ? (
@@ -542,61 +499,100 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
                   </div>
                 );
               })()}
-              {!selectedNode && (
-                <p className="text-sm text-gray-600 mt-2">Click to see details</p>
-              )}
             </div>
             
             <div className="space-y-2">
-              <h4 className="font-semibold text-sm text-gray-700">Connections</h4>
+              {/* Custom connection logic by node type */}
+              {(() => {
+                const nodeName = selectedNode || hoveredNode;
+                if (!nodeName) return null;
+                const { type } = getNodeCategory(nodeName);
+                // Helper to convert value to label and color
+                const valueLabel = (v: number) => v === 1 ? 'low' : v === 2 ? 'moderate' : v === 3 ? 'high' : v;
+                // Use blue for moderate for better aesthetics
+                const valueColor = (v: number) => v === 1 ? 'text-green-700' : v === 2 ? 'text-blue-700' : v === 3 ? 'text-red-600' : 'text-gray-600';
+                if (type === 'SECTOR') {
+                  const flows = processedLinks
+                    .filter(l => l.source.name === nodeName)
+                    .map(l => ({ name: l.target.name, value: l.value }));
+                  return (
+                    <>
+                      <h4 className="font-grotesk font-medium text-xs text-gray-700 mb-1 uppercase tracking-wide">Flows</h4>
+                      <div className="space-y-1">
+                        {flows.map((f, i) => (
+                          <div key={i} className="text-sm flex items-center font-grotesk">
+                            <span>{f.name}</span>
+                            <span className={`ml-2 font-mono font-medium ${valueColor(f.value)}`}>{valueLabel(f.value)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  );
+                } else if (type === 'FLOW') {
+                  const sectors = processedLinks
+                    .filter(l => l.target.name === nodeName && getNodeCategory(l.source.name).type === 'SECTOR')
+                    .map(l => ({ name: l.source.name, value: l.value }));
+                  const stocks = processedLinks
+                    .filter(l => l.source.name === nodeName && getNodeCategory(l.target.name).type === 'STOCK')
+                    .map(l => ({ name: l.target.name, value: l.value }));
+                  return (
+                    <>
+                      <h4 className="font-grotesk font-medium text-xs text-gray-700 mb-1 uppercase tracking-wide">Sectors</h4>
+                      <div className="space-y-1 mb-2">
+                        {sectors.map((s, i) => (
+                          <div key={i} className="text-sm flex items-center font-grotesk">
+                            <span>{s.name}</span>
+                            <span className={`ml-2 font-mono font-medium ${valueColor(s.value)}`}>{valueLabel(s.value)}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <h4 className="font-grotesk font-medium text-xs text-gray-700 mb-1 uppercase tracking-wide">Stocks</h4>
+                      <div className="space-y-1">
+                        {stocks.map((s, i) => (
+                          <div key={i} className="text-sm flex items-center font-grotesk">
+                            <span>{s.name}</span>
+                            <span className={`ml-2 font-mono font-medium ${valueColor(s.value)}`}>{valueLabel(s.value)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  );
+                } else if (type === 'STOCK') {
+                  const flows = processedLinks
+                    .filter(l => l.target.name === nodeName && getNodeCategory(l.source.name).type === 'FLOW')
+                    .map(l => ({ name: l.source.name, value: l.value }));
+                  return (
+                    <>
+                      <h4 className="font-grotesk font-medium text-xs text-gray-700 mb-1 uppercase tracking-wide">Flows</h4>
               <div className="space-y-1">
-                {processedLinks
-                  .filter((l: SankeyLink) => l.source.name === (selectedNode || hoveredNode) || l.target.name === (selectedNode || hoveredNode))
-                  .map((link: SankeyLink, i: number) => (
-                    <div key={i} className="text-sm">
-                      {link.source.name === (selectedNode || hoveredNode) ? (
-                        <span>
-                          {selectedNode || hoveredNode} → {link.target.name} 
-                          <span className="text-gray-500 ml-2">(Value: {link.value})</span>
-                        </span>
-                      ) : (
-                        <span>
-                          {link.source.name} → {selectedNode || hoveredNode}
-                          <span className="text-gray-500 ml-2">(Value: {link.value})</span>
-                        </span>
-                      )}
+                        {flows.map((f, i) => (
+                          <div key={i} className="text-sm flex items-center font-grotesk">
+                            <span>{f.name}</span>
+                            <span className={`ml-2 font-mono font-medium ${valueColor(f.value)}`}>{valueLabel(f.value)}</span>
                     </div>
                   ))}
               </div>
+                    </>
+                  );
+                }
+                return null;
+              })()}
             </div>
 
             <div className="space-y-2">
-              <h4 className="font-semibold text-sm text-gray-700">Totals</h4>
-              <div className="text-sm">
-                <div>Incoming: {
-                  processedLinks
-                    .filter((l: SankeyLink) => l.target.name === (selectedNode || hoveredNode))
-                    .reduce((sum: number, l: SankeyLink) => sum + l.value, 0)
-                }</div>
-                <div>Outgoing: {
-                  processedLinks
-                    .filter((l: SankeyLink) => l.source.name === (selectedNode || hoveredNode))
-                    .reduce((sum: number, l: SankeyLink) => sum + l.value, 0)
-                }</div>
+              <h4 className="font-grotesk font-medium text-xs text-gray-700 mb-1 uppercase tracking-wide">Magnitude</h4>
+              <div className="text-sm font-mono font-medium text-white">
+                {(() => {
+                  const nodeName = selectedNode || hoveredNode;
+                  if (!nodeName) return null;
+                  // Sum all in and out values for this node
+                  const total = processedLinks
+                    .filter((l: SankeyLink) => l.source.name === nodeName || l.target.name === nodeName)
+                    .reduce((sum: number, l: SankeyLink) => sum + l.value, 0);
+                  return total;
+                })()}
               </div>
             </div>
-
-            {selectedNode && (
-              <button
-                onClick={() => {
-                  setSelectedNode(null);
-                  setHoveredNode(null);
-                }}
-                className="mt-4 px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm font-medium transition-colors"
-              >
-                Clear Selection
-              </button>
-            )}
           </div>
         ) : (
           <div className="text-gray-500 text-sm">
