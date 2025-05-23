@@ -131,7 +131,7 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
         .attr("height", height);
       
       // Use larger margins to avoid edges
-      const margin = { top: 100, right: 50, bottom: 50, left: 50 };
+      const margin = { top: 100, right: 100, bottom: 50, left: 50 };  // Increased right margin
       const innerWidth = width - margin.left - margin.right;
       const innerHeight = height - margin.top - margin.bottom;
       
@@ -151,9 +151,9 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
         const incomingSum = data
           .filter(d => d.target === node.name)
           .reduce((sum, d) => sum + d.value, 0);
-          const outgoingSum = data
-            .filter(d => d.source === node.name)
-            .reduce((sum, d) => sum + d.value, 0);
+        const outgoingSum = data
+          .filter(d => d.source === node.name)
+          .reduce((sum, d) => sum + d.value, 0);
         let magnitude;
         if (node.layer === 0) {
           // For industry nodes, use outgoing sum
@@ -173,11 +173,17 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
         rowMagnitudes.set(node.layer, row);
       });
 
-      // Normalize overview magnitudes
+      // Normalize overview magnitudes with a minimum width for sectors
       nodes.forEach(node => {
         const row = rowMagnitudes.get(node.layer)!;
         const rawMagnitude = magnitudes.get(node.name)!;
-        const normalizedMagnitude = (rawMagnitude - row.min) / (row.max - row.min);
+        let normalizedMagnitude = (rawMagnitude - row.min) / (row.max - row.min);
+        
+        // Ensure minimum width for sectors
+        if (node.layer === 0) {
+          normalizedMagnitude = Math.max(normalizedMagnitude, 0.1); // Minimum 10% width for sectors
+        }
+        
         magnitudes.set(node.name, normalizedMagnitude);
       });
 
@@ -332,27 +338,38 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
       const colorScale = d3.scaleOrdinal<string>()
         .domain(nodeNames)
         .range([
-          '#4A90E2', // Soft blue
-          '#50E3C2', // Mint
-          '#B8E986', // Sage
-          '#F5A623', // Amber
-          '#D0021B', // Burgundy
-          '#9013FE', // Purple
-          '#417505', // Forest
-          '#7ED321', // Lime
-          '#BD10E0', // Magenta
-          '#4A4A4A', // Charcoal
-          '#F8E71C', // Gold
-          '#7B61FF', // Indigo
-          '#50E3C2', // Teal
-          '#F5A623', // Orange
-          '#D0021B'  // Red
+          // Sectors (layer 0) - Business/Anthropogenic colors
+          '#2C3E50', // Deep blue-gray (Finance)
+          '#E74C3C', // Red (Energy)
+          '#F39C12', // Orange (Manufacturing)
+          '#27AE60', // Green (Agriculture)
+          '#8E44AD', // Purple (Infrastructure)
+          '#16A085', // Teal (Retail)
+          '#D35400', // Dark orange (Transportation)
+          
+          // Flows (layer 1) - Dynamic/Fluid colors
+          '#00BCD4', // Cyan (Water)
+          '#4CAF50', // Green (Air)
+          '#9C27B0', // Purple (Nutrients)
+          '#FF9800', // Orange (Carbon)
+          '#2196F3', // Blue (Energy)
+          '#FFEB3B', // Yellow (Food)
+          '#795548', // Brown (Materials)
+          
+          // Stocks (layer 2) - Earth/Grounded tones
+          '#1B5E20', // Dark green (Forests)
+          '#0D47A1', // Deep blue (Water)
+          '#33691E', // Dark olive (Grasslands)
+          '#004D40', // Dark teal (Wetlands)
+          '#3E2723', // Dark brown (Soil)
+          '#263238', // Dark blue-gray (Urban)
+          '#827717'  // Dark lime (Desert)
         ]);
 
       // Adjust link colors to be more subtle
       const getLinkColor = (source: string): string => {
         const color = d3.color(colorScale(source));
-        return color ? color.copy({ opacity: 0.15 }).toString() : '#ccc';
+        return color ? color.copy({ opacity: 0.25 }).toString() : '#ccc';
       };
 
       [0, 1, 2].forEach(layer => {
@@ -363,10 +380,23 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
           // Determine opacity
           let opacity = 1;
           if (activeNode) {
-            if (n.name === activeNode || connectedNodes.has(n.name)) {
-              opacity = 1;
+            const activeNodeType = getNodeCategory(activeNode).type;
+            if (activeNodeType === 'SECTOR') {
+              // For sectors, show the sector, its connected flows, and all stocks
+              if (n.name === activeNode || 
+                  connectedNodes.has(n.name) || 
+                  getNodeCategory(n.name).type === 'STOCK') {
+                opacity = 1;
+              } else {
+                opacity = 0.1;
+              }
             } else {
-              opacity = 0.1;
+              // For other nodes, show only direct connections
+              if (n.name === activeNode || connectedNodes.has(n.name)) {
+                opacity = 1;
+              } else {
+                opacity = 0.1;
+              }
             }
           } else {
             // Default state: calm but readable
@@ -441,7 +471,17 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
         })
         .style('transition', 'opacity 0.3s, stroke-width 0.3s')
         .style('opacity', d => {
-          if (!activeNode) return 0.15;
+          if (!activeNode) return 0.25;
+          const activeNodeType = getNodeCategory(activeNode).type;
+          
+          if (activeNodeType === 'SECTOR') {
+            // For sectors, show both direct connections and flow-to-stock connections
+            return (d.source.name === activeNode || 
+                   (getNodeCategory(d.source.name).type === 'FLOW' && 
+                    getNodeCategory(d.target.name).type === 'STOCK')) ? 1 : 0.1;
+          }
+          
+          // For other nodes, show only direct connections
           return (d.source.name === activeNode || d.target.name === activeNode) ? 1 : 0.1;
         });
     };
@@ -527,8 +567,8 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
                 const { type } = getNodeCategory(nodeName);
                 // Helper to convert value to label and color
                 const valueLabel = (v: number) => v === 1 ? 'low' : v === 2 ? 'moderate' : v === 3 ? 'high' : v;
-                // Use blue for moderate for better aesthetics
-                const valueColor = (v: number) => v === 1 ? 'text-green-700' : v === 2 ? 'text-blue-700' : v === 3 ? 'text-red-600' : 'text-gray-600';
+                // Use yellow for moderate for better aesthetics
+                const valueColor = (v: number) => v === 1 ? 'text-green-700' : v === 2 ? 'text-yellow-500' : v === 3 ? 'text-red-600' : 'text-gray-600';
                 if (type === 'SECTOR') {
                   const flows = processedLinks
                     .filter(l => l.source.name === nodeName)
@@ -614,7 +654,7 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
           </div>
         ) : (
           <div className="text-gray-500 text-sm">
-            Hover over a node to see details
+            Hover or click to explore nature risk exposure
           </div>
         )}
       </div>
