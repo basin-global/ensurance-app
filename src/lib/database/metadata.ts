@@ -35,16 +35,15 @@ async function checkImageExists(url: string): Promise<boolean> {
 // Helper to check if table exists
 async function checkTableExists(tableName: string): Promise<boolean> {
     try {
-        const result = await sql.query(`
+        const result = await sql`
             SELECT EXISTS (
                 SELECT FROM information_schema.tables 
                 WHERE table_schema = 'members'
-                AND table_name = $1
-            )
-        `, [tableName.replace('members.', '')]);
+                AND table_name = ${tableName}
+            );
+        `;
         return result.rows[0].exists;
-    } catch (error) {
-        console.error('Error checking table existence:', error);
+    } catch {
         return false;
     }
 }
@@ -55,15 +54,6 @@ export const metadata = {
         try {
             // Check if this is a specific token
             if (contract.toLowerCase() === specificContract.address.toLowerCase()) {
-                // Handle contract metadata (tokenId 0)
-                if (tokenId === '0') {
-                    return {
-                        name: 'Specific Certificates',
-                        description: 'Specific Certificates for Natural Capital',
-                        image: `https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com/specific-ensurance/0.png`
-                    };
-                }
-
                 // Get specific token data
                 const { rows: [token] } = await sql`
                     SELECT * FROM certificates.specific 
@@ -94,11 +84,13 @@ export const metadata = {
             const { rows: [group] } = await sql`
                 SELECT * FROM members.groups 
                 WHERE decode(replace(contract_address, '0x', ''), 'hex') = decode(replace(${contract}, '0x', ''), 'hex')
-                LIMIT 1
             `;
 
             if (!group) {
-                throw new Error('Group not found');
+                return {
+                    error: 'Group not found',
+                    status: 404
+                };
             }
 
             // Remove leading dot for table name
@@ -108,7 +100,10 @@ export const metadata = {
             // Check if table exists
             const tableExists = await checkTableExists(tableName);
             if (!tableExists) {
-                throw new Error(`Accounts table for group ${group.group_name} does not exist`);
+                return {
+                    error: `Accounts table for group ${group.group_name} does not exist`,
+                    status: 404
+                };
             }
 
             // Check if token exists on-chain using domainIdsNames

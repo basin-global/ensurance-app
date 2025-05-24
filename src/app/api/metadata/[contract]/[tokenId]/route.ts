@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { metadata } from '@/lib/database/metadata';
+import { specificContract } from '@/modules/specific/config/ERC1155';
 
 // Force dynamic route to ensure fresh data
 export const dynamic = 'force-dynamic';
@@ -14,7 +15,24 @@ export async function GET(
             tokenId: params.tokenId
         });
         
+        // Check if this is a specific certificate contract
+        const isSpecificContract = params.contract.toLowerCase() === specificContract.address.toLowerCase();
+        
+        if (isSpecificContract) {
+            console.log('Handling specific certificate metadata request');
+        } else {
+            console.log('Handling group account metadata request');
+        }
+        
         const nftMetadata = await metadata.getByContractAndToken(params.contract, params.tokenId);
+        
+        if (nftMetadata.error) {
+            console.error('Metadata error:', nftMetadata.error);
+            return NextResponse.json(
+                { error: nftMetadata.error },
+                { status: nftMetadata.status || 500 }
+            );
+        }
         
         console.log('Metadata generated:', nftMetadata);
         return NextResponse.json(nftMetadata);
