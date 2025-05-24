@@ -1,10 +1,12 @@
 import { put } from '@vercel/blob'
-import { TokenMetadata } from './config/ERC1155'
+import { TokenMetadata, specificContract } from './config/ERC1155'
+import { sql } from '@vercel/postgres'
 
 const BLOB_DIR = 'specific-ensurance'
 const BLOB_BASE_URL = 'https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com'
 
 export interface SpecificMetadata extends TokenMetadata {
+  image: string
   animation_url?: string
   content?: {
     mime: string
@@ -17,84 +19,79 @@ export interface SpecificMetadata extends TokenMetadata {
  */
 export const specificMetadata = {
   /**
-   * Upload media file (image, video, audio) to Vercel Blob
-   * @param file The file to upload
+   * Upload media file to Vercel Blob
+   * @param file The file to upload (must be PNG)
    * @param tokenId The token ID (use '0' for contract image)
-   * @param thumbnail Optional thumbnail image for video files
    * @returns The URL of the uploaded file
    */
   async uploadMedia(
     file: File, 
-    tokenId: string,
-    thumbnail?: File
-  ): Promise<{ url: string; thumbnailUrl?: string }> {
-    // Get file extension
-    const ext = file.name.split('.').pop()?.toLowerCase() || ''
-    const validExts = ['png', 'jpg', 'jpeg', 'gif', 'mp4']
-    
-    if (!validExts.includes(ext)) {
-      throw new Error('Invalid file type. Supported: PNG, JPG, GIF, MP4')
+    tokenId: string
+  ): Promise<{ url: string }> {
+    // Validate file type
+    if (file.type !== 'image/png') {
+      throw new Error('Only PNG images are supported')
     }
 
-    const isVideo = ext === 'mp4'
+    // Create form data
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('tokenId', tokenId)
 
-    // Upload main file
-    const { url } = await put(`${BLOB_DIR}/${tokenId}.${ext}`, file, {
-      access: 'public',
-      addRandomSuffix: false,
-      token: process.env.BLOB_READ_WRITE_TOKEN
+    // Upload file via API route
+    const response = await fetch('/api/blob/upload', {
+      method: 'POST',
+      body: formData
     })
 
-    // For videos, handle thumbnail
-    if (isVideo) {
-      if (!thumbnail) {
-        throw new Error('Thumbnail image required for video files')
-      }
-
-      const thumbExt = thumbnail.name.split('.').pop()?.toLowerCase() || ''
-      if (!['png', 'jpg', 'jpeg'].includes(thumbExt)) {
-        throw new Error('Thumbnail must be PNG or JPG')
-      }
-
-      const { url: thumbnailUrl } = await put(
-        `${BLOB_DIR}/${tokenId}-thumb.${thumbExt}`, 
-        thumbnail,
-        {
-          access: 'public',
-          addRandomSuffix: false,
-          token: process.env.BLOB_READ_WRITE_TOKEN
-        }
-      )
-
-      return { url, thumbnailUrl }
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to upload file')
     }
 
+    const { url } = await response.json()
     return { url }
+  },
+
+  /**
+   * Store metadata in database
+   */
+  async storeMetadata(
+    tokenId: string,
+    metadata: SpecificMetadata
+  ): Promise<void> {
+    await sql`
+      INSERT INTO certificates.specific (
+        token_id,
+        chain,
+        name,
+        description,
+        image,
+        animation_url,
+        mime_type
+      ) VALUES (
+        ${Number(tokenId)},
+        ${specificContract.network.name.toLowerCase()},
+        ${metadata.name},
+        ${metadata.description || null},
+        ${metadata.image},
+        ${metadata.animation_url || null},
+        ${metadata.content?.mime || 'image/png'}
+      )
+    `
   },
 
   /**
    * Get the metadata URL for a token
    */
   getMetadataUrl(tokenId: string): string {
-    return `${process.env.NEXT_PUBLIC_APP_URL}/api/specific/${tokenId}`
+    return `/api/metadata/${specificContract.address}/${tokenId}`
   },
 
   /**
-   * Get the expected blob URLs for a token's media
+   * Get the expected blob URL for a token's media
    */
-  getMediaUrls(tokenId: string, ext: string): {
-    mediaUrl: string
-    thumbnailUrl?: string 
-  } {
-    const mediaUrl = `${BLOB_BASE_URL}/${BLOB_DIR}/${tokenId}.${ext}`
-    
-    if (ext === 'mp4') {
-      return {
-        mediaUrl,
-        thumbnailUrl: `${BLOB_BASE_URL}/${BLOB_DIR}/${tokenId}-thumb.png`
-      }
-    }
-
-    return { mediaUrl }
+  getMediaUrl(tokenId: string): string {
+    return `${BLOB_BASE_URL}/${BLOB_DIR}/${tokenId}.png`
   }
 } 

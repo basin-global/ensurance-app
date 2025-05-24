@@ -2,13 +2,20 @@ import { createNew1155Token } from '@zoralabs/protocol-sdk'
 import { createPublicClient, createWalletClient, custom, http } from 'viem'
 import { base } from 'viem/chains'
 import { USDC_ADDRESS } from './config/ERC20'
-import { SPECIFIC_CONTRACT_ADDRESS, specificContract, type TokenMetadata } from './config/ERC1155'
+import { specificContract, type TokenMetadata } from './config/ERC1155'
 import type { Address } from 'viem'
 import { publicClient } from './config/ERC20'
 import type { ERC20MintConfig } from './config/ERC20'
 import { isAppAdmin } from '@/config/admin'
 import { specificMetadata } from './metadata'
 import { sql } from '@vercel/postgres'
+import { type Hash } from 'viem'
+import type { TokenMetadata as TokenMetadataType } from './types'
+import { uploadMedia } from './metadata'
+import { storeMetadata } from './metadata'
+
+// Constants
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as `0x${string}`
 
 // ABI for reading nextTokenId
 const CONTRACT_ABI = [{
@@ -33,24 +40,23 @@ export async function getNextTokenId(): Promise<string> {
 }
 
 export type CreateTokenStatus = {
-  step: 'creating-token' | 'uploading-media' | 'storing-metadata' | 'complete';
-  tokenId?: string;
-  txHash?: string;
-  mediaUrl?: string;
-  error?: string;
+  step: 'creating-token' | 'uploading-media' | 'storing-metadata' | 'complete'
+  error?: string
+  tokenId?: bigint
+  txHash?: `0x${string}`
+  mediaUrl?: string
 }
 
-export interface CreateTokenParams {
-  metadata: TokenMetadata;
-  mediaFile: File;
-  thumbnailFile?: File;
-  erc20Config: {
-    currency: Address;
-    pricePerToken: bigint;
-    payoutRecipient: Address;
-  };
-  creatorAccount: Address;
-  onStatus?: (status: CreateTokenStatus) => void;
+export type CreateTokenParams = {
+  metadata: TokenMetadata
+  mediaFile: File
+  erc20Config?: {
+    currency: `0x${string}`
+    pricePerToken: bigint
+    payoutRecipient: `0x${string}`
+  }
+  creatorAccount: `0x${string}`
+  onStatus: (status: CreateTokenStatus) => void
 }
 
 /**
@@ -75,13 +81,12 @@ export async function uploadTokenMedia({
     })
 
     // Upload media
-    const { url: mediaUrl, thumbnailUrl } = await specificMetadata.uploadMedia(
+    const { url: mediaUrl } = await specificMetadata.uploadMedia(
       mediaFile,
-      tokenId,
-      thumbnailFile
+      tokenId
     )
 
-    return { mediaUrl, thumbnailUrl }
+    return { mediaUrl }
   } catch (error) {
     onStatus?.({
       step: 'uploading-media',
@@ -97,46 +102,61 @@ export async function uploadTokenMedia({
  */
 export async function createToken({
   metadata,
+  mediaFile,
   erc20Config,
   creatorAccount,
   onStatus
-}: CreateTokenParams) {
+}: CreateTokenParams): Promise<{
+  tokenId: bigint
+  parameters: {
+    abi: any
+    functionName: string
+    args: any[]
+    address: `0x${string}`
+  }
+}> {
   try {
-    onStatus?.({ step: 'creating-token' })
+    onStatus({
+      step: 'creating-token'
+    })
 
-    // Create token parameters
+    // Get next token ID
+    const nextTokenId = await getNextTokenId()
+
+    // Create token on-chain
     const result = await createNew1155Token({
       contractAddress: specificContract.address,
       token: {
-        tokenMetadataURI: '', // Will be set later
-        payoutRecipient: erc20Config.payoutRecipient,
+        tokenMetadataURI: `https://ensurance.app/api/metadata/${specificContract.address}/${nextTokenId}`,
         salesConfig: {
-          pricePerToken: erc20Config.pricePerToken,
-          saleStart: BigInt(Math.floor(Date.now() / 1000)),
-          saleEnd: BigInt(0),
+          type: "erc20Mint",
+          currency: erc20Config?.currency ?? ZERO_ADDRESS,
+          pricePerToken: erc20Config?.pricePerToken ?? BigInt(0),
           maxTokensPerAddress: BigInt(0),
-          currency: erc20Config.currency
+          saleEnd: BigInt(0),
+          saleStart: BigInt(Math.floor(Date.now() / 1000))
         }
       },
       account: creatorAccount,
       chainId: base.id
     })
 
-    onStatus?.({ 
+    // Update status: Token created
+    onStatus?.({
       step: 'creating-token',
-      tokenId: result.tokenId.toString()
+      tokenId: result.tokenId
     })
 
+    // Return the result for transaction submission
     return {
-      tokenId: result.tokenId.toString(),
+      tokenId: result.tokenId,
       parameters: result.parameters
     }
-
-  } catch (error: any) {
-    console.error('Error creating token:', error)
-    if (error?.code === 4001 || error?.message?.includes('rejected')) {
-      throw new Error('Transaction cancelled')
-    }
+  } catch (error) {
+    onStatus?.({
+      step: 'error',
+      error: error instanceof Error ? error.message : 'Failed to create token'
+    })
     throw error
   }
 }
@@ -148,70 +168,57 @@ export async function finalizeToken({
   tokenId,
   metadata,
   mediaFile,
-  thumbnailFile,
   onStatus
 }: {
-  tokenId: string
+  tokenId: bigint
   metadata: TokenMetadata
   mediaFile: File
-  thumbnailFile?: File
   onStatus?: (status: CreateTokenStatus) => void
-}) {
+}): Promise<void> {
   try {
     // Update status: Uploading media
     onStatus?.({
       step: 'uploading-media',
-      tokenId
+      tokenId: tokenId.toString()
     })
 
     // Upload media
-    const { url: mediaUrl, thumbnailUrl } = await specificMetadata.uploadMedia(
+    const { url: mediaUrl } = await specificMetadata.uploadMedia(
       mediaFile,
-      tokenId,
-      thumbnailFile
+      tokenId.toString()
     )
 
     // Update status: Storing metadata
     onStatus?.({
       step: 'storing-metadata',
-      tokenId,
-      mediaUrl
+      tokenId: tokenId.toString()
     })
 
-    // Store metadata in database
-    await sql`
-      INSERT INTO certificates.specific (
-        token_id,
-        chain,
-        name,
-        description,
-        image,
-        animation_url,
-        mime_type
-      ) VALUES (
-        ${Number(tokenId)},
-        ${specificContract.network.name.toLowerCase()},
-        ${metadata.name},
-        ${metadata.description || null},
-        ${thumbnailUrl || mediaUrl},
-        ${mediaUrl.endsWith('.mp4') ? mediaUrl : null},
-        ${mediaFile.type}
-      )
-    `
+    // Store metadata
+    await specificMetadata.storeMetadata(
+      tokenId.toString(),
+      {
+        name: metadata.name,
+        description: metadata.description,
+        image: mediaUrl,
+        animation_url: mediaUrl,
+        content: {
+          mime: 'image/png',
+          uri: mediaUrl
+        }
+      }
+    )
 
     // Update status: Complete
     onStatus?.({
       step: 'complete',
-      tokenId,
+      tokenId: tokenId.toString(),
       mediaUrl
     })
-
-    return { mediaUrl }
   } catch (error) {
     onStatus?.({
-      step: 'uploading-media',
-      tokenId,
-      error: error instanceof Error ? error.message : 'Failed to upload media'
+      step: 'error',
+      error: error instanceof Error ? error.message : 'Failed to finalize token'
     })
     throw error
   }

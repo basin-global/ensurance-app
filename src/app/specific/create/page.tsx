@@ -5,14 +5,20 @@ import { parseUnits, createWalletClient, custom, type Hash } from 'viem'
 import { base } from 'viem/chains'
 import { createToken, finalizeToken, type CreateTokenStatus } from '@/modules/specific/create'
 import { USDC_ADDRESS } from '@/modules/specific/config/ERC20'
-import { MAX_SUPPLY_OPEN_EDITION } from '@/modules/specific/config/ERC1155'
+import { MAX_SUPPLY_OPEN_EDITION, specificContract } from '@/modules/specific/config/ERC1155'
 import { toast } from 'react-toastify'
 import { usePrivy, useWallets } from '@privy-io/react-auth'
 import { useRouter } from 'next/navigation'
 import { isAppAdmin } from '@/config/admin'
 import Link from 'next/link'
-import { createWalletClient as createWalletClientViem, http } from 'viem'
+import { createWalletClient as createWalletClientViem, http, createPublicClient } from 'viem'
 import type { WalletClient } from 'viem'
+
+// Initialize public client
+const publicClient = createPublicClient({
+  chain: base,
+  transport: http()
+})
 
 export default function CreateSpecificPage() {
   const { user, ready, authenticated } = usePrivy()
@@ -34,7 +40,7 @@ export default function CreateSpecificPage() {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [mediaFile, setMediaFile] = useState<File>()
-  const [thumbnailFile, setThumbnailFile] = useState<File>()
+  const [previewUrl, setPreviewUrl] = useState<string>()
   const [price, setPrice] = useState('')
   const [isLimitedEdition, setIsLimitedEdition] = useState(false)
   const [maxSupply, setMaxSupply] = useState('')
@@ -59,24 +65,21 @@ export default function CreateSpecificPage() {
         transport: custom(provider)
       })
 
-      // TODO: Implement proper type checking for createToken parameters
-      /*
+      // Step 1: Create token on-chain
       const result = await createToken({
         metadata: {
           name,
           description,
           maxSupply: isLimitedEdition ? BigInt(maxSupply) : MAX_SUPPLY_OPEN_EDITION,
-          createReferral: address
+          createReferral: activeWallet.address as `0x${string}`
         },
         mediaFile,
-        thumbnailFile,
-        // TODO: Implement proper type checking for payoutRecipient
-        // erc20Config: {
-        //   currency: USDC_ADDRESS,
-        //   pricePerToken: parseUnits(price, 6),
-        //   payoutRecipient: address
-        // },
-        creatorAccount: address as `0x${string}`,
+        erc20Config: {
+          currency: USDC_ADDRESS,
+          pricePerToken: price ? parseUnits(price, 6) : BigInt(0),
+          payoutRecipient: activeWallet.address as `0x${string}`
+        },
+        creatorAccount: activeWallet.address as `0x${string}`,
         onStatus: (newStatus) => {
           setStatus(newStatus)
           
@@ -102,11 +105,8 @@ export default function CreateSpecificPage() {
           }
         }
       })
-      */
 
-      // TODO: Implement proper type checking for contract interactions
-      // Extract contract parameters from Zora SDK result
-      /*
+      // Step 2: Submit transaction
       const { abi, functionName, args, address: contractAddress } = result.parameters
       const hash = await walletClient.writeContract({
         abi,
@@ -122,17 +122,19 @@ export default function CreateSpecificPage() {
         txHash: hash
       } : prev)
 
-      // After transaction is confirmed, upload media and finalize
+      // Step 3: Wait for transaction confirmation
+      await publicClient.waitForTransactionReceipt({ hash })
+
+      // Step 4: Upload media and store metadata
       await finalizeToken({
         tokenId: result.tokenId,
         metadata: {
           name,
           description,
           maxSupply: isLimitedEdition ? BigInt(maxSupply) : MAX_SUPPLY_OPEN_EDITION,
-          createReferral: address
+          createReferral: activeWallet.address as `0x${string}`
         },
         mediaFile,
-        thumbnailFile,
         onStatus: (newStatus) => {
           setStatus(prev => ({
             ...prev,
@@ -141,7 +143,9 @@ export default function CreateSpecificPage() {
           }))
         }
       })
-      */
+
+      // Step 5: Redirect to token page
+      router.push(`/specific/${specificContract.address}/${result.tokenId}`)
 
     } catch (error) {
       console.error('Error creating token:', error)
@@ -151,17 +155,39 @@ export default function CreateSpecificPage() {
     }
   }
 
-  const handleMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMediaChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    setMediaFile(file)
-
-    // Clear thumbnail if not video
-    if (!file.type.includes('video')) {
-      setThumbnailFile(undefined)
+    // Validate file type
+    if (file.type !== 'image/png') {
+      toast.error('Only PNG images are supported')
+      return
     }
+
+    // Create preview
+    const url = URL.createObjectURL(file)
+    setPreviewUrl(url)
+
+    // Load image to check dimensions
+    const img = new Image()
+    img.onload = () => {
+      if (img.width !== img.height) {
+        toast.warning('Image should be square. It will be cropped to square.')
+      }
+      setMediaFile(file)
+    }
+    img.src = url
   }
+
+  // Clean up preview URL
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    }
+  }, [previewUrl])
 
   // Status display component
   const StatusDisplay = () => {
@@ -279,30 +305,26 @@ export default function CreateSpecificPage() {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="media" className="block text-sm font-medium text-white">Media File (Image or Video)</label>
+              <label htmlFor="media" className="block text-sm font-medium text-white">Media File (PNG)</label>
               <input
                 id="media"
                 type="file"
                 className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-white file:text-white file:bg-transparent"
-                accept="image/*,video/mp4"
+                accept="image/png"
                 onChange={handleMediaChange}
                 required
               />
+              {previewUrl && (
+                <div className="mt-2">
+                  <p className="text-sm text-muted-foreground mb-2">Preview:</p>
+                  <img 
+                    src={previewUrl} 
+                    alt="Preview" 
+                    className="w-32 h-32 object-cover rounded-lg"
+                  />
+                </div>
+              )}
             </div>
-
-            {mediaFile?.type.includes('video') && (
-              <div className="space-y-2">
-                <label htmlFor="thumbnail" className="block text-sm font-medium text-white">Thumbnail Image (Required for Video)</label>
-                <input
-                  id="thumbnail"
-                  type="file"
-                  className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-white file:text-white file:bg-transparent"
-                  accept="image/*"
-                  onChange={e => setThumbnailFile(e.target.files?.[0])}
-                  required
-                />
-              </div>
-            )}
 
             <div className="space-y-2">
               <label htmlFor="price" className="block text-sm font-medium text-white">Price (USDC)</label>

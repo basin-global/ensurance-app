@@ -28,7 +28,7 @@ export interface SpecificMetadata extends TokenMetadata {
 }
 
 export const specificContract = {
-  address: '0x...' as `0x${string}`,
+  address: '0x7DFaa8f8E2aA32b6C2112213B395b4C9889580dd' as `0x${string}`,
   rpcUrl: 'https://mainnet.base.org',
   network: {
     id: base.id,

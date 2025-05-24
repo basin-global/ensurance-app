@@ -3,6 +3,7 @@ import { ImageGenerator } from '@/modules/metadata/ImageGenerator';
 import { sync } from '@/modules/admin/sync/service';
 import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
+import { specificContract } from '@/modules/specific/config/ERC1155';
 
 // Initialize Viem client
 const client = createPublicClient({
@@ -52,6 +53,43 @@ export const metadata = {
     // Get NFT metadata by contract and token ID
     getByContractAndToken: async (contract: string, tokenId: string) => {
         try {
+            // Check if this is a specific token
+            if (contract.toLowerCase() === specificContract.address.toLowerCase()) {
+                // Handle contract metadata (tokenId 0)
+                if (tokenId === '0') {
+                    return {
+                        name: 'Specific Certificates',
+                        description: 'Specific Certificates for Natural Capital',
+                        image: `https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com/specific-ensurance/0.png`
+                    };
+                }
+
+                // Get specific token data
+                const { rows: [token] } = await sql`
+                    SELECT * FROM certificates.specific 
+                    WHERE token_id = ${Number(tokenId)}
+                    LIMIT 1
+                `;
+
+                if (!token) {
+                    return {
+                        error: `Token ${tokenId} not found`,
+                        status: 404
+                    };
+                }
+
+                return {
+                    name: token.name,
+                    description: token.description || 'A Specific Certificate for Natural Capital',
+                    image: token.image,
+                    animation_url: token.animation_url,
+                    content: {
+                        mime: token.mime_type,
+                        uri: token.animation_url || token.image
+                    }
+                };
+            }
+
             // Get group info from contract address
             const { rows: [group] } = await sql`
                 SELECT * FROM members.groups 

@@ -6,7 +6,7 @@ import GeneralCertificateVerification from './GeneralCertificateVerification'
 import { ShieldCheck } from 'lucide-react'
 
 interface Props {
-  type: 'group' | 'account' | 'general'
+  type: 'group' | 'account' | 'general' | 'specific'
   name: string
   group?: string
   contractAddress?: string
