@@ -3,7 +3,7 @@
 import { PageHeader } from '@/components/layout/PageHeader'
 import VerificationSection from '@/components/layout/verifications/VerificationSection'
 import { SplitsWrapper } from '@/providers/splits-provider'
-import Details from '@/modules/specific/Details'
+import { Collect } from '@/modules/specific/collect'
 
 export default function TokenPage({
   params
@@ -21,7 +21,7 @@ export default function TokenPage({
       
       <div className="container mx-auto px-4 flex-1 pb-12">
         <SplitsWrapper>
-          <Details
+          <Collect
             contractAddress={params.contract as `0x${string}`}
             tokenId={params.tokenId}
           />

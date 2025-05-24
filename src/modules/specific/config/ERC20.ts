@@ -39,27 +39,4 @@ export const SUPPORTED_TOKENS: Record<string, SupportedERC20Token> = {
     decimals: 6,
     // priceFeed: '0x...' // Chainlink or other oracle address for future use
   }
-} as const
-
-/**
- * Convert USD price to token amount
- * Currently just 1:1 for USDC, but will support price feeds later
- */
-export function convertUSDToTokens(
-  usdAmount: number,
-  tokenSymbol: keyof typeof SUPPORTED_TOKENS
-): bigint {
-  const token = SUPPORTED_TOKENS[tokenSymbol]
-  
-  if (!token) {
-    throw new Error(`Unsupported token: ${tokenSymbol}`)
-  }
-
-  // For now, just handle USDC 1:1
-  if (tokenSymbol === 'USDC') {
-    return BigInt(Math.floor(usdAmount * 10 ** token.decimals))
-  }
-
-  // TODO: Implement price feed conversion for other tokens
-  throw new Error('Price conversion not yet implemented for non-USDC tokens')
-} 
+} as const 

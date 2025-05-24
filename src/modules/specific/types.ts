@@ -13,4 +13,15 @@ export type TokenMetadata = {
     trait_type: string;
     value: string | number;
   }>;
+}
+
+export interface SpecificMetadata {
+  name: string;
+  description: string;
+  image: string;
+  animation_url?: string;
+  content: {
+    mime: string;
+    uri: string;
+  };
 } 

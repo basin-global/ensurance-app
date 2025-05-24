@@ -17,7 +17,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -30,32 +29,38 @@ import {
 import { toast } from 'react-toastify'
 import Image from 'next/image'
 
-interface EnsureButtonsProps {
+interface CollectProps {
   contractAddress: `0x${string}`
   tokenId: string
   size?: 'sm' | 'lg'
   imageUrl?: string
+  tokenInfo?: any
+  onTokenInfoUpdate?: (info: any) => void
 }
 
-export function EnsureButtons1155({ 
+export function Collect({ 
   contractAddress,
   tokenId,
   size = 'lg',
-  imageUrl = '/assets/no-image-found.png'
-}: EnsureButtonsProps) {
+  imageUrl = '/assets/no-image-found.png',
+  tokenInfo: initialTokenInfo,
+  onTokenInfoUpdate
+}: CollectProps) {
   const { login, authenticated } = usePrivy()
   const { wallets } = useWallets()
   const [isLoading, setIsLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [quantity, setQuantity] = useState('1')
-  const [tokenInfo, setTokenInfo] = useState<any>(null)
+  const [tokenInfo, setTokenInfo] = useState(initialTokenInfo)
+  const [isLoadingInfo, setIsLoadingInfo] = useState(!initialTokenInfo)
 
-  // Fetch token info when modal opens
+  // Fetch token info when component mounts or when modal opens
   useEffect(() => {
     const fetchTokenInfo = async () => {
-      if (!modalOpen) return
+      if (!modalOpen && initialTokenInfo) return
 
       try {
+        setIsLoadingInfo(true)
         const publicClient = createPublicClient({
           chain: base,
           transport: http('https://mainnet.base.org')
@@ -68,18 +73,18 @@ export function EnsureButtons1155({
           tokenId: BigInt(tokenId)
         })
 
-        // Log raw token info for debugging
-        console.log('Raw token info from SDK:', token)
-
         setTokenInfo(token)
+        onTokenInfoUpdate?.(token)
       } catch (error) {
         console.error('Error fetching token info:', error)
         toast.error('Failed to fetch token info')
+      } finally {
+        setIsLoadingInfo(false)
       }
     }
 
     fetchTokenInfo()
-  }, [modalOpen, contractAddress, tokenId])
+  }, [modalOpen, contractAddress, tokenId, onTokenInfoUpdate, initialTokenInfo])
 
   const handleOpenModal = async () => {
     if (!authenticated) {
@@ -104,13 +109,11 @@ export function EnsureButtons1155({
 
       const provider = await activeWallet.getEthereumProvider()
       
-      // Create public client for reading
       const publicClient = createPublicClient({
         chain: base,
         transport: http('https://mainnet.base.org')
       })
 
-      // Create wallet client
       const walletClient = createWalletClient({
         chain: base,
         transport: custom(provider)
@@ -119,13 +122,18 @@ export function EnsureButtons1155({
       const pendingToast = toast.loading('preparing mint transaction...')
       
       try {
-        // Create collector client
         const collectorClient = createCollectorClient({ 
           chainId: base.id, 
-          publicClient: publicClient as any // TODO: Fix type issue
+          publicClient: publicClient as any
         })
 
-        // Get mint parameters
+        // Get token info first to ensure we have latest data
+        const { token } = await getToken({
+          tokenContract: SPECIFIC_CONTRACT_ADDRESS,
+          mintType: "1155",
+          tokenId: BigInt(tokenId)
+        })
+
         const { parameters, erc20Approval } = await collectorClient.mint({
           tokenContract: SPECIFIC_CONTRACT_ADDRESS,
           mintType: "1155",
@@ -136,30 +144,11 @@ export function EnsureButtons1155({
           mintRecipient: activeWallet.address as `0x${string}`
         })
 
-        // Log mint parameters for debugging
-        console.log('Mint parameters:', {
-          parameters,
-          erc20Approval,
-          tokenContract: SPECIFIC_CONTRACT_ADDRESS,
-          tokenId,
-          quantity,
-          minterAccount: activeWallet.address,
-          mintReferral: '0x7EdDce062a290c59feb95E2Bd7611eeE24610A6b',
-          mintRecipient: activeWallet.address
-        })
-
-        // If ERC20 approval is needed, handle it
         if (erc20Approval) {
           toast.update(pendingToast, {
             render: 'approving USDC spend...',
             type: 'info',
             isLoading: true
-          })
-
-          console.log('ERC20 Approval needed:', {
-            token: erc20Approval.erc20,
-            approveTo: erc20Approval.approveTo,
-            amount: erc20Approval.quantity
           })
 
           const approvalHash = await walletClient.writeContract({
@@ -173,7 +162,6 @@ export function EnsureButtons1155({
           await publicClient.waitForTransactionReceipt({ hash: approvalHash })
         }
 
-        // Send the mint transaction
         toast.update(pendingToast, {
           render: 'minting token...',
           type: 'info',
@@ -183,10 +171,10 @@ export function EnsureButtons1155({
         const hash = await walletClient.writeContract({
           ...parameters,
           account: activeWallet.address as `0x${string}`,
-          value: BigInt(0) // No ETH value since we're using USDC
+          value: BigInt(0)
         })
 
-        const receipt = await publicClient.waitForTransactionReceipt({ hash })
+        await publicClient.waitForTransactionReceipt({ hash })
         
         toast.update(pendingToast, {
           render: 'token minted successfully',
@@ -224,27 +212,73 @@ export function EnsureButtons1155({
 
   const iconSize = size === 'sm' ? 'w-6 h-6' : 'w-10 h-10'
 
-  // Calculate total price - handle both possible token info structures
+  // Calculate total price
   const pricePerToken = tokenInfo?.pricePerToken || tokenInfo?.salesConfig?.pricePerToken || BigInt(0)
   const totalPrice = pricePerToken * BigInt(quantity || '0')
 
+  if (isLoadingInfo) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-4 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+      </div>
+    )
+  }
+
   return (
-    <>
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              onClick={handleOpenModal}
-              className="flex items-center gap-2 text-gray-300 hover:text-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <PlusCircle className={`${iconSize} stroke-[1.5] stroke-green-500 hover:stroke-green-400 transition-colors`} />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>mint token</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      {/* Left column - Image */}
+      <div className="relative aspect-square rounded-lg overflow-hidden bg-gray-900">
+        {tokenInfo?.metadata?.image ? (
+          <Image
+            src={tokenInfo.metadata.image}
+            alt={tokenInfo.metadata.name || 'Token'}
+            fill
+            className="object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-gray-500">
+            No image available
+          </div>
+        )}
+      </div>
+
+      {/* Right column - Details */}
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-white">
+            {tokenInfo?.metadata?.name || 'Token'}
+          </h1>
+          {tokenInfo?.metadata?.description && (
+            <p className="mt-2 text-gray-400">
+              {tokenInfo.metadata.description}
+            </p>
+          )}
+        </div>
+
+        {/* Price and Mint Button */}
+        <div className="flex items-center justify-between pt-4">
+          {pricePerToken > BigInt(0) && (
+            <div className="text-xl font-medium text-white">
+              {formatUnits(pricePerToken, 6)} USDC
+            </div>
+          )}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleOpenModal}
+                  className="flex items-center gap-2 text-gray-300 hover:text-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <PlusCircle className={`${iconSize} stroke-[1.5] stroke-green-500 hover:stroke-green-400 transition-colors`} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>mint token</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      </div>
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="sm:max-w-[500px] bg-black/95 border border-gray-800 shadow-xl backdrop-blur-xl">
@@ -255,13 +289,13 @@ export function EnsureButtons1155({
                   mint token
                 </DialogTitle>
                 <div className="text-3xl font-bold text-white">
-                  Token #{tokenId}
+                  {tokenInfo?.metadata?.name || 'Token'}
                 </div>
               </div>
               <div className="relative w-20 h-20 rounded-lg overflow-hidden mr-4">
                 <Image 
-                  src={imageUrl}
-                  alt={`Token #${tokenId}`}
+                  src={tokenInfo?.metadata?.image || imageUrl}
+                  alt={tokenInfo?.metadata?.name || 'Token'}
                   fill
                   className="object-cover"
                 />
@@ -329,6 +363,6 @@ export function EnsureButtons1155({
           </div>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   )
 } 

@@ -7,15 +7,16 @@ import type { Address } from 'viem'
 import { publicClient } from './config/ERC20'
 import type { ERC20MintConfig } from './config/ERC20'
 import { isAppAdmin } from '@/config/admin'
-import { specificMetadata } from './metadata'
 import { sql } from '@vercel/postgres'
 import { type Hash } from 'viem'
-import type { TokenMetadata as TokenMetadataType } from './types'
-import { uploadMedia } from './metadata'
-import { storeMetadata } from './metadata'
+import type { TokenMetadata as TokenMetadataType, SpecificMetadata } from './types'
 
 // Constants
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as `0x${string}`
+
+// URL generation helper
+const getMetadataUrl = (tokenId: string) => 
+  `/api/metadata/${specificContract.address}/${tokenId}`;
 
 // ABI for reading nextTokenId
 const CONTRACT_ABI = [{
@@ -40,9 +41,9 @@ export async function getNextTokenId(): Promise<string> {
 }
 
 export type CreateTokenStatus = {
-  step: 'creating-token' | 'uploading-media' | 'storing-metadata' | 'complete'
+  step: 'creating-token' | 'uploading-media' | 'storing-metadata' | 'complete' | 'error'
   error?: string
-  tokenId?: bigint
+  tokenId?: string
   txHash?: `0x${string}`
   mediaUrl?: string
 }
@@ -80,12 +81,28 @@ export async function uploadTokenMedia({
       tokenId
     })
 
-    // Upload media
-    const { url: mediaUrl } = await specificMetadata.uploadMedia(
-      mediaFile,
-      tokenId
-    )
+    // Create form data
+    const formData = new FormData()
+    formData.append('file', mediaFile)
+    formData.append('tokenId', tokenId)
+    formData.append('metadata', JSON.stringify({
+      contract_address: specificContract.address,
+      name: '',  // These will be updated later in finalizeToken
+      description: ''
+    }))
 
+    // Upload media and store initial metadata
+    const response = await fetch('/api/specific', {
+      method: 'POST',
+      body: formData
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to upload file')
+    }
+
+    const { mediaUrl } = await response.json()
     return { mediaUrl }
   } catch (error) {
     onStatus?.({
@@ -127,7 +144,7 @@ export async function createToken({
     const result = await createNew1155Token({
       contractAddress: specificContract.address,
       token: {
-        tokenMetadataURI: `https://ensurance.app/api/metadata/${specificContract.address}/${nextTokenId}`,
+        tokenMetadataURI: getMetadataUrl(nextTokenId),
         salesConfig: {
           type: "erc20Mint",
           currency: erc20Config?.currency ?? ZERO_ADDRESS,
@@ -144,7 +161,7 @@ export async function createToken({
     // Update status: Token created
     onStatus?.({
       step: 'creating-token',
-      tokenId: result.tokenId
+      tokenId: result.tokenId.toString()
     })
 
     // Return the result for transaction submission
@@ -176,45 +193,40 @@ export async function finalizeToken({
   onStatus?: (status: CreateTokenStatus) => void
 }): Promise<void> {
   try {
-    // Update status: Uploading media
-    onStatus?.({
-      step: 'uploading-media',
-      tokenId: tokenId.toString()
-    })
-
-    // Upload media
-    const { url: mediaUrl } = await specificMetadata.uploadMedia(
-      mediaFile,
-      tokenId.toString()
-    )
-
-    // Update status: Storing metadata
+    // Update status: Uploading media and storing metadata
     onStatus?.({
       step: 'storing-metadata',
       tokenId: tokenId.toString()
-    })
+    });
 
-    // Store metadata
-    await specificMetadata.storeMetadata(
-      tokenId.toString(),
-      {
-        name: metadata.name,
-        description: metadata.description,
-        image: mediaUrl,
-        animation_url: mediaUrl,
-        content: {
-          mime: 'image/png',
-          uri: mediaUrl
-        }
-      }
-    )
+    // Create form data
+    const formData = new FormData();
+    formData.append('file', mediaFile);
+    formData.append('tokenId', tokenId.toString());
+    formData.append('metadata', JSON.stringify({
+      contract_address: specificContract.address,
+      name: metadata.name,
+      description: metadata.description
+    }));
+
+    // Upload media and store metadata
+    const response = await fetch('/api/specific', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to store metadata');
+    }
+
+    const { mediaUrl } = await response.json();
 
     // Update status: Complete
     onStatus?.({
       step: 'complete',
       tokenId: tokenId.toString(),
       mediaUrl
-    })
+    });
   } catch (error) {
     onStatus?.({
       step: 'error',
