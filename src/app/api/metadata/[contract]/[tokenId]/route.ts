@@ -35,7 +35,13 @@ export async function GET(
         }
         
         console.log('Metadata generated:', nftMetadata);
-        return NextResponse.json(nftMetadata);
+        return NextResponse.json(nftMetadata, {
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            }
+        });
     } catch (error) {
         console.error('Metadata API error:', {
             contract: params.contract,
@@ -45,7 +51,26 @@ export async function GET(
         });
         return NextResponse.json(
             { error: error instanceof Error ? error.message : 'Failed to get metadata' },
-            { status: 500 }
+            { 
+                status: 500,
+                headers: {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type'
+                }
+            }
         );
     }
+}
+
+// Handle OPTIONS request for CORS preflight
+export async function OPTIONS() {
+    return new NextResponse(null, {
+        status: 204,
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        }
+    });
 } 

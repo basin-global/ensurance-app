@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
         ${specificMetadata.description},
         ${specificMetadata.image},
         ${specificMetadata.animation_url},
-        ${specificMetadata.content.mime}
+        ${specificMetadata.content?.mime || null}
       )
       ON CONFLICT (token_id, contract_address) 
       DO UPDATE SET

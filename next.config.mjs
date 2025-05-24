@@ -17,6 +17,12 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'ensurance.app',
+        port: '',
+        pathname: '/**',
+      },
     ],
     domains: [
       'openseauserdata.com',
@@ -29,7 +35,8 @@ const nextConfig = {
       'cloudflare-ipfs.com',
       '2rhcowhl4b5wwjk8.public.blob.vercel-storage.com',
       'magic.decentralized-content.com',
-      'raw.githubusercontent.com'
+      'raw.githubusercontent.com',
+      'ensurance.app'
     ]
   }
 }
