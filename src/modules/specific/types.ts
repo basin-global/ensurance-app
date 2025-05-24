@@ -9,19 +9,17 @@ export type TokenMetadata = {
   description: string;
   image: string;
   thumbnail?: string;
-  attributes?: Array<{
-    trait_type: string;
-    value: string | number;
-  }>;
+  attributes?: Record<string, any>;
 }
 
 export interface SpecificMetadata {
   name: string;
-  description: string;
+  description?: string;
   image: string;
   animation_url?: string;
-  content: {
+  content?: {
     mime: string;
     uri: string;
   };
+  attributes?: Record<string, any>;
 } 

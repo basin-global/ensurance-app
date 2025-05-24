@@ -11,6 +11,7 @@ interface SpecificCertificate {
   image: string;
   animation_url: string | null;
   mime_type: string;
+  attributes: Record<string, any> | null;
   created_at: string;
   updated_at: string;
 }
@@ -32,7 +33,8 @@ export const specificCertificates = {
         description,
         image,
         animation_url,
-        mime_type
+        mime_type,
+        attributes
       ) VALUES (
         ${Number(tokenId)},
         ${specificContract.address},
@@ -41,7 +43,8 @@ export const specificCertificates = {
         ${metadata.description},
         ${metadata.image},
         ${metadata.animation_url || null},
-        ${metadata.content?.mime || 'image/png'}
+        ${metadata.content?.mime || 'image/png'},
+        ${metadata.attributes ? JSON.stringify(metadata.attributes) : null}
       )
       ON CONFLICT (token_id, contract_address) 
       DO UPDATE SET
@@ -50,6 +53,7 @@ export const specificCertificates = {
         image = EXCLUDED.image,
         animation_url = EXCLUDED.animation_url,
         mime_type = EXCLUDED.mime_type,
+        attributes = EXCLUDED.attributes,
         updated_at = NOW()
     `;
   },

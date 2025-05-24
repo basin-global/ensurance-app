@@ -72,11 +72,12 @@ export const metadata = {
                     name: token.name,
                     description: token.description || 'A Specific Certificate for Natural Capital',
                     image: token.image,
-                    animation_url: token.animation_url,
+                    animation_url: token.animation_url || null,
                     content: {
-                        mime: token.mime_type,
+                        mime: token.mime_type || null,
                         uri: token.animation_url || token.image
-                    }
+                    },
+                    attributes: token.attributes || []
                 };
             }
 
