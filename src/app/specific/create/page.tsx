@@ -13,6 +13,7 @@ import { isAppAdmin } from '@/config/admin'
 import Link from 'next/link'
 import { createWalletClient as createWalletClientViem, http, createPublicClient } from 'viem'
 import type { WalletClient } from 'viem'
+import { PageHeader } from '@/components/layout/PageHeader'
 
 // Initialize public client
 const publicClient = createPublicClient({
@@ -76,8 +77,7 @@ export default function CreateSpecificPage() {
         mediaFile,
         erc20Config: {
           currency: USDC_ADDRESS,
-          pricePerToken: price ? parseUnits(price, 6) : BigInt(0),
-          payoutRecipient: activeWallet.address as `0x${string}`
+          pricePerToken: price ? parseUnits(price, 6) : BigInt(0)
         },
         creatorAccount: activeWallet.address as `0x${string}`,
         onStatus: (newStatus) => {
@@ -276,128 +276,151 @@ export default function CreateSpecificPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-12">
-      <div className="container max-w-2xl">
-        <div className="bg-background border rounded-lg p-8">
-          <h1 className="text-2xl font-bold mb-8">Create Specific Certificate</h1>
+    <div className="min-h-screen flex flex-col">
+      <div className="container mx-auto px-4 py-8 flex-1">
+        <div className="space-y-8">
+          <PageHeader
+            title="create specific certificate"
+            showSearch={false}
+          />
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <label htmlFor="name" className="block text-sm font-medium text-white">Name</label>
-              <input
-                id="name"
-                className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-white"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                required
-              />
-            </div>
+          <div className="bg-gray-900/30 rounded-lg p-8">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <label htmlFor="name" className="block text-sm font-medium text-gray-200">Name</label>
+                <input
+                  id="name"
+                  className="w-full rounded-md border border-gray-700 bg-gray-900/50 px-3 py-2 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  required
+                />
+              </div>
 
-            <div className="space-y-2">
-              <label htmlFor="description" className="block text-sm font-medium text-white">Description</label>
-              <textarea
-                id="description"
-                className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-white"
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-                rows={4}
-              />
-            </div>
+              <div className="space-y-2">
+                <label htmlFor="description" className="block text-sm font-medium text-gray-200">Description</label>
+                <textarea
+                  id="description"
+                  className="w-full rounded-md border border-gray-700 bg-gray-900/50 px-3 py-2 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  rows={4}
+                />
+              </div>
 
-            <div className="space-y-2">
-              <label htmlFor="media" className="block text-sm font-medium text-white">Media File (PNG)</label>
-              <input
-                id="media"
-                type="file"
-                className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-white file:text-white file:bg-transparent"
-                accept="image/png"
-                onChange={handleMediaChange}
-                required
-              />
-              {previewUrl && (
-                <div className="mt-2">
-                  <p className="text-sm text-muted-foreground mb-2">Preview:</p>
-                  <img 
-                    src={previewUrl} 
-                    alt="Preview" 
-                    className="w-32 h-32 object-cover rounded-lg"
+              <div className="space-y-2">
+                <label htmlFor="media" className="block text-sm font-medium text-gray-200">Media File (PNG)</label>
+                <input
+                  id="media"
+                  type="file"
+                  className="w-full rounded-md border border-gray-700 bg-gray-900/50 px-3 py-2 text-white file:text-white file:bg-transparent file:border-0 file:mr-4 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  accept="image/png"
+                  onChange={handleMediaChange}
+                  required
+                />
+                {previewUrl && (
+                  <div className="mt-2">
+                    <p className="text-sm text-gray-400 mb-2">Preview:</p>
+                    <img 
+                      src={previewUrl} 
+                      alt="Preview" 
+                      className="w-32 h-32 object-cover rounded-lg"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="price" className="block text-sm font-medium text-gray-200">Price (USDC)</label>
+                <input
+                  id="price"
+                  type="number"
+                  className="w-full rounded-md border border-gray-700 bg-gray-900/50 px-3 py-2 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={price}
+                  onChange={e => {
+                    // Allow empty input
+                    if (e.target.value === '') {
+                      setPrice('')
+                      return
+                    }
+                    
+                    // Handle decimal input
+                    const value = e.target.value
+                    if (value === '.') {
+                      setPrice('0.')
+                      return
+                    }
+                    
+                    // Parse and validate number
+                    const num = parseFloat(value)
+                    if (!isNaN(num) && num >= 0) {
+                      // Only format to 2 decimals when the user has finished typing
+                      if (value.endsWith('.') || value.endsWith('0')) {
+                        setPrice(value)
+                      } else {
+                        setPrice(num.toFixed(2))
+                      }
+                    }
+                  }}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-200">Edition Type</label>
+                <div className="flex items-center space-x-4">
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      checked={!isLimitedEdition}
+                      onChange={() => setIsLimitedEdition(false)}
+                      className="rounded border-gray-700 bg-gray-900/50 text-blue-500 focus:ring-blue-500"
+                    />
+                    <span className="text-gray-200">Open Edition</span>
+                  </label>
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      checked={isLimitedEdition}
+                      onChange={() => setIsLimitedEdition(true)}
+                      className="rounded border-gray-700 bg-gray-900/50 text-blue-500 focus:ring-blue-500"
+                    />
+                    <span className="text-gray-200">Limited Edition</span>
+                  </label>
+                </div>
+              </div>
+
+              {isLimitedEdition && (
+                <div className="space-y-2">
+                  <label htmlFor="maxSupply" className="block text-sm font-medium text-gray-200">Max Supply</label>
+                  <input
+                    id="maxSupply"
+                    type="number"
+                    className="w-full rounded-md border border-gray-700 bg-gray-900/50 px-3 py-2 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    min="1"
+                    step="1"
+                    placeholder="Enter maximum supply"
+                    value={maxSupply}
+                    onChange={e => setMaxSupply(e.target.value)}
+                    required={isLimitedEdition}
                   />
                 </div>
               )}
-            </div>
 
-            <div className="space-y-2">
-              <label htmlFor="price" className="block text-sm font-medium text-white">Price (USDC)</label>
-              <input
-                id="price"
-                type="number"
-                className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-white placeholder:text-gray-500"
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-                value={price}
-                onChange={e => {
-                  // Format to 2 decimal places for display
-                  const value = parseFloat(e.target.value).toFixed(2)
-                  if (!isNaN(parseFloat(value))) {
-                    setPrice(value)
-                  }
-                }}
-                required
-              />
-            </div>
+              <button 
+                type="submit" 
+                disabled={isLoading}
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isLoading ? 'Creating...' : 'Create Token'}
+              </button>
+            </form>
 
-            <div className="space-y-2">
-              <label className="block text-sm font-medium">Edition Type</label>
-              <div className="flex items-center space-x-4">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    checked={!isLimitedEdition}
-                    onChange={() => setIsLimitedEdition(false)}
-                    className="rounded border-gray-300"
-                  />
-                  <span>Open Edition</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    checked={isLimitedEdition}
-                    onChange={() => setIsLimitedEdition(true)}
-                    className="rounded border-gray-300"
-                  />
-                  <span>Limited Edition</span>
-                </label>
-              </div>
-            </div>
-
-            {isLimitedEdition && (
-              <div className="space-y-2">
-                <label htmlFor="maxSupply" className="block text-sm font-medium text-white">Max Supply</label>
-                <input
-                  id="maxSupply"
-                  type="number"
-                  className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-white placeholder:text-gray-500"
-                  min="1"
-                  step="1"
-                  placeholder="Enter maximum supply"
-                  value={maxSupply}
-                  onChange={e => setMaxSupply(e.target.value)}
-                  required={isLimitedEdition}
-                />
-              </div>
-            )}
-
-            <button 
-              type="submit" 
-              disabled={isLoading}
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-2 px-4 rounded-md disabled:opacity-50"
-            >
-              {isLoading ? 'Creating...' : 'Create Token'}
-            </button>
-          </form>
-
-          <StatusDisplay />
+            <StatusDisplay />
+          </div>
         </div>
       </div>
     </div>

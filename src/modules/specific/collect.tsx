@@ -7,11 +7,17 @@ import {
   custom, 
   http,
   erc20Abi,
-  formatUnits
+  formatUnits,
+  type PublicClient,
+  type Chain
 } from 'viem'
 import { base } from 'viem/chains'
-import { getToken, createCollectorClient } from '@zoralabs/protocol-sdk'
-import { SPECIFIC_CONTRACT_ADDRESS } from './config/ERC1155'
+import { 
+  CONTRACTS, 
+  ABIS, 
+  publicClient,
+  type TokenMetadata 
+} from './config'
 import {
   Dialog,
   DialogContent,
@@ -28,6 +34,24 @@ import {
 } from "@/components/ui/tooltip"
 import { toast } from 'react-toastify'
 import Image from 'next/image'
+
+// Types for contract return values
+type TokenData = {
+  totalMinted: bigint
+  maxSupply: bigint
+  image: string
+  name: string
+  description: string
+}
+
+type SalesConfig = {
+  saleStart: bigint
+  saleEnd: bigint
+  maxTokensPerAddress: bigint
+  pricePerToken: bigint
+  fundsRecipient: `0x${string}`
+  currency: `0x${string}`
+}
 
 interface CollectProps {
   contractAddress: `0x${string}`
@@ -57,34 +81,60 @@ export function Collect({
   // Fetch token info when component mounts or when modal opens
   useEffect(() => {
     const fetchTokenInfo = async () => {
-      if (!modalOpen && initialTokenInfo) return
+      if (!tokenInfo) {
+        try {
+          setIsLoadingInfo(true)
+          
+          // Get token data and sales config
+          const [tokenData, salesConfig, tokenUri] = await Promise.all([
+            publicClient.readContract({
+              address: contractAddress,
+              abi: ABIS.specific,
+              functionName: 'getTokenInfo',
+              args: [BigInt(tokenId)]
+            }) as Promise<TokenData>,
+            publicClient.readContract({
+              address: contractAddress,
+              abi: ABIS.specific,
+              functionName: 'sale',
+              args: [BigInt(tokenId)]
+            }) as Promise<SalesConfig>,
+            publicClient.readContract({
+              address: contractAddress,
+              abi: ABIS.specific,
+              functionName: 'uri',
+              args: [BigInt(tokenId)]
+            }) as Promise<string>
+          ])
 
-      try {
-        setIsLoadingInfo(true)
-        const publicClient = createPublicClient({
-          chain: base,
-          transport: http('https://mainnet.base.org')
-        })
+          // Fetch metadata from tokenURI
+          const metadataResponse = await fetch(tokenUri)
+          if (!metadataResponse.ok) {
+            throw new Error('Failed to fetch metadata')
+          }
+          const metadata = await metadataResponse.json()
 
-        const { token } = await getToken({
-          publicClient,
-          tokenContract: contractAddress,
-          mintType: "1155",
-          tokenId: BigInt(tokenId)
-        })
+          const result = {
+            token: {
+              ...tokenData,
+              ...metadata,
+              salesConfig
+            }
+          }
 
-        setTokenInfo(token)
-        onTokenInfoUpdate?.(token)
-      } catch (error) {
-        console.error('Error fetching token info:', error)
-        toast.error('Failed to fetch token info')
-      } finally {
-        setIsLoadingInfo(false)
+          setTokenInfo(result)
+          onTokenInfoUpdate?.(result)
+        } catch (error) {
+          console.error('Error fetching token info:', error)
+          toast.error('Failed to fetch token info')
+        } finally {
+          setIsLoadingInfo(false)
+        }
       }
     }
 
     fetchTokenInfo()
-  }, [modalOpen, contractAddress, tokenId, onTokenInfoUpdate, initialTokenInfo])
+  }, [contractAddress, tokenId, onTokenInfoUpdate, tokenInfo])
 
   const handleOpenModal = async () => {
     if (!authenticated) {
@@ -109,11 +159,6 @@ export function Collect({
 
       const provider = await activeWallet.getEthereumProvider()
       
-      const publicClient = createPublicClient({
-        chain: base,
-        transport: http('https://mainnet.base.org')
-      })
-
       const walletClient = createWalletClient({
         chain: base,
         transport: custom(provider)
@@ -122,29 +167,15 @@ export function Collect({
       const pendingToast = toast.loading('preparing mint transaction...')
       
       try {
-        const collectorClient = createCollectorClient({ 
-          chainId: base.id, 
-          publicClient: publicClient as any
-        })
+        const quantityToMint = BigInt(quantity)
+        const mintReferral = '0x7EdDce062a290c59feb95E2Bd7611eeE24610A6b' as `0x${string}`
+        const mintRecipient = activeWallet.address as `0x${string}`
 
-        // Get token info first to ensure we have latest data
-        const { token } = await getToken({
-          tokenContract: SPECIFIC_CONTRACT_ADDRESS,
-          mintType: "1155",
-          tokenId: BigInt(tokenId)
-        })
+        // Check if ERC20 approval is needed
+        const pricePerToken = tokenInfo?.token?.salesConfig?.pricePerToken || BigInt(0)
+        const totalPrice = pricePerToken * quantityToMint
 
-        const { parameters, erc20Approval } = await collectorClient.mint({
-          tokenContract: SPECIFIC_CONTRACT_ADDRESS,
-          mintType: "1155",
-          tokenId: BigInt(tokenId),
-          quantityToMint: BigInt(quantity),
-          minterAccount: activeWallet.address as `0x${string}`,
-          mintReferral: '0x7EdDce062a290c59feb95E2Bd7611eeE24610A6b' as `0x${string}`,
-          mintRecipient: activeWallet.address as `0x${string}`
-        })
-
-        if (erc20Approval) {
+        if (totalPrice > BigInt(0)) {
           toast.update(pendingToast, {
             render: 'approving USDC spend...',
             type: 'info',
@@ -153,9 +184,9 @@ export function Collect({
 
           const approvalHash = await walletClient.writeContract({
             abi: erc20Abi,
-            address: erc20Approval.erc20,
+            address: CONTRACTS.usdc,
             functionName: 'approve',
-            args: [erc20Approval.approveTo, erc20Approval.quantity],
+            args: [contractAddress, totalPrice],
             account: activeWallet.address as `0x${string}`,
           })
 
@@ -163,15 +194,30 @@ export function Collect({
         }
 
         toast.update(pendingToast, {
-          render: 'minting token...',
+          render: 'confirm mint transaction in your wallet...',
           type: 'info',
           isLoading: true
         })
 
+        // Execute the mint transaction
         const hash = await walletClient.writeContract({
-          ...parameters,
-          account: activeWallet.address as `0x${string}`,
-          value: BigInt(0)
+          address: contractAddress,
+          abi: ABIS.specific,
+          functionName: 'mint',
+          args: [
+            BigInt(tokenId),
+            quantityToMint,
+            mintReferral,
+            mintRecipient,
+            '' // Empty string for no comment
+          ],
+          account: activeWallet.address as `0x${string}`
+        })
+
+        toast.update(pendingToast, {
+          render: 'minting token...',
+          type: 'info',
+          isLoading: true
         })
 
         await publicClient.waitForTransactionReceipt({ hash })
@@ -189,6 +235,13 @@ export function Collect({
         if (error?.code === 4001 || error?.message?.includes('rejected')) {
           toast.dismiss(pendingToast)
           toast.error('transaction cancelled')
+        } else if (error?.message?.includes('429')) {
+          toast.update(pendingToast, {
+            render: 'rate limit exceeded, please wait a moment and try again',
+            type: 'error',
+            isLoading: false,
+            autoClose: 5000
+          })
         } else {
           toast.update(pendingToast, {
             render: 'mint failed',
@@ -212,8 +265,8 @@ export function Collect({
 
   const iconSize = size === 'sm' ? 'w-6 h-6' : 'w-10 h-10'
 
-  // Calculate total price
-  const pricePerToken = tokenInfo?.pricePerToken || tokenInfo?.salesConfig?.pricePerToken || BigInt(0)
+  // Calculate total price from costs
+  const pricePerToken = tokenInfo?.token?.salesConfig?.pricePerToken || BigInt(0)
   const totalPrice = pricePerToken * BigInt(quantity || '0')
 
   if (isLoadingInfo) {
@@ -228,10 +281,10 @@ export function Collect({
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
       {/* Left column - Image */}
       <div className="relative aspect-square rounded-lg overflow-hidden bg-gray-900">
-        {tokenInfo?.metadata?.image ? (
+        {tokenInfo?.token?.image ? (
           <Image
-            src={tokenInfo.metadata.image}
-            alt={tokenInfo.metadata.name || 'Token'}
+            src={tokenInfo.token.image}
+            alt={tokenInfo.token.name || 'Token'}
             fill
             className="object-cover"
           />
@@ -246,11 +299,11 @@ export function Collect({
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-white">
-            {tokenInfo?.metadata?.name || 'Token'}
+            {tokenInfo?.token?.name || 'Token'}
           </h1>
-          {tokenInfo?.metadata?.description && (
+          {tokenInfo?.token?.description && (
             <p className="mt-2 text-gray-400">
-              {tokenInfo.metadata.description}
+              {tokenInfo.token.description}
             </p>
           )}
         </div>
@@ -289,13 +342,13 @@ export function Collect({
                   mint token
                 </DialogTitle>
                 <div className="text-3xl font-bold text-white">
-                  {tokenInfo?.metadata?.name || 'Token'}
+                  {tokenInfo?.token?.name || 'Token'}
                 </div>
               </div>
               <div className="relative w-20 h-20 rounded-lg overflow-hidden mr-4">
                 <Image 
-                  src={tokenInfo?.metadata?.image || imageUrl}
-                  alt={tokenInfo?.metadata?.name || 'Token'}
+                  src={tokenInfo?.token?.image || imageUrl}
+                  alt={tokenInfo?.token?.name || 'Token'}
                   fill
                   className="object-cover"
                 />

@@ -10,7 +10,7 @@ const BLOB_BASE_URL = 'https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com';
 
 // URL generation helpers
 const getMetadataUrl = (tokenId: string) => 
-  `/api/metadata/${specificContract.address}/${tokenId}`;
+  `https://ensurance.app/api/metadata/${specificContract.address}/${tokenId}`;
 
 const getMediaUrl = (tokenId: string) => 
   `${BLOB_BASE_URL}/${BLOB_DIR}/${tokenId}.png`;
@@ -72,7 +72,6 @@ export async function POST(request: NextRequest) {
     await sql`
       INSERT INTO certificates.specific (
         token_id,
-        contract_address,
         chain,
         name,
         description,
@@ -81,7 +80,6 @@ export async function POST(request: NextRequest) {
         mime_type
       ) VALUES (
         ${Number(tokenId)},
-        ${metadata.contract_address},
         'base',
         ${specificMetadata.name},
         ${specificMetadata.description},
@@ -89,7 +87,7 @@ export async function POST(request: NextRequest) {
         ${specificMetadata.animation_url},
         ${specificMetadata.content?.mime || null}
       )
-      ON CONFLICT (token_id, contract_address) 
+      ON CONFLICT (token_id) 
       DO UPDATE SET
         name = EXCLUDED.name,
         description = EXCLUDED.description,
