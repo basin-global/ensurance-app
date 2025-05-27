@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@vercel/postgres';
 import { put } from '@vercel/blob';
-import { specificContract } from '@/modules/specific/config/ERC1155';
+import { CONTRACTS } from '@/modules/specific/config';
 import type { SpecificMetadata } from '@/modules/specific/types';
 
 // Blob storage configuration
@@ -10,7 +10,7 @@ const BLOB_BASE_URL = 'https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com';
 
 // URL generation helpers
 const getMetadataUrl = (tokenId: string) => 
-  `https://ensurance.app/api/metadata/${specificContract.address}/${tokenId}`;
+  `https://ensurance.app/api/metadata/${CONTRACTS.specific}/${tokenId}`;
 
 const getMediaUrl = (tokenId: string) => 
   `${BLOB_BASE_URL}/${BLOB_DIR}/${tokenId}.png`;
@@ -33,16 +33,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file type
-    if (file.type !== 'image/png') {
-      return NextResponse.json(
-        { error: 'Only PNG images are supported' },
-        { status: 400 }
-      );
-    }
-
     // Validate contract address
-    if (metadata.contract_address.toLowerCase() !== specificContract.address.toLowerCase()) {
+    if (metadata.contract_address.toLowerCase() !== CONTRACTS.specific.toLowerCase()) {
       return NextResponse.json(
         { error: 'Invalid contract address' },
         { status: 400 }

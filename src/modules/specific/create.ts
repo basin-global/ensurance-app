@@ -1,4 +1,4 @@
-import { createPublicClient, createWalletClient, custom, http } from 'viem'
+import { createPublicClient, createWalletClient, custom, http, encodeFunctionData } from 'viem'
 import { base } from 'viem/chains'
 import { 
   CONTRACTS, 
@@ -18,7 +18,7 @@ import type { TokenMetadata as TokenMetadataType, SpecificMetadata } from './typ
 
 // URL generation helper
 const getMetadataUrl = (tokenId: string) => 
-  `/api/metadata/${CONTRACTS.specific}/${tokenId}`;
+  `https://ensurance.app/api/metadata/${CONTRACTS.specific}/${tokenId}`;
 
 /**
  * Get the next token ID that will be minted
@@ -27,7 +27,7 @@ export async function getNextTokenId(): Promise<string> {
   const nextTokenId = await publicClient.readContract({
     address: CONTRACTS.specific,
     abi: ABIS.specific,
-    functionName: CONTRACT_FUNCTIONS.nextTokenId
+    functionName: 'nextTokenId'
   }) as bigint
   
   return nextTokenId.toString()
@@ -44,9 +44,13 @@ export type CreateTokenStatus = {
 export type CreateTokenParams = {
   metadata: TokenMetadata
   mediaFile: File
-  erc20Config?: {
-    currency: `0x${string}`
+  salesConfig?: {
+    saleStart: bigint
+    saleEnd: bigint
+    maxTokensPerAddress: bigint
     pricePerToken: bigint
+    fundsRecipient: `0x${string}`
+    currency: `0x${string}`
   }
   creatorAccount: `0x${string}`
   onStatus: (status: CreateTokenStatus) => void
@@ -58,7 +62,7 @@ export type CreateTokenParams = {
 export async function createToken({
   metadata,
   mediaFile,
-  erc20Config,
+  salesConfig,
   creatorAccount,
   onStatus
 }: CreateTokenParams): Promise<{
@@ -80,19 +84,21 @@ export async function createToken({
     const metadataUrl = getMetadataUrl(nextTokenId)
 
     // Prepare token setup parameters
-    const maxSupply = metadata.maxSupply ?? MAX_SUPPLY_OPEN_EDITION
-    const createReferral = metadata.createReferral ?? ZERO_ADDRESS
+    const maxSupply = metadata.maxSupply ?? BigInt(2 ** 64 - 1)
+    const createReferral = '0x3CeDe7eae1feA81b4AEFf1f348f7497e6794ff96' as `0x${string}`
 
     // Create token on-chain using direct contract call
     const parameters = {
       abi: ABIS.specific,
-      functionName: createReferral === ZERO_ADDRESS 
-        ? CONTRACT_FUNCTIONS.setupNewToken 
-        : CONTRACT_FUNCTIONS.setupNewTokenWithCreateReferral,
-      args: createReferral === ZERO_ADDRESS
-        ? [metadataUrl, maxSupply]
-        : [metadataUrl, maxSupply, createReferral],
+      functionName: 'setupNewTokenWithCreateReferral',
+      args: [metadataUrl, maxSupply, createReferral],
       address: CONTRACTS.specific
+    }
+
+    // If sales config is provided, prepare callSale parameters
+    if (salesConfig) {
+      const salesConfigBytes = encodeSalesConfig(salesConfig)
+      parameters.args.push(CONTRACTS.erc20Minter, salesConfigBytes)
     }
 
     // Update status: Token created
@@ -225,4 +231,31 @@ export async function finalizeToken({
     })
     throw error
   }
+}
+
+// Helper to encode sales config for callSale
+export function encodeSalesConfig(config: {
+  saleStart: bigint
+  saleEnd: bigint
+  maxTokensPerAddress: bigint
+  pricePerToken: bigint
+  fundsRecipient: `0x${string}`
+  currency: `0x${string}`
+}): `0x${string}` {
+  // Convert the config into a tuple matching the contract's expected format
+  const salesConfig = [
+    config.saleStart, // uint64
+    config.saleEnd, // uint64
+    BigInt(0), // maxTokensPerAddress (uint64) - not used
+    config.pricePerToken, // uint256
+    config.fundsRecipient, // address
+    config.currency // address
+  ]
+
+  // Encode the tuple using the contract's ABI
+  return encodeFunctionData({
+    abi: ABIS.erc20Minter,
+    functionName: 'setSale',
+    args: [salesConfig]
+  })
 } 

@@ -3,7 +3,7 @@ import { ImageGenerator } from '@/modules/metadata/ImageGenerator';
 import { sync } from '@/modules/admin/sync/service';
 import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
-import { specificContract } from '@/modules/specific/config/ERC1155';
+import { CONTRACTS } from '@/modules/specific/config';
 
 // Initialize Viem client
 const client = createPublicClient({
@@ -53,7 +53,7 @@ export const metadata = {
     getByContractAndToken: async (contract: string, tokenId: string) => {
         try {
             // Check if this is a specific token
-            if (contract.toLowerCase() === specificContract.address.toLowerCase()) {
+            if (contract.toLowerCase() === CONTRACTS.specific.toLowerCase()) {
                 // Get specific token data
                 const { rows: [token] } = await sql`
                     SELECT * FROM certificates.specific 

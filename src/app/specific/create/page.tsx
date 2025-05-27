@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react'
 import { parseUnits, createWalletClient, custom, type Hash } from 'viem'
 import { base } from 'viem/chains'
 import { createToken, finalizeToken, type CreateTokenStatus } from '@/modules/specific/create'
-import { USDC_ADDRESS } from '@/modules/specific/config/ERC20'
-import { MAX_SUPPLY_OPEN_EDITION, specificContract } from '@/modules/specific/config/ERC1155'
+import { CONTRACTS, MAX_SUPPLY_OPEN_EDITION, ABIS } from '@/modules/specific/config'
 import { toast } from 'react-toastify'
 import { usePrivy, useWallets } from '@privy-io/react-auth'
 import { useRouter } from 'next/navigation'
@@ -14,6 +13,7 @@ import Link from 'next/link'
 import { createWalletClient as createWalletClientViem, http, createPublicClient } from 'viem'
 import type { WalletClient } from 'viem'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { encodeSalesConfig } from '@/modules/specific/create'
 
 // Initialize public client
 const publicClient = createPublicClient({
@@ -28,7 +28,9 @@ export default function CreateSpecificPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [status, setStatus] = useState<CreateTokenStatus>()
   const { wallets } = useWallets()
-  const activeWallet = wallets[0] // Get first connected wallet
+  const activeWallet = wallets[0]
+  const [fundsRecipient, setFundsRecipient] = useState('')
+  const [isSettingUpSales, setIsSettingUpSales] = useState(false)
 
   // Redirect non-admins
   useEffect(() => {
@@ -43,13 +45,63 @@ export default function CreateSpecificPage() {
   const [mediaFile, setMediaFile] = useState<File>()
   const [previewUrl, setPreviewUrl] = useState<string>()
   const [price, setPrice] = useState('')
-  const [isLimitedEdition, setIsLimitedEdition] = useState(false)
-  const [maxSupply, setMaxSupply] = useState('')
+  const [rawPrice, setRawPrice] = useState('')
+  const [saleStart, setSaleStart] = useState('')
+  const [saleEnd, setSaleEnd] = useState('')
+
+  // Format price for display (2 decimal places)
+  const formatPrice = (value: string) => {
+    // Handle empty value
+    if (!value) return ''
+    
+    // Remove any non-numeric characters except decimal point
+    const numericValue = value.replace(/[^0-9.]/g, '')
+    
+    // Split into dollars and cents
+    const parts = numericValue.split('.')
+    const dollars = parts[0]
+    const cents = parts[1]?.slice(0, 2) || '00'
+    
+    // Format dollars with commas
+    const formattedDollars = dollars.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+    
+    // Format with 2 decimal places
+    return `${formattedDollars}.${cents}`
+  }
+
+  // Handle price input changes
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    // Allow empty value for clearing
+    if (!value) {
+      setPrice('')
+      return
+    }
+    
+    // Remove the $ sign if user types it
+    const cleanValue = value.replace('$', '')
+    setPrice(cleanValue)
+  }
+
+  // Handle price input blur
+  const handlePriceBlur = () => {
+    if (price) {
+      setPrice(formatPrice(price))
+    }
+  }
+
+  // Convert formatted price to USDC amount (6 decimals)
+  const getPriceInUSDC = (formattedPrice: string): bigint => {
+    if (!formattedPrice) return BigInt(0)
+    // Remove commas and convert to USDC (6 decimals)
+    const numericValue = formattedPrice.replace(/,/g, '')
+    return parseUnits(numericValue, 6)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!activeWallet || !mediaFile || !name || !price) {
-      console.error('Missing required fields')
+    if (!activeWallet || !mediaFile || !name) {
+      toast.error('Please fill in all required fields')
       return
     }
 
@@ -71,14 +123,9 @@ export default function CreateSpecificPage() {
         metadata: {
           name,
           description,
-          maxSupply: isLimitedEdition ? BigInt(maxSupply) : MAX_SUPPLY_OPEN_EDITION,
-          createReferral: activeWallet.address as `0x${string}`
+          maxSupply: MAX_SUPPLY_OPEN_EDITION
         },
         mediaFile,
-        erc20Config: {
-          currency: USDC_ADDRESS,
-          pricePerToken: price ? parseUnits(price, 6) : BigInt(0)
-        },
         creatorAccount: activeWallet.address as `0x${string}`,
         onStatus: (newStatus) => {
           setStatus(newStatus)
@@ -106,7 +153,7 @@ export default function CreateSpecificPage() {
         }
       })
 
-      // Step 2: Submit transaction
+      // Step 2: Submit setup transaction
       const { abi, functionName, args, address: contractAddress } = result.parameters
       const hash = await walletClient.writeContract({
         abi,
@@ -125,14 +172,57 @@ export default function CreateSpecificPage() {
       // Step 3: Wait for transaction confirmation
       await publicClient.waitForTransactionReceipt({ hash })
 
-      // Step 4: Upload media and store metadata
+      // Step 4: If price is set, setup sales
+      if (price) {
+        setIsSettingUpSales(true)
+        try {
+          // Handle dates - start immediately if not set, no end date if not set
+          const now = Math.floor(Date.now() / 1000)
+          const saleStartTime = saleStart 
+            ? Math.floor(new Date(saleStart).getTime() / 1000)
+            : now
+          const saleEndTime = saleEnd
+            ? Math.floor(new Date(saleEnd).getTime() / 1000)
+            : BigInt(2 ** 64 - 1) // Maximum uint64 value for no end date
+
+          const salesConfig = {
+            saleStart: BigInt(saleStartTime),
+            saleEnd: BigInt(saleEndTime),
+            maxTokensPerAddress: BigInt(0), // Not used but required by type
+            pricePerToken: getPriceInUSDC(price),
+            fundsRecipient: fundsRecipient as `0x${string}` || activeWallet.address as `0x${string}`,
+            currency: CONTRACTS.usdc
+          }
+
+          // Call setupSales function
+          const salesHash = await walletClient.writeContract({
+            abi: ABIS.specific,
+            functionName: 'callSale',
+            args: [result.tokenId, CONTRACTS.erc20Minter, encodeSalesConfig(salesConfig)],
+            address: CONTRACTS.specific,
+            account: activeWallet.address as `0x${string}`,
+            chain: base
+          }) as Hash
+
+          // Wait for sales configuration transaction
+          await publicClient.waitForTransactionReceipt({ hash: salesHash })
+          toast.success('Sales configuration set successfully!')
+        } catch (error) {
+          console.error('Error setting up sales:', error)
+          toast.error('Failed to setup sales configuration')
+          throw error // Re-throw to prevent continuing to metadata upload
+        } finally {
+          setIsSettingUpSales(false)
+        }
+      }
+
+      // Step 5: Upload media and store metadata
       await finalizeToken({
         tokenId: result.tokenId,
         metadata: {
           name,
           description,
-          maxSupply: isLimitedEdition ? BigInt(maxSupply) : MAX_SUPPLY_OPEN_EDITION,
-          createReferral: activeWallet.address as `0x${string}`
+          maxSupply: MAX_SUPPLY_OPEN_EDITION
         },
         mediaFile,
         onStatus: (newStatus) => {
@@ -144,8 +234,8 @@ export default function CreateSpecificPage() {
         }
       })
 
-      // Step 5: Redirect to token page
-      router.push(`/specific/${specificContract.address}/${result.tokenId}`)
+      // Step 6: Redirect to token page
+      router.push(`/specific/${result.tokenId}`)
 
     } catch (error) {
       console.error('Error creating token:', error)
@@ -160,8 +250,8 @@ export default function CreateSpecificPage() {
     if (!file) return
 
     // Validate file type
-    if (file.type !== 'image/png') {
-      toast.error('Only PNG images are supported')
+    if (!file.type.startsWith('image/')) {
+      toast.error('Only image files are supported')
       return
     }
 
@@ -248,8 +338,12 @@ export default function CreateSpecificPage() {
                 }}
               />
             </div>
-            <span className="text-sm text-muted-foreground">
-              {status.step === 'complete' ? 'Done!' : 'In Progress...'}
+            <span className="text-sm text-gray-500">
+              {status.step === 'creating-token' && 'Creating...'}
+              {status.step === 'uploading-media' && 'Uploading...'}
+              {status.step === 'storing-metadata' && 'Storing...'}
+              {status.step === 'complete' && 'Complete'}
+              {status.step === 'error' && 'Error'}
             </span>
           </div>
         </div>
@@ -263,7 +357,7 @@ export default function CreateSpecificPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="container max-w-2xl">
           <div className="bg-background border rounded-lg p-6">
-            <h1 className="text-2xl font-bold mb-6">Create Specific Certificate</h1>
+            <h1 className="text-2xl font-bold mb-6">create specific ensurance</h1>
             <p className="text-muted-foreground">Please connect your wallet to continue.</p>
           </div>
         </div>
@@ -276,153 +370,129 @@ export default function CreateSpecificPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <div className="container mx-auto px-4 py-8 flex-1">
-        <div className="space-y-8">
-          <PageHeader
-            title="create specific certificate"
-            showSearch={false}
-          />
+    <div className="container mx-auto px-4 py-8">
+      <PageHeader 
+        title="create specific ensurance"
+        showSearch={false}
+      />
 
-          <div className="bg-gray-900/30 rounded-lg p-8">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <label htmlFor="name" className="block text-sm font-medium text-gray-200">Name</label>
-                <input
-                  id="name"
-                  className="w-full rounded-md border border-gray-700 bg-gray-900/50 px-3 py-2 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  required
-                />
-              </div>
+      <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-6">
+        {/* Basic Info */}
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1 text-white">Name *</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg bg-gray-900 text-white border-gray-700"
+              required
+            />
+          </div>
 
-              <div className="space-y-2">
-                <label htmlFor="description" className="block text-sm font-medium text-gray-200">Description</label>
-                <textarea
-                  id="description"
-                  className="w-full rounded-md border border-gray-700 bg-gray-900/50 px-3 py-2 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  value={description}
-                  onChange={e => setDescription(e.target.value)}
-                  rows={4}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="media" className="block text-sm font-medium text-gray-200">Media File (PNG)</label>
-                <input
-                  id="media"
-                  type="file"
-                  className="w-full rounded-md border border-gray-700 bg-gray-900/50 px-3 py-2 text-white file:text-white file:bg-transparent file:border-0 file:mr-4 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  accept="image/png"
-                  onChange={handleMediaChange}
-                  required
-                />
-                {previewUrl && (
-                  <div className="mt-2">
-                    <p className="text-sm text-gray-400 mb-2">Preview:</p>
-                    <img 
-                      src={previewUrl} 
-                      alt="Preview" 
-                      className="w-32 h-32 object-cover rounded-lg"
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="price" className="block text-sm font-medium text-gray-200">Price (USDC)</label>
-                <input
-                  id="price"
-                  type="number"
-                  className="w-full rounded-md border border-gray-700 bg-gray-900/50 px-3 py-2 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={price}
-                  onChange={e => {
-                    // Allow empty input
-                    if (e.target.value === '') {
-                      setPrice('')
-                      return
-                    }
-                    
-                    // Handle decimal input
-                    const value = e.target.value
-                    if (value === '.') {
-                      setPrice('0.')
-                      return
-                    }
-                    
-                    // Parse and validate number
-                    const num = parseFloat(value)
-                    if (!isNaN(num) && num >= 0) {
-                      // Only format to 2 decimals when the user has finished typing
-                      if (value.endsWith('.') || value.endsWith('0')) {
-                        setPrice(value)
-                      } else {
-                        setPrice(num.toFixed(2))
-                      }
-                    }
-                  }}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-200">Edition Type</label>
-                <div className="flex items-center space-x-4">
-                  <label className="flex items-center space-x-2">
-                    <input
-                      type="radio"
-                      checked={!isLimitedEdition}
-                      onChange={() => setIsLimitedEdition(false)}
-                      className="rounded border-gray-700 bg-gray-900/50 text-blue-500 focus:ring-blue-500"
-                    />
-                    <span className="text-gray-200">Open Edition</span>
-                  </label>
-                  <label className="flex items-center space-x-2">
-                    <input
-                      type="radio"
-                      checked={isLimitedEdition}
-                      onChange={() => setIsLimitedEdition(true)}
-                      className="rounded border-gray-700 bg-gray-900/50 text-blue-500 focus:ring-blue-500"
-                    />
-                    <span className="text-gray-200">Limited Edition</span>
-                  </label>
-                </div>
-              </div>
-
-              {isLimitedEdition && (
-                <div className="space-y-2">
-                  <label htmlFor="maxSupply" className="block text-sm font-medium text-gray-200">Max Supply</label>
-                  <input
-                    id="maxSupply"
-                    type="number"
-                    className="w-full rounded-md border border-gray-700 bg-gray-900/50 px-3 py-2 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                    min="1"
-                    step="1"
-                    placeholder="Enter maximum supply"
-                    value={maxSupply}
-                    onChange={e => setMaxSupply(e.target.value)}
-                    required={isLimitedEdition}
-                  />
-                </div>
-              )}
-
-              <button 
-                type="submit" 
-                disabled={isLoading}
-                className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {isLoading ? 'Creating...' : 'Create Token'}
-              </button>
-            </form>
-
-            <StatusDisplay />
+          <div>
+            <label className="block text-sm font-medium mb-1 text-white">Description</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg bg-gray-900 text-white border-gray-700"
+              rows={4}
+            />
           </div>
         </div>
-      </div>
+
+        {/* Media Upload */}
+        <div>
+          <label className="block text-sm font-medium mb-1 text-white">Media (PNG) *</label>
+          <label className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-lg bg-gray-900 border-gray-700 cursor-pointer hover:border-primary/50 transition-colors">
+            <div className="space-y-1 text-center">
+              {previewUrl ? (
+                <img src={previewUrl} alt="Preview" className="mx-auto h-32 w-32 object-cover rounded-lg" />
+              ) : (
+                <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                  <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+              <div className="flex text-sm text-gray-300">
+                <span className="font-medium text-primary hover:text-primary/80">
+                  Upload a file
+                </span>
+                <p className="pl-1">or drag and drop</p>
+              </div>
+              <p className="text-xs text-gray-400">PNG only, up to 10MB</p>
+            </div>
+            <input type="file" className="hidden" onChange={handleMediaChange} accept="image/png" />
+          </label>
+        </div>
+
+        {/* Sales Settings */}
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1 text-white">Price (USDC) *</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <span className="text-gray-400">$</span>
+              </div>
+              <input
+                type="text"
+                value={price}
+                onChange={handlePriceChange}
+                onBlur={handlePriceBlur}
+                className="w-full pl-7 pr-3 py-2 border rounded-lg bg-gray-900 text-white border-gray-700"
+                placeholder="0.00"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1 text-white">Funds Recipient</label>
+            <input
+              type="text"
+              value={fundsRecipient}
+              onChange={(e) => setFundsRecipient(e.target.value)}
+              placeholder={activeWallet?.address}
+              className="w-full px-3 py-2 border rounded-lg bg-gray-900 text-white border-gray-700"
+            />
+            <p className="text-xs text-gray-400 mt-1">Leave empty to use your address</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1 text-white">Sale Start</label>
+              <input
+                type="date"
+                value={saleStart}
+                onChange={(e) => setSaleStart(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg bg-gray-900 text-white border-gray-700"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1 text-white">Sale End</label>
+              <input
+                type="date"
+                value={saleEnd}
+                onChange={(e) => setSaleEnd(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg bg-gray-900 text-white border-gray-700"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Submit Button */}
+        <div className="flex justify-center mt-8">
+          <button
+            type="submit"
+            disabled={isLoading || isSettingUpSales}
+            className="px-8 py-3 text-lg font-medium text-white rounded-lg shadow-lg bg-blue-600 hover:bg-blue-500 active:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105 active:scale-95"
+          >
+            {isLoading ? 'Creating...' : isSettingUpSales ? 'Setting up sales...' : 'Create Certificate'}
+          </button>
+        </div>
+
+        {/* Status Display */}
+        <StatusDisplay />
+      </form>
     </div>
   )
 }

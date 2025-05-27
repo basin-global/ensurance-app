@@ -8,7 +8,7 @@ import zoraErc20MinterAbi from '@/abi/ZoraERC20Minter.json'
 export const NETWORK = {
   id: base.id,
   name: base.name,
-  rpcUrl: 'https://mainnet.base.org'
+  rpcUrl: `https://base-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`
 } as const
 
 // Contract addresses

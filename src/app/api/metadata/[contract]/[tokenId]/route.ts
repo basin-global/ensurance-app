@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { metadata } from '@/lib/database/metadata';
-import { specificContract } from '@/modules/specific/config/ERC1155';
+import { CONTRACTS } from '@/modules/specific/config';
 
 // Force dynamic route to ensure fresh data
 export const dynamic = 'force-dynamic';
@@ -16,7 +16,7 @@ export async function GET(
         });
         
         // Check if this is a specific certificate contract
-        const isSpecificContract = params.contract.toLowerCase() === specificContract.address.toLowerCase();
+        const isSpecificContract = params.contract.toLowerCase() === CONTRACTS.specific.toLowerCase();
         
         if (isSpecificContract) {
             console.log('Handling specific certificate metadata request');
