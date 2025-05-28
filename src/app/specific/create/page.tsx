@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { parseUnits, createWalletClient, custom, type Hash } from 'viem'
+import { createWalletClient, custom, type Hash } from 'viem'
 import { base } from 'viem/chains'
 import { createToken, finalizeToken, type CreateTokenStatus } from '@/modules/specific/create'
-import { CONTRACTS, MAX_SUPPLY_OPEN_EDITION, ABIS } from '@/modules/specific/config'
+import { CONTRACTS, MAX_SUPPLY_OPEN_EDITION } from '@/modules/specific/config'
 import { toast } from 'react-toastify'
 import { usePrivy, useWallets } from '@privy-io/react-auth'
 import { useRouter } from 'next/navigation'
@@ -13,7 +13,6 @@ import Link from 'next/link'
 import { createWalletClient as createWalletClientViem, http, createPublicClient } from 'viem'
 import type { WalletClient } from 'viem'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { encodeSalesConfig } from '@/modules/specific/create'
 
 // Initialize public client
 const publicClient = createPublicClient({
@@ -29,8 +28,6 @@ export default function CreateSpecificPage() {
   const [status, setStatus] = useState<CreateTokenStatus>()
   const { wallets } = useWallets()
   const activeWallet = wallets[0]
-  const [fundsRecipient, setFundsRecipient] = useState('')
-  const [isSettingUpSales, setIsSettingUpSales] = useState(false)
 
   // Redirect non-admins
   useEffect(() => {
@@ -44,59 +41,6 @@ export default function CreateSpecificPage() {
   const [description, setDescription] = useState('')
   const [mediaFile, setMediaFile] = useState<File>()
   const [previewUrl, setPreviewUrl] = useState<string>()
-  const [price, setPrice] = useState('')
-  const [rawPrice, setRawPrice] = useState('')
-  const [saleStart, setSaleStart] = useState('')
-  const [saleEnd, setSaleEnd] = useState('')
-
-  // Format price for display (2 decimal places)
-  const formatPrice = (value: string) => {
-    // Handle empty value
-    if (!value) return ''
-    
-    // Remove any non-numeric characters except decimal point
-    const numericValue = value.replace(/[^0-9.]/g, '')
-    
-    // Split into dollars and cents
-    const parts = numericValue.split('.')
-    const dollars = parts[0]
-    const cents = parts[1]?.slice(0, 2) || '00'
-    
-    // Format dollars with commas
-    const formattedDollars = dollars.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-    
-    // Format with 2 decimal places
-    return `${formattedDollars}.${cents}`
-  }
-
-  // Handle price input changes
-  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    // Allow empty value for clearing
-    if (!value) {
-      setPrice('')
-      return
-    }
-    
-    // Remove the $ sign if user types it
-    const cleanValue = value.replace('$', '')
-    setPrice(cleanValue)
-  }
-
-  // Handle price input blur
-  const handlePriceBlur = () => {
-    if (price) {
-      setPrice(formatPrice(price))
-    }
-  }
-
-  // Convert formatted price to USDC amount (6 decimals)
-  const getPriceInUSDC = (formattedPrice: string): bigint => {
-    if (!formattedPrice) return BigInt(0)
-    // Remove commas and convert to USDC (6 decimals)
-    const numericValue = formattedPrice.replace(/,/g, '')
-    return parseUnits(numericValue, 6)
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -172,51 +116,7 @@ export default function CreateSpecificPage() {
       // Step 3: Wait for transaction confirmation
       await publicClient.waitForTransactionReceipt({ hash })
 
-      // Step 4: If price is set, setup sales
-      if (price) {
-        setIsSettingUpSales(true)
-        try {
-          // Handle dates - start immediately if not set, no end date if not set
-          const now = Math.floor(Date.now() / 1000)
-          const saleStartTime = saleStart 
-            ? Math.floor(new Date(saleStart).getTime() / 1000)
-            : now
-          const saleEndTime = saleEnd
-            ? Math.floor(new Date(saleEnd).getTime() / 1000)
-            : BigInt(2 ** 64 - 1) // Maximum uint64 value for no end date
-
-          const salesConfig = {
-            saleStart: BigInt(saleStartTime),
-            saleEnd: BigInt(saleEndTime),
-            maxTokensPerAddress: BigInt(0), // Not used but required by type
-            pricePerToken: getPriceInUSDC(price),
-            fundsRecipient: fundsRecipient as `0x${string}` || activeWallet.address as `0x${string}`,
-            currency: CONTRACTS.usdc
-          }
-
-          // Call setupSales function
-          const salesHash = await walletClient.writeContract({
-            abi: ABIS.specific,
-            functionName: 'callSale',
-            args: [result.tokenId, CONTRACTS.erc20Minter, encodeSalesConfig(salesConfig)],
-            address: CONTRACTS.specific,
-            account: activeWallet.address as `0x${string}`,
-            chain: base
-          }) as Hash
-
-          // Wait for sales configuration transaction
-          await publicClient.waitForTransactionReceipt({ hash: salesHash })
-          toast.success('Sales configuration set successfully!')
-        } catch (error) {
-          console.error('Error setting up sales:', error)
-          toast.error('Failed to setup sales configuration')
-          throw error // Re-throw to prevent continuing to metadata upload
-        } finally {
-          setIsSettingUpSales(false)
-        }
-      }
-
-      // Step 5: Upload media and store metadata
+      // Step 4: Upload media and store metadata
       await finalizeToken({
         tokenId: result.tokenId,
         metadata: {
@@ -234,8 +134,12 @@ export default function CreateSpecificPage() {
         }
       })
 
-      // Step 6: Redirect to token page
-      router.push(`/specific/${result.tokenId}`)
+      // Step 5: Redirect to token page
+      if (status?.redirectUrl) {
+        router.push(status.redirectUrl)
+      } else {
+        router.push(`/specific/${CONTRACTS.specific}/${result.tokenId}/manage`)
+      }
 
     } catch (error) {
       console.error('Error creating token:', error)
@@ -425,68 +329,14 @@ export default function CreateSpecificPage() {
           </label>
         </div>
 
-        {/* Sales Settings */}
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1 text-white">Price (USDC) *</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <span className="text-gray-400">$</span>
-              </div>
-              <input
-                type="text"
-                value={price}
-                onChange={handlePriceChange}
-                onBlur={handlePriceBlur}
-                className="w-full pl-7 pr-3 py-2 border rounded-lg bg-gray-900 text-white border-gray-700"
-                placeholder="0.00"
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1 text-white">Funds Recipient</label>
-            <input
-              type="text"
-              value={fundsRecipient}
-              onChange={(e) => setFundsRecipient(e.target.value)}
-              placeholder={activeWallet?.address}
-              className="w-full px-3 py-2 border rounded-lg bg-gray-900 text-white border-gray-700"
-            />
-            <p className="text-xs text-gray-400 mt-1">Leave empty to use your address</p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1 text-white">Sale Start</label>
-              <input
-                type="date"
-                value={saleStart}
-                onChange={(e) => setSaleStart(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg bg-gray-900 text-white border-gray-700"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1 text-white">Sale End</label>
-              <input
-                type="date"
-                value={saleEnd}
-                onChange={(e) => setSaleEnd(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg bg-gray-900 text-white border-gray-700"
-              />
-            </div>
-          </div>
-        </div>
-
         {/* Submit Button */}
         <div className="flex justify-center mt-8">
           <button
             type="submit"
-            disabled={isLoading || isSettingUpSales}
+            disabled={isLoading}
             className="px-8 py-3 text-lg font-medium text-white rounded-lg shadow-lg bg-blue-600 hover:bg-blue-500 active:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105 active:scale-95"
           >
-            {isLoading ? 'Creating...' : isSettingUpSales ? 'Setting up sales...' : 'Create Certificate'}
+            {isLoading ? 'Creating...' : 'Create Certificate'}
           </button>
         </div>
 

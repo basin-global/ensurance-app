@@ -64,29 +64,21 @@ export async function POST(request: NextRequest) {
     await sql`
       INSERT INTO certificates.specific (
         token_id,
-        chain,
         name,
         description,
+        chain,
         image,
         animation_url,
         mime_type
       ) VALUES (
         ${Number(tokenId)},
-        'base',
         ${specificMetadata.name},
         ${specificMetadata.description},
+        'base',
         ${specificMetadata.image},
         ${specificMetadata.animation_url},
-        ${specificMetadata.content?.mime || null}
+        ${specificMetadata.content?.mime || 'image/png'}
       )
-      ON CONFLICT (token_id) 
-      DO UPDATE SET
-        name = EXCLUDED.name,
-        description = EXCLUDED.description,
-        image = EXCLUDED.image,
-        animation_url = EXCLUDED.animation_url,
-        mime_type = EXCLUDED.mime_type,
-        updated_at = NOW()
     `;
 
     return NextResponse.json({ 

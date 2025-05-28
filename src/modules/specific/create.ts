@@ -15,6 +15,7 @@ import { isAppAdmin } from '@/config/admin'
 import { sql } from '@vercel/postgres'
 import { type Hash } from 'viem'
 import type { TokenMetadata as TokenMetadataType, SpecificMetadata } from './types'
+import { encodeSalesConfig, dateToUint64 } from './callSale'
 
 // URL generation helper
 const getMetadataUrl = (tokenId: string) => 
@@ -39,6 +40,7 @@ export type CreateTokenStatus = {
   tokenId?: string
   txHash?: `0x${string}`
   mediaUrl?: string
+  redirectUrl?: string
 }
 
 export type CreateTokenParams = {
@@ -97,7 +99,7 @@ export async function createToken({
 
     // If sales config is provided, prepare callSale parameters
     if (salesConfig) {
-      const salesConfigBytes = encodeSalesConfig(salesConfig)
+      const salesConfigBytes = await encodeSalesConfig(nextTokenId, salesConfig)
       parameters.args.push(CONTRACTS.erc20Minter, salesConfigBytes)
     }
 
@@ -222,7 +224,8 @@ export async function finalizeToken({
     onStatus?.({
       step: 'complete',
       tokenId: tokenId.toString(),
-      mediaUrl
+      mediaUrl,
+      redirectUrl: `/specific/${CONTRACTS.specific}/${tokenId.toString()}/manage`
     });
   } catch (error) {
     onStatus?.({
@@ -231,31 +234,4 @@ export async function finalizeToken({
     })
     throw error
   }
-}
-
-// Helper to encode sales config for callSale
-export function encodeSalesConfig(config: {
-  saleStart: bigint
-  saleEnd: bigint
-  maxTokensPerAddress: bigint
-  pricePerToken: bigint
-  fundsRecipient: `0x${string}`
-  currency: `0x${string}`
-}): `0x${string}` {
-  // Convert the config into a tuple matching the contract's expected format
-  const salesConfig = [
-    config.saleStart, // uint64
-    config.saleEnd, // uint64
-    BigInt(0), // maxTokensPerAddress (uint64) - not used
-    config.pricePerToken, // uint256
-    config.fundsRecipient, // address
-    config.currency // address
-  ]
-
-  // Encode the tuple using the contract's ABI
-  return encodeFunctionData({
-    abi: ABIS.erc20Minter,
-    functionName: 'setSale',
-    args: [salesConfig]
-  })
 } 

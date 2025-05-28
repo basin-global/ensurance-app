@@ -9,48 +9,8 @@ import {
 import type { Address } from 'viem'
 import { type Hash } from 'viem'
 import { toast } from 'react-toastify'
-
-// Types for contract return values
-type TokenData = {
-  totalMinted: bigint
-  maxSupply: bigint
-  image: string
-  name: string
-  description: string
-}
-
-type SalesConfig = {
-  saleStart: bigint
-  saleEnd: bigint
-  maxTokensPerAddress: bigint
-  pricePerToken: bigint
-  fundsRecipient: `0x${string}`
-  currency: `0x${string}`
-}
-
-export type TokenInfo = {
-  creator: `0x${string}`
-  creationDate: string
-  price: string
-  name: string
-  totalMinted: string
-  maxSupply: string
-  saleStart: string
-  saleEnd: string
-  fundsRecipient: `0x${string}`
-}
-
-export type UpdateTokenParams = {
-  contractAddress: string
-  tokenId: string
-  fundsRecipient: `0x${string}`
-  onStatus?: (status: {
-    step: string
-    error?: string
-    tokenId?: string
-  }) => void
-  walletClient?: any // Wallet client for transactions
-}
+import { encodeSalesConfig, getSalesConfig } from './callSale'
+import type { TokenData, SalesConfig } from './types'
 
 // Helper to convert IPFS URLs if needed
 const convertIpfsUrl = (url: string) => {
@@ -66,7 +26,7 @@ const convertIpfsUrl = (url: string) => {
 export async function getTokenInfo(
   contractAddress: `0x${string}`,
   tokenId: string
-): Promise<TokenInfo> {
+): Promise<{ token: TokenData; salesConfig: SalesConfig }> {
   try {
     console.log('Fetching token info for:', { contractAddress, tokenId })
     
@@ -90,34 +50,48 @@ export async function getTokenInfo(
     console.log('Token URI:', tokenUri)
 
     // Fetch metadata from tokenURI
-    const metadataResponse = await fetch(convertIpfsUrl(tokenUri))
-    if (!metadataResponse.ok) {
-      throw new Error('Failed to fetch metadata')
+    let metadata = { name: '' }
+    try {
+      const metadataResponse = await fetch(convertIpfsUrl(tokenUri))
+      if (metadataResponse.ok) {
+        metadata = await metadataResponse.json()
+      }
+    } catch (error) {
+      console.warn('Failed to fetch metadata, using defaults:', error)
     }
-    const metadata = await metadataResponse.json()
     console.log('Metadata:', metadata)
 
     // Get sales config from ERC20 minter
-    const salesConfig = await publicClient.readContract({
-      address: CONTRACTS.erc20Minter,
-      abi: ABIS.erc20Minter,
-      functionName: 'sale',
-      args: [CONTRACTS.specific, BigInt(tokenId)]
-    }) as Promise<SalesConfig>
+    let salesConfig: SalesConfig
+    try {
+      const config = await publicClient.readContract({
+        address: CONTRACTS.erc20Minter,
+        abi: ABIS.erc20Minter,
+        functionName: 'sale',
+        args: [CONTRACTS.specific, BigInt(tokenId)]
+      })
+      salesConfig = config as SalesConfig
+    } catch (error) {
+      console.warn('Failed to fetch sales config, using defaults:', error)
+      // Default sales config
+      salesConfig = {
+        saleStart: BigInt(0),
+        saleEnd: BigInt(0),
+        maxTokensPerAddress: BigInt(0),
+        pricePerToken: BigInt(0),
+        fundsRecipient: CONTRACTS.specific,
+        currency: CONTRACTS.usdc
+      }
+    }
 
-    const resolvedSalesConfig = await salesConfig
-    console.log('Sales config:', resolvedSalesConfig)
+    console.log('Sales config:', salesConfig)
 
     return {
-      creator: resolvedSalesConfig.fundsRecipient,
-      creationDate: new Date().toISOString(),
-      price: resolvedSalesConfig.pricePerToken.toString(),
-      name: metadata.name || '',
-      totalMinted: tokenData.totalMinted.toString(),
-      maxSupply: tokenData.maxSupply.toString(),
-      saleStart: resolvedSalesConfig.saleStart.toString(),
-      saleEnd: resolvedSalesConfig.saleEnd.toString(),
-      fundsRecipient: resolvedSalesConfig.fundsRecipient
+      token: {
+        ...tokenData,
+        name: metadata.name || ''
+      },
+      salesConfig
     }
   } catch (error) {
     console.error('Error in getTokenInfo:', error)
@@ -230,71 +204,5 @@ export async function setFundsRecipient({
   } catch (error) {
     console.error('Error setting funds recipient:', error)
     throw new Error('Failed to set funds recipient')
-  }
-}
-
-/**
- * Update token funds recipient
- */
-export async function updateFundsRecipient({
-  contractAddress,
-  tokenId,
-  fundsRecipient,
-  onStatus,
-  walletClient
-}: UpdateTokenParams): Promise<void> {
-  try {
-    onStatus?.({ step: 'updating-funds-recipient' })
-
-    if (!walletClient) {
-      throw new Error('Wallet client is required for updating funds recipient')
-    }
-
-    // Get current sales config from ERC20 minter
-    const currentConfig = await publicClient.readContract({
-      address: CONTRACTS.erc20Minter,
-      abi: ABIS.erc20Minter,
-      functionName: 'sale',
-      args: [BigInt(tokenId)]
-    }) as Promise<SalesConfig>
-
-    const resolvedConfig = await currentConfig
-
-    // Create updated sales config preserving existing values
-    const updatedConfig = {
-      saleStart: resolvedConfig.saleStart,
-      saleEnd: resolvedConfig.saleEnd,
-      maxTokensPerAddress: resolvedConfig.maxTokensPerAddress,
-      pricePerToken: resolvedConfig.pricePerToken,
-      fundsRecipient: fundsRecipient,
-      currency: resolvedConfig.currency
-    }
-
-    // Encode the sales config
-    const salesConfigBytes = encodeFunctionData({
-      abi: ABIS.erc20Minter,
-      functionName: 'setSale',
-      args: [updatedConfig]
-    })
-
-    // Call the specific contract's callSale function
-    const tx = await walletClient.writeContract({
-      address: CONTRACTS.specific,
-      abi: ABIS.specific,
-      functionName: 'callSale',
-      args: [BigInt(tokenId), CONTRACTS.erc20Minter, salesConfigBytes]
-    }) as Hash
-
-    // Wait for transaction
-    await publicClient.waitForTransactionReceipt({ hash: tx })
-
-    onStatus?.({ step: 'complete' })
-  } catch (error) {
-    console.error('Error updating funds recipient:', error)
-    onStatus?.({ 
-      step: 'error', 
-      error: error instanceof Error ? error.message : 'Failed to update funds recipient'
-    })
-    throw error
   }
 } 

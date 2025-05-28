@@ -58,16 +58,4 @@ export type CreateTokenParams = {
   }
   creatorAccount: `0x${string}`
   onStatus: (status: CreateTokenStatus) => void
-}
-
-export type UpdateTokenParams = {
-  contractAddress: string
-  tokenId: string
-  fundsRecipient: `0x${string}`
-  onStatus?: (status: {
-    step: string
-    error?: string
-    tokenId?: string
-  }) => void
-  walletClient?: any // Wallet client for transactions
 } 
