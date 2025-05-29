@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { PageHeader } from "@/components/layout/PageHeader"
 import GeneralGrid from '@/modules/general/GeneralGrid'
-import MarketSummary from '@/components/MarketSummary'
+import MarketSummary from '@/modules/general/GeneralMarketSummary'
 
 interface MarketData {
   total_volume?: string
@@ -15,8 +15,8 @@ export default function GeneralPage() {
   const [marketData, setMarketData] = useState<MarketData[]>([])
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col gap-8">
+    <div className="container mx-auto px-4 py-6">
+      <div className="flex flex-col gap-6">
         <div className="flex justify-between items-start">
           <div className="flex-1">
             <PageHeader 

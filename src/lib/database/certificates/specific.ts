@@ -1,5 +1,5 @@
 import { sql } from '@vercel/postgres';
-import { specificContract } from '@/modules/specific/config/ERC1155';
+import { CONTRACTS } from '@/modules/specific/config';
 import type { SpecificMetadata } from '@/modules/specific/types';
 
 interface SpecificCertificate {
@@ -37,7 +37,7 @@ export const specificCertificates = {
         attributes
       ) VALUES (
         ${Number(tokenId)},
-        ${specificContract.address},
+        ${CONTRACTS.specific},
         'base',
         ${metadata.name},
         ${metadata.description},
@@ -65,7 +65,7 @@ export const specificCertificates = {
     const { rows } = await sql`
       SELECT * FROM certificates.specific 
       WHERE token_id = ${Number(tokenId)}
-      AND contract_address = ${specificContract.address}
+      AND contract_address = ${CONTRACTS.specific}
     `;
     return rows[0] as SpecificCertificate || null;
   },
@@ -76,7 +76,7 @@ export const specificCertificates = {
   async getAll(): Promise<SpecificCertificate[]> {
     const { rows } = await sql`
       SELECT * FROM certificates.specific 
-      WHERE contract_address = ${specificContract.address}
+      WHERE contract_address = ${CONTRACTS.specific}
     `;
     return rows as SpecificCertificate[];
   }

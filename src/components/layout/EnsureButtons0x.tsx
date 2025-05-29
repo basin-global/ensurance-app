@@ -42,7 +42,6 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip"
-import { SUPPORTED_TOKENS } from '@/modules/specific/config/ERC20'
 import ZORA_COIN_ABI from '@/abi/ZoraCoin.json'
 import { toast } from 'react-toastify'
 import Image from 'next/image'
@@ -677,7 +676,7 @@ export function EnsureButtons0x({
     if (cached) return cached
 
     try {
-      const response = await fetch(`/api/token/image?address=${address}`)
+      const response = await fetch(`/api/config/image?address=${address}`)
       const data = await response.json()
       if (data.url) {
         // Save to cache

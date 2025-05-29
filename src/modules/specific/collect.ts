@@ -1,7 +1,32 @@
 import { createPublicClient, http } from 'viem'
 import { base } from 'viem/chains'
-import { getToken, getTokensOfContract } from '@zoralabs/protocol-sdk'
+import { getToken, getTokensOfContract, mint } from '@zoralabs/protocol-sdk'
 import type { TokenMetadata } from './types'
+
+// Type for the sales config structure
+type SalesConfig = {
+  pricePerToken: bigint
+  saleEnd: bigint
+  saleStart: bigint
+}
+
+// Type for the raw token data from Zora SDK
+type ZoraTokenData = {
+  token: {
+    contract: { address: string }
+    creator: `0x${string}`
+    maxSupply: bigint
+    mintType: '1155' | '721' | 'premint'
+    tokenURI: string
+    totalMinted: bigint
+    primaryMintActive: boolean
+    salesConfig?: {
+      pricePerToken: bigint
+      saleEnd: bigint
+      saleStart: bigint
+    }
+  }
+}
 
 export type TokenDisplayInfo = {
   contract: string
@@ -10,11 +35,8 @@ export type TokenDisplayInfo = {
   mintType: '1155' | '721' | 'premint'
   tokenURI: string
   totalMinted: bigint
-  salesConfig?: {
-    pricePerToken: bigint
-    saleEnd: bigint
-    saleStart: bigint
-  }
+  primaryMintActive: boolean
+  salesConfig?: SalesConfig
 }
 
 /**
@@ -37,14 +59,26 @@ export async function getTokenInfo(
       tokenId: BigInt(tokenId)
     })
 
+    // Type assertion for the raw token data
+    const rawToken = token as unknown as {
+      contract: { address: string }
+      creator: `0x${string}`
+      maxSupply: bigint
+      mintType: '1155' | '721' | 'premint'
+      tokenURI: string
+      totalMinted: bigint
+      salesConfig?: SalesConfig
+    }
+
     return {
-      contract: token.contract.address,
-      creator: token.creator,
-      maxSupply: token.maxSupply,
-      mintType: token.mintType,
-      tokenURI: token.tokenURI,
-      totalMinted: token.totalMinted,
-      salesConfig: token.salesConfig as any // Type assertion needed due to SDK type mismatch
+      contract: rawToken.contract.address,
+      creator: rawToken.creator,
+      maxSupply: rawToken.maxSupply,
+      mintType: rawToken.mintType,
+      tokenURI: rawToken.tokenURI,
+      totalMinted: rawToken.totalMinted,
+      primaryMintActive: true, // Default to true for single token view
+      salesConfig: rawToken.salesConfig
     }
   } catch (error) {
     console.error('Error fetching token info:', error)
@@ -75,17 +109,61 @@ export async function getContractTokens(
       raw: response
     })
 
-    return response.tokens.map(token => ({
-      contract: token.token.contract.address,
-      creator: token.token.creator,
-      maxSupply: token.token.maxSupply,
-      mintType: token.token.mintType,
-      tokenURI: token.token.tokenURI,
-      totalMinted: token.token.totalMinted,
-      salesConfig: token.token.salesConfig as any // Type assertion needed due to SDK type mismatch
-    }))
+    return response.tokens.map(token => {
+      // Type assertion for the raw token data
+      const rawToken = token as unknown as {
+        token: {
+          contract: { address: string }
+          creator: `0x${string}`
+          maxSupply: bigint
+          mintType: '1155' | '721' | 'premint'
+          tokenURI: string
+          totalMinted: bigint
+          salesConfig?: SalesConfig
+        }
+        primaryMintActive?: boolean
+      }
+
+      return {
+        contract: rawToken.token.contract.address,
+        creator: rawToken.token.creator,
+        maxSupply: rawToken.token.maxSupply,
+        mintType: rawToken.token.mintType,
+        tokenURI: rawToken.token.tokenURI,
+        totalMinted: rawToken.token.totalMinted,
+        primaryMintActive: rawToken.primaryMintActive ?? true,
+        salesConfig: rawToken.token.salesConfig
+      }
+    })
   } catch (error) {
     console.error('Error fetching contract tokens:', error)
     return []
+  }
+}
+
+/**
+ * Mint tokens using Zora's SDK
+ */
+export async function mintTokens(
+  contractAddress: `0x${string}`,
+  tokenId: string,
+  quantity: number,
+  minterAccount: `0x${string}`,
+  publicClient: any
+) {
+  try {
+    const { parameters } = await mint({
+      tokenContract: contractAddress,
+      mintType: '1155',
+      tokenId: BigInt(tokenId),
+      quantityToMint: quantity,
+      minterAccount,
+      publicClient,
+    })
+
+    return parameters
+  } catch (error) {
+    console.error('Error preparing mint transaction:', error)
+    throw error
   }
 } 

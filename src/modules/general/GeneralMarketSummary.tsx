@@ -47,24 +47,29 @@ export default function MarketSummary({
     sum + (item.creator_earnings || []).reduce((s, e) => s + Number(e.amountUsd || '0'), 0), 
     0
   )
+  const policiesIssued = data.length
 
   if (variant === 'subtle') {
     return (
       <div className={cn("text-right", className)}>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1">
           <div className="flex justify-end gap-6">
             <div>
-              <div className="text-sm text-gray-400">market cap:</div>
+              <div className="text-sm text-gray-400">policies issued</div>
+              <div className="text-xl font-semibold text-white">{policiesIssued}</div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-400">market cap</div>
               <div className="text-xl font-semibold text-white">${formatNumber(totalMarketCap.toString())}</div>
             </div>
             <div>
-              <div className="text-sm text-gray-400">volume:</div>
+              <div className="text-sm text-gray-400">volume</div>
               <div className="text-xl font-semibold text-white">${formatNumber(totalVolume.toString())}</div>
             </div>
           </div>
           {isAdmin && (
             <div>
-              <div className="text-sm text-gray-400">proceeds:</div>
+              <div className="text-sm text-gray-400">proceeds</div>
               <div className="text-xl font-semibold text-white">${formatNumber(totalProceeds.toString())}</div>
             </div>
           )}
@@ -79,19 +84,23 @@ export default function MarketSummary({
         <CardContent className="p-6">
           <h2 className="text-xl font-semibold text-white mb-4">{title}</h2>
           <div className="flex flex-col gap-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
-                <div className="text-sm text-gray-400">market cap:</div>
+                <div className="text-sm text-gray-400">policies issued</div>
+                <div className="text-2xl font-bold text-white">{policiesIssued}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-400">market cap</div>
                 <div className="text-2xl font-bold text-white">${formatNumber(totalMarketCap.toString())}</div>
               </div>
               <div>
-                <div className="text-sm text-gray-400">volume:</div>
+                <div className="text-sm text-gray-400">volume</div>
                 <div className="text-2xl font-bold text-white">${formatNumber(totalVolume.toString())}</div>
               </div>
             </div>
             {isAdmin && (
               <div>
-                <div className="text-sm text-gray-400">proceeds:</div>
+                <div className="text-sm text-gray-400">proceeds</div>
                 <div className="text-2xl font-bold text-white">${formatNumber(totalProceeds.toString())}</div>
               </div>
             )}
