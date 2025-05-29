@@ -1,80 +1,91 @@
-import { createPublicClient, createWalletClient, custom, http } from 'viem'
+import { createPublicClient, http } from 'viem'
 import { base } from 'viem/chains'
-import { CONTRACTS, ABIS, publicClient } from './config'
+import { getToken, getTokensOfContract } from '@zoralabs/protocol-sdk'
 import type { TokenMetadata } from './types'
 
-export type CollectParams = {
-  tokenId: string
-  quantity: bigint
-  recipient: `0x${string}`
-  walletClient: any
-  onSuccess?: () => void
-  onError?: (error: Error) => void
-}
-
-export type SalesConfig = {
-  saleStart: bigint
-  saleEnd: bigint
-  maxTokensPerAddress: bigint
-  pricePerToken: bigint
-  fundsRecipient: `0x${string}`
-  currency: `0x${string}`
-}
-
-/**
- * Get sales config for a token
- */
-export async function getSalesConfig(tokenId: string): Promise<SalesConfig> {
-  try {
-    const config = await publicClient.readContract({
-      address: CONTRACTS.erc20Minter,
-      abi: ABIS.erc20Minter,
-      functionName: 'sale',
-      args: [BigInt(tokenId)]
-    })
-    return config as SalesConfig
-  } catch (error) {
-    console.error('Error fetching sales config:', error)
-    throw new Error('Failed to fetch sales config')
+export type TokenDisplayInfo = {
+  contract: string
+  creator: `0x${string}`
+  maxSupply: bigint
+  mintType: '1155' | '721' | 'premint'
+  tokenURI: string
+  totalMinted: bigint
+  salesConfig?: {
+    pricePerToken: bigint
+    saleEnd: bigint
+    saleStart: bigint
   }
 }
 
 /**
- * Mint a token using ERC20 minter
+ * Get a single token's information
  */
-export async function collectToken({
-  tokenId,
-  quantity,
-  recipient,
-  walletClient,
-  onSuccess,
-  onError
-}: CollectParams): Promise<void> {
+export async function getTokenInfo(
+  contractAddress: `0x${string}`,
+  tokenId: string
+): Promise<TokenDisplayInfo | null> {
   try {
-    const mintReferral = '0x3CeDe7eae1feA81b4AEFf1f348f7497e6794ff96' as `0x${string}`
-
-    // TODO: Implement Permit2 approval
-    // For now, we'll assume the token is already approved
-
-    // Execute mint transaction
-    const hash = await walletClient.writeContract({
-      address: CONTRACTS.erc20Minter,
-      abi: ABIS.erc20Minter,
-      functionName: 'mint',
-      args: [
-        BigInt(tokenId),
-        quantity,
-        mintReferral,
-        recipient,
-        '' // Empty string for no comment
-      ],
-      account: recipient
+    const publicClient = createPublicClient({
+      chain: base,
+      transport: http()
     })
 
-    await publicClient.waitForTransactionReceipt({ hash })
-    onSuccess?.()
+    const { token } = await getToken({
+      publicClient,
+      tokenContract: contractAddress,
+      mintType: '1155',
+      tokenId: BigInt(tokenId)
+    })
+
+    return {
+      contract: token.contract.address,
+      creator: token.creator,
+      maxSupply: token.maxSupply,
+      mintType: token.mintType,
+      tokenURI: token.tokenURI,
+      totalMinted: token.totalMinted,
+      salesConfig: token.salesConfig as any // Type assertion needed due to SDK type mismatch
+    }
   } catch (error) {
-    console.error('Mint failed:', error)
-    onError?.(error instanceof Error ? error : new Error('Failed to collect'))
+    console.error('Error fetching token info:', error)
+    return null
+  }
+}
+
+/**
+ * Get all tokens for a contract
+ */
+export async function getContractTokens(
+  contractAddress: `0x${string}`
+): Promise<TokenDisplayInfo[]> {
+  try {
+    const publicClient = createPublicClient({
+      chain: base,
+      transport: http()
+    })
+
+    const response = await getTokensOfContract({
+      publicClient,
+      tokenContract: contractAddress
+    })
+
+    // Log the raw response
+    console.log('Raw Zora SDK Response:', {
+      tokens: response.tokens,
+      raw: response
+    })
+
+    return response.tokens.map(token => ({
+      contract: token.token.contract.address,
+      creator: token.token.creator,
+      maxSupply: token.token.maxSupply,
+      mintType: token.token.mintType,
+      tokenURI: token.token.tokenURI,
+      totalMinted: token.token.totalMinted,
+      salesConfig: token.token.salesConfig as any // Type assertion needed due to SDK type mismatch
+    }))
+  } catch (error) {
+    console.error('Error fetching contract tokens:', error)
+    return []
   }
 } 

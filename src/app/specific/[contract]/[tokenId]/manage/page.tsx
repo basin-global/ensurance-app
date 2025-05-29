@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getTokenInfo } from '@/modules/specific/manage'
 import { CONTRACTS, ABIS, SUPPORTED_TOKENS, type SupportedERC20Token, formatUsdcAmount, parseUsdcAmount, validateUsdcAmount, formatTimestamp, formatDateForInput, dateToUint64, formatSalesConfigForContract, formatSaleEnd } from '@/modules/specific/config'
 import { encodeSalesConfig } from '@/modules/specific/callSale'
+import { encodeInitialSalesConfig, getInitialSalesConfig } from '@/modules/specific/callSaleInitial'
 import Image from 'next/image'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from "@/components/ui/button"
@@ -157,17 +158,27 @@ export default function ManagePage() {
         transport: custom(provider)
       })
 
-      // Create updated config using the centralized formatter
-      const updatedConfig = formatSalesConfigForContract({
-        saleStart,
-        saleEnd,
-        price,
-        fundsRecipient,
-        currency: selectedCurrency || CONTRACTS.usdc // Default to USDC if no currency selected
-      })
+      // Create updated config using original contract values as base
+      const config: SalesConfig = {
+        saleStart: saleStart ? dateToUint64(saleStart) : tokenInfo?.salesConfig.saleStart || BigInt(0),
+        saleEnd: saleEnd ? dateToUint64(saleEnd) : tokenInfo?.salesConfig.saleEnd || BigInt(0),
+        maxTokensPerAddress: tokenInfo?.salesConfig.maxTokensPerAddress || BigInt(0),
+        pricePerToken: price ? parseUsdcAmount(price) : tokenInfo?.salesConfig.pricePerToken || BigInt(0),
+        fundsRecipient: fundsRecipient ? fundsRecipient as `0x${string}` : tokenInfo?.salesConfig.fundsRecipient || CONTRACTS.erc20Minter,
+        currency: selectedCurrency || tokenInfo?.salesConfig.currency || CONTRACTS.usdc
+      }
 
       // Use encodeSalesConfig instead of direct encoding
-      const salesConfigBytes = encodeSalesConfig(updatedConfig, params.tokenId as string)
+      const salesConfigBytes = encodeSalesConfig(config, params.tokenId as string)
+
+      // Add detailed logging
+      console.log('=== Update Sales Config Details ===')
+      console.log('Token ID:', params.tokenId)
+      console.log('Sales Config Bytes:', salesConfigBytes)
+      console.log('Contract Address:', CONTRACTS.specific)
+      console.log('Minter Address:', CONTRACTS.erc20Minter)
+      console.log('Raw Config:', config)
+      console.log('================================')
 
       // Call the specific contract's callSale function
       const tx = await walletClient.writeContract({
@@ -184,6 +195,85 @@ export default function ManagePage() {
     } catch (error) {
       console.error('Error updating token:', error)
       toast.error(error instanceof Error ? error.message : 'Failed to update token')
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  // Add this helper function after the other helper functions
+  const isSalesConfigUndefined = (config: SalesConfig | undefined) => {
+    if (!config) return true
+    return (
+      config.saleStart === BigInt(0) &&
+      config.saleEnd === BigInt(0) &&
+      config.maxTokensPerAddress === BigInt(0) &&
+      config.pricePerToken === BigInt(0)
+    )
+  }
+
+  // Add this new handler function before the return statement
+  const handleInitialConfig = async () => {
+    if (!activeWallet) {
+      toast.error('Please connect your wallet')
+      return
+    }
+
+    setIsUpdating(true)
+    try {
+      const provider = await activeWallet.getEthereumProvider()
+      const walletClient = createWalletClient({
+        account: activeWallet.address as `0x${string}`,
+        chain: base,
+        transport: custom(provider)
+      })
+
+      const salesConfigBytes = encodeInitialSalesConfig(params.tokenId as string, activeWallet.address as `0x${string}`)
+      
+      // Add detailed logging
+      console.log('=== Initial Sales Config Details ===')
+      console.log('Token ID:', params.tokenId)
+      console.log('Sales Config Bytes:', salesConfigBytes)
+      console.log('Contract Address:', CONTRACTS.specific)
+      console.log('Minter Address:', CONTRACTS.erc20Minter)
+      console.log('Wallet Address:', activeWallet.address)
+      console.log('Raw Config:', getInitialSalesConfig(params.tokenId as string, activeWallet.address as `0x${string}`))
+      console.log('================================')
+
+      const tx = await walletClient.writeContract({
+        address: CONTRACTS.specific,
+        abi: ABIS.specific,
+        functionName: 'callSale',
+        args: [BigInt(params.tokenId as string), CONTRACTS.erc20Minter, salesConfigBytes]
+      })
+
+      const receipt = await publicClient.waitForTransactionReceipt({ hash: tx })
+      
+      if (receipt.status === 'success') {
+        toast.success('Initial sales configuration set: Free tokens with no limits')
+      } else {
+        toast.error('Transaction failed: Configuration not updated')
+        return
+      }
+      
+      // Refresh token info
+      const info = await getTokenInfo(
+        params.contract as `0x${string}`,
+        params.tokenId as string
+      )
+      setTokenInfo(info)
+    } catch (error) {
+      console.error('Error setting initial config:', error)
+      if (error instanceof Error) {
+        if (error.message.includes('user rejected')) {
+          toast.error('Transaction cancelled by user')
+        } else if (error.message.includes('insufficient funds')) {
+          toast.error('Insufficient funds for gas')
+        } else {
+          toast.error(`Transaction failed: ${error.message}`)
+        }
+      } else {
+        toast.error('Failed to set initial configuration')
+      }
     } finally {
       setIsUpdating(false)
     }
@@ -308,116 +398,131 @@ export default function ManagePage() {
               <CardTitle>Update Token</CardTitle>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
+              {tokenInfo && isSalesConfigUndefined(tokenInfo.salesConfig) ? (
                 <div className="space-y-4">
-                  <div>
-                    <label htmlFor="saleStart" className="block text-sm font-medium mb-1">Sale Start</label>
-                    <input
-                      id="saleStart"
-                      type="date"
-                      value={saleStart}
-                      onChange={(e) => setSaleStart(e.target.value)}
-                      className="mt-1 w-full rounded-md border border-gray-800 bg-black/20 px-3 py-2 text-sm text-white ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&::-webkit-calendar-picker-indicator]:invert"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="saleEnd" className="block text-sm font-medium mb-1">Sale End</label>
-                    <input
-                      id="saleEnd"
-                      type="date"
-                      value={saleEnd}
-                      onChange={(e) => setSaleEnd(e.target.value)}
-                      className="mt-1 w-full rounded-md border border-gray-800 bg-black/20 px-3 py-2 text-sm text-white ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&::-webkit-calendar-picker-indicator]:invert"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setSaleEnd('')}
-                      className="text-xs text-blue-400 hover:text-blue-300 mt-1"
-                    >
-                      Set to infinite
-                    </button>
-                  </div>
-
-                  <div>
-                    <label htmlFor="price" className="block text-sm font-medium mb-1">Price (USDC)</label>
-                    <div className="relative mt-1">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span className="text-gray-400">$</span>
-                      </div>
+                  <p className="text-sm text-muted-foreground">
+                    This token has no sales configuration set. Click below to set the initial configuration.
+                  </p>
+                  <Button 
+                    onClick={handleInitialConfig}
+                    className="w-full"
+                    disabled={isUpdating}
+                  >
+                    {isUpdating ? 'Setting Initial Config...' : 'Set Initial Sales Config'}
+                  </Button>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="space-y-4">
+                    <div>
+                      <label htmlFor="saleStart" className="block text-sm font-medium mb-1">Sale Start</label>
                       <input
-                        id="price"
-                        type="text"
-                        value={price}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/,/g, '')
-                          const error = validateUsdcAmount(value)
-                          if (!error) {
-                            setPrice(value) // Allow any valid input while typing
-                          }
-                        }}
-                        onBlur={(e) => {
-                          // Format the price when user is done typing
-                          const value = e.target.value.replace(/,/g, '')
-                          const amountFloat = parseFloat(value)
-                          if (!isNaN(amountFloat)) {
-                            setPrice(amountFloat.toFixed(2))
-                          }
-                        }}
-                        className="w-full rounded-md border border-gray-800 bg-black/20 pl-7 px-3 py-2 text-sm text-white ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        id="saleStart"
+                        type="date"
+                        value={saleStart}
+                        onChange={(e) => setSaleStart(e.target.value)}
+                        className="mt-1 w-full rounded-md border border-gray-800 bg-black/20 px-3 py-2 text-sm text-white ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&::-webkit-calendar-picker-indicator]:invert"
                       />
                     </div>
-                  </div>
 
-                  <div>
-                    <label htmlFor="fundsRecipient" className="block text-sm font-medium mb-1">Funds Recipient</label>
-                    <input
-                      id="fundsRecipient"
-                      value={fundsRecipient}
-                      onChange={(e) => setFundsRecipient(e.target.value)}
-                      className="mt-1 w-full rounded-md border border-gray-800 bg-black/20 px-3 py-2 text-sm text-white font-mono ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    />
-                  </div>
+                    <div>
+                      <label htmlFor="saleEnd" className="block text-sm font-medium mb-1">Sale End</label>
+                      <input
+                        id="saleEnd"
+                        type="date"
+                        value={saleEnd}
+                        onChange={(e) => setSaleEnd(e.target.value)}
+                        className="mt-1 w-full rounded-md border border-gray-800 bg-black/20 px-3 py-2 text-sm text-white ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&::-webkit-calendar-picker-indicator]:invert"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setSaleEnd('')}
+                        className="text-xs text-blue-400 hover:text-blue-300 mt-1"
+                      >
+                        Set to infinite
+                      </button>
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Max Tokens Per Address</label>
-                    <div className="mt-1 px-3 py-2 text-sm text-muted-foreground bg-black/20 rounded-md border border-gray-800">
-                      {tokenInfo?.salesConfig.maxTokensPerAddress.toString() === '0' ? 'No limit' : tokenInfo?.salesConfig.maxTokensPerAddress.toString()}
+                    <div>
+                      <label htmlFor="price" className="block text-sm font-medium mb-1">Price (USDC)</label>
+                      <div className="relative mt-1">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <span className="text-gray-400">$</span>
+                        </div>
+                        <input
+                          id="price"
+                          type="text"
+                          value={price}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/,/g, '')
+                            const error = validateUsdcAmount(value)
+                            if (!error) {
+                              setPrice(value) // Allow any valid input while typing
+                            }
+                          }}
+                          onBlur={(e) => {
+                            // Format the price when user is done typing
+                            const value = e.target.value.replace(/,/g, '')
+                            const amountFloat = parseFloat(value)
+                            if (!isNaN(amountFloat)) {
+                              setPrice(amountFloat.toFixed(2))
+                            }
+                          }}
+                          className="w-full rounded-md border border-gray-800 bg-black/20 pl-7 px-3 py-2 text-sm text-white ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label htmlFor="fundsRecipient" className="block text-sm font-medium mb-1">Funds Recipient</label>
+                      <input
+                        id="fundsRecipient"
+                        value={fundsRecipient}
+                        onChange={(e) => setFundsRecipient(e.target.value)}
+                        className="mt-1 w-full rounded-md border border-gray-800 bg-black/20 px-3 py-2 text-sm text-white font-mono ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Max Tokens Per Address</label>
+                      <div className="mt-1 px-3 py-2 text-sm text-muted-foreground bg-black/20 rounded-md border border-gray-800">
+                        {tokenInfo?.salesConfig.maxTokensPerAddress.toString() === '0' ? 'No limit' : tokenInfo?.salesConfig.maxTokensPerAddress.toString()}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Currency</label>
+                      <Select
+                        value={selectedCurrency}
+                        onValueChange={(value) => setSelectedCurrency(value as `0x${string}`)}
+                      >
+                        <SelectTrigger className="mt-1 w-full bg-black/20 border-gray-800">
+                          <SelectValue placeholder="Select currency" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-gray-900 border-gray-800">
+                          {Object.entries(SUPPORTED_TOKENS).map(([symbol, token]) => (
+                            <SelectItem 
+                              key={token.address} 
+                              value={token.address}
+                              className="hover:bg-gray-800"
+                            >
+                              {symbol}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Currency</label>
-                    <Select
-                      value={selectedCurrency}
-                      onValueChange={(value) => setSelectedCurrency(value as `0x${string}`)}
-                    >
-                      <SelectTrigger className="mt-1 w-full bg-black/20 border-gray-800">
-                        <SelectValue placeholder="Select currency" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-gray-900 border-gray-800">
-                        {Object.entries(SUPPORTED_TOKENS).map(([symbol, token]) => (
-                          <SelectItem 
-                            key={token.address} 
-                            value={token.address}
-                            className="hover:bg-gray-800"
-                          >
-                            {symbol}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <Button 
-                  type="submit" 
-                  className="w-full"
-                  disabled={isUpdating}
-                >
-                  {isUpdating ? 'Updating...' : 'Update Token'}
-                </Button>
-              </form>
+                  <Button 
+                    type="submit" 
+                    className="w-full"
+                    disabled={isUpdating}
+                  >
+                    {isUpdating ? 'Updating...' : 'Update Token'}
+                  </Button>
+                </form>
+              )}
             </CardContent>
           </Card>
         </div>
