@@ -14,8 +14,9 @@ export const NETWORK = {
 // Contract addresses
 export const CONTRACTS = {
   specific: '0x7DFaa8f8E2aA32b6C2112213B395b4C9889580dd' as `0x${string}`,
-  usdc: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as `0x${string}`,
-  erc20Minter: '0x777777E8850d8D6d98De2B5f64fae401F96eFF31' as `0x${string}`
+  usdc: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913' as `0x${string}`,
+  erc20Minter: '0x777777e8850d8d6d98de2b5f64fae401f96eff31' as `0x${string}`,
+  mintReferral: '0x3CeDe7eae1feA81b4AEFf1f348f7497e6794ff96' as `0x${string}`
 } as const
 
 // Public client
@@ -245,4 +246,7 @@ export const formatSalesConfigForContract = (config: {
 export const formatSaleEnd = (saleEnd: bigint | string | undefined): string => {
   if (!saleEnd || saleEnd === '0' || saleEnd === BigInt(0)) return 'No end date'
   return formatTimestamp(saleEnd.toString())
-} 
+}
+
+// Permit2 on Base
+export const PERMIT2_ADDRESS = '0x000000000022D473030F116dDEE9F6B43aC78BA3' as `0x${string}` 

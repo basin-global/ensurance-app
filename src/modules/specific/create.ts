@@ -46,14 +46,6 @@ export type CreateTokenStatus = {
 export type CreateTokenParams = {
   metadata: TokenMetadata
   mediaFile: File
-  salesConfig?: {
-    saleStart: bigint
-    saleEnd: bigint
-    maxTokensPerAddress: bigint
-    pricePerToken: bigint
-    fundsRecipient: `0x${string}`
-    currency: `0x${string}`
-  }
   creatorAccount: `0x${string}`
   onStatus: (status: CreateTokenStatus) => void
 }
@@ -64,7 +56,6 @@ export type CreateTokenParams = {
 export async function createToken({
   metadata,
   mediaFile,
-  salesConfig,
   creatorAccount,
   onStatus
 }: CreateTokenParams): Promise<{
@@ -95,12 +86,6 @@ export async function createToken({
       functionName: 'setupNewTokenWithCreateReferral',
       args: [metadataUrl, maxSupply, createReferral],
       address: CONTRACTS.specific
-    }
-
-    // If sales config is provided, prepare callSale parameters
-    if (salesConfig) {
-      const salesConfigBytes = await encodeSalesConfig(nextTokenId, salesConfig)
-      parameters.args.push(CONTRACTS.erc20Minter, salesConfigBytes)
     }
 
     // Update status: Token created

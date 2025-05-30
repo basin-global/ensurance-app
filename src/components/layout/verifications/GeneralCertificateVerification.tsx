@@ -32,8 +32,21 @@ export default function GeneralCertificateVerification({ contractAddress }: Prop
   }
 
   return (
-    <div className="flex flex-col items-center">
-      <div className="text-[12px] flex justify-center gap-2">
+    <div className="flex flex-col gap-1.5">
+      {/* Certificate verification line */}
+      <div className="flex justify-center">
+        <Link
+          href={`https://basescan.org/token/${contractAddress}#readProxyContract`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-500 hover:text-blue-600 transition-colors"
+        >
+          certificate of ensurance
+        </Link>
+      </div>
+
+      {/* Zora link line */}
+      <div className="flex justify-center gap-2">
         <Link
           href={`https://zora.co/coin/base:${contractAddress}`}
           target="_blank"
@@ -43,20 +56,21 @@ export default function GeneralCertificateVerification({ contractAddress }: Prop
           zora
         </Link>
         <Link
-          href={`https://basescan.org/token/${contractAddress}`}
+          href={`https://matcha.xyz/tokens/base/${contractAddress}`}
           target="_blank"
           rel="noopener noreferrer"
           className="text-gray-400 hover:text-white transition-colors"
         >
-          basescan
+          matcha
         </Link>
       </div>
+
       <Button
         variant="ghost"
         size="sm"
         onClick={handleRefresh}
         disabled={refreshing}
-        className="text-[12px] text-gray-400 hover:text-white transition-colors -mt-1"
+        className="text-[12px] text-gray-400 hover:text-white transition-colors"
       >
         {refreshing ? 'refreshing...' : 'refresh'}
       </Button>

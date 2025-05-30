@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { MAX_SUPPLY_OPEN_EDITION } from '@/modules/specific/config'
 import { EnsureButtonsSpecific } from '@/components/layout/EnsureButtonsSpecific'
+import VerificationSection from '@/components/layout/verifications/VerificationSection'
 
 const FALLBACK_IMAGE = '/assets/no-image-found.png'
 
@@ -238,7 +239,7 @@ export default function SpecificTokenPage({
                       tokenId={BigInt(params.tokenId)}
                       imageUrl={imageUrl}
                       tokenName={metadata?.name}
-                      tokenSymbol={metadata?.name?.split(' ')[0] || 'TOKEN'}
+                      tokenSymbol={metadata?.name || 'Certificate'}
                       maxSupply={tokenInfo.maxSupply}
                       totalMinted={tokenInfo.totalMinted}
                       pricePerToken={tokenInfo.salesConfig?.pricePerToken}
@@ -254,6 +255,13 @@ export default function SpecificTokenPage({
           </div>
         </div>
       </div>
+
+      <VerificationSection 
+        type="specific"
+        name={metadata?.name || 'Unnamed Token'}
+        contractAddress={params.contract}
+        tokenId={params.tokenId}
+      />
     </div>
   )
 }

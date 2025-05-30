@@ -1,6 +1,6 @@
 'use client'
 
-import { PlusCircle, RefreshCw, Flame } from 'lucide-react'
+import { PlusCircle, RefreshCw, Flame, ExternalLink } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { usePrivy, useWallets } from '@privy-io/react-auth'
@@ -12,6 +12,7 @@ import {
   createPublicClient,
   type PublicClient,
   type WalletClient,
+  maxUint256
 } from 'viem'
 import { base } from 'viem/chains'
 import {
@@ -30,8 +31,9 @@ import {
 } from "@/components/ui/tooltip"
 import { toast } from 'react-toastify'
 import ZORA_1155_ABI from '@/abi/Zora1155proxy.json'
-import { mintTokens } from '@/modules/specific/collect'
-import { formatUsdcAmount, parseUsdcAmount, SUPPORTED_TOKENS } from '@/modules/specific/config'
+import ZORA_ERC20_MINTER_ABI from '@/abi/ZoraERC20Minter.json'
+import { mintToken } from '@/modules/specific/collect'
+import { formatUsdcAmount, parseUsdcAmount, SUPPORTED_TOKENS, CONTRACTS, PERMIT2_ADDRESS } from '@/modules/specific/config'
 
 interface EnsureButtonsSpecificProps {
   contractAddress: Address
@@ -51,6 +53,8 @@ interface EnsureButtonsSpecificProps {
 
 type TradeType = 'buy' | 'sell' | 'burn'
 
+const PROCEEDS_ADDRESS = '0xa187F8CBdd36D63967c33f5BD4dD4B9ECA51270e' as `0x${string}`
+
 export function EnsureButtonsSpecific({ 
   contractAddress,
   tokenId,
@@ -66,7 +70,7 @@ export function EnsureButtonsSpecific({
   pricePerToken,
   primaryMintActive = false
 }: EnsureButtonsSpecificProps) {
-  const { login, authenticated } = usePrivy()
+  const { login, authenticated, user } = usePrivy()
   const { wallets } = useWallets()
   const [isLoading, setIsLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
@@ -76,6 +80,7 @@ export function EnsureButtonsSpecific({
   const [formattedAmount, setFormattedAmount] = useState('')
   const [amountError, setAmountError] = useState<string>('')
   const [tokenBalance, setTokenBalance] = useState<bigint>(BigInt(0))
+  const [usdcBalance, setUsdcBalance] = useState<bigint>(BigInt(0))
 
   // Create a single publicClient instance
   const publicClient = createPublicClient({
@@ -83,32 +88,50 @@ export function EnsureButtonsSpecific({
     transport: http()
   })
 
-  const iconSize = size === 'sm' ? 'w-6 h-6' : 'w-10 h-10'
+  // Function to fetch balances
+  const fetchBalances = async () => {
+    try {
+      const activeWallet = user?.wallet
+      if (!activeWallet?.address) return
 
-  // Add effect to fetch token balance
-  useEffect(() => {
-    const fetchBalance = async () => {
-      if (!contractAddress || !authenticated) return
-      
-      try {
-        const activeWallet = wallets[0]
-        if (!activeWallet) return
+      // Fetch token balance
+      const tokenBalance = await publicClient.readContract({
+        address: contractAddress,
+        abi: ZORA_1155_ABI,
+        functionName: 'balanceOf',
+        args: [activeWallet.address, tokenId]
+      }) as bigint
+      setTokenBalance(tokenBalance)
 
-        const balance = await publicClient.readContract({
-          address: contractAddress,
-          abi: ZORA_1155_ABI,
-          functionName: 'balanceOf',
-          args: [activeWallet.address, tokenId]
-        }) as bigint
-        
-        setTokenBalance(balance)
-      } catch (error) {
-        console.error('Error fetching balance:', error)
-      }
+      // Fetch USDC balance
+      const usdcBalance = await publicClient.readContract({
+        address: CONTRACTS.usdc,
+        abi: [
+          {
+            inputs: [{ name: 'account', type: 'address' }],
+            name: 'balanceOf',
+            outputs: [{ type: 'uint256' }],
+            stateMutability: 'view',
+            type: 'function'
+          }
+        ],
+        functionName: 'balanceOf',
+        args: [activeWallet.address as `0x${string}`]
+      }) as bigint
+      setUsdcBalance(usdcBalance)
+    } catch (error) {
+      console.error('Error fetching balances:', error)
     }
+  }
 
-    fetchBalance()
-  }, [contractAddress, authenticated, wallets, publicClient, tokenId])
+  // Fetch balances on mount and when wallet changes
+  useEffect(() => {
+    if (authenticated && user?.wallet?.address) {
+      fetchBalances()
+    }
+  }, [authenticated, user?.wallet?.address])
+
+  const iconSize = size === 'sm' ? 'w-6 h-6' : 'w-10 h-10'
 
   const handleOpenModal = (type: TradeType) => {
     if (!authenticated) {
@@ -121,10 +144,15 @@ export function EnsureButtonsSpecific({
       return
     }
 
+    // Reset states
     setAmount('')
     setFormattedAmount('')
     setAmountError('')
     setTradeType(type)
+
+    // Fetch balances when opening modal
+    fetchBalances()
+
     if (type === 'burn') {
       setBurnModalOpen(true)
     } else {
@@ -175,14 +203,12 @@ export function EnsureButtonsSpecific({
 
     try {
       setIsLoading(true)
-      const activeWallet = wallets[0]
-      if (!activeWallet) {
+      const activeWallet = user?.wallet
+      if (!activeWallet?.address) {
         toast.dismiss(pendingToast)
         toast.error('No wallet connected')
         return
       }
-
-      const provider = await activeWallet.getEthereumProvider()
 
       if (tradeType === 'burn') {
         const tokenAmount = BigInt(Math.floor(Number(amount)))
@@ -194,24 +220,26 @@ export function EnsureButtonsSpecific({
 
         try {
           toast.update(pendingToast, {
-            render: 'confirming burn...',
+            render: 'sending to ensurance proceeds...',
             type: 'info',
             isLoading: true
           })
 
           const walletClient = createWalletClient({
             chain: base,
-            transport: custom(provider)
+            transport: custom(window.ethereum)
           })
 
           const hash = await walletClient.writeContract({
             address: contractAddress,
             abi: ZORA_1155_ABI,
-            functionName: 'burnBatch',
+            functionName: 'safeTransferFrom',
             args: [
               activeWallet.address,
-              [tokenId],
-              [tokenAmount]
+              PROCEEDS_ADDRESS,
+              tokenId,
+              tokenAmount,
+              '0x' // No data needed
             ],
             chain: base,
             account: activeWallet.address as `0x${string}`
@@ -220,7 +248,7 @@ export function EnsureButtonsSpecific({
           await publicClient.waitForTransactionReceipt({ hash })
           
           toast.update(pendingToast, {
-            render: 'tokens burned successfully',
+            render: 'certificates sent to ensurance proceeds',
             type: 'success',
             isLoading: false,
             autoClose: 5000,
@@ -228,15 +256,16 @@ export function EnsureButtonsSpecific({
           })
           
           setModalOpen(false)
+          await fetchBalances()
           return
         } catch (error: any) {
-          console.error('Burn failed:', error)
+          console.error('Transfer failed:', error)
           if (error?.code === 4001 || error?.message?.includes('rejected')) {
             toast.dismiss(pendingToast)
             toast.error('transaction cancelled')
           } else {
             toast.update(pendingToast, {
-              render: 'burn failed',
+              render: 'transfer failed',
               type: 'error',
               isLoading: false,
               autoClose: 5000
@@ -259,28 +288,107 @@ export function EnsureButtonsSpecific({
         }
 
         try {
+          const walletClient = createWalletClient({
+            chain: base,
+            transport: custom(window.ethereum)
+          })
+
+          // Get mint parameters and check if approval is needed
+          const { parameters, needsApproval } = await mintToken(
+            contractAddress,
+            tokenId.toString(),
+            Number(quantity),
+            activeWallet.address as `0x${string}`,
+            walletClient
+          )
+
+          // If approval is needed, handle it first
+          if (needsApproval) {
+            toast.update(pendingToast, {
+              render: 'approving USDC...',
+              type: 'info',
+              isLoading: true
+            })
+
+            // Approve USDC
+            const approveHash = await walletClient.writeContract({
+              address: CONTRACTS.usdc,
+              abi: [
+                {
+                  inputs: [
+                    { name: 'spender', type: 'address' },
+                    { name: 'amount', type: 'uint256' }
+                  ],
+                  name: 'approve',
+                  outputs: [{ type: 'bool' }],
+                  stateMutability: 'nonpayable',
+                  type: 'function'
+                }
+              ],
+              functionName: 'approve',
+              args: [CONTRACTS.erc20Minter, maxUint256],
+              account: activeWallet.address as `0x${string}`
+            })
+
+            await publicClient.waitForTransactionReceipt({ hash: approveHash })
+
+            toast.update(pendingToast, {
+              render: 'USDC approved! Click ENSURE again to mint.',
+              type: 'success',
+              isLoading: false,
+              autoClose: 5000
+            })
+            
+            setModalOpen(false)
+            await fetchBalances()
+            return
+          }
+
+          // Proceed with mint
           toast.update(pendingToast, {
             render: 'confirming purchase...',
             type: 'info',
             isLoading: true
           })
 
-          const walletClient = createWalletClient({
-            chain: base,
-            transport: custom(provider)
+          if (!pricePerToken) {
+            toast.dismiss(pendingToast)
+            toast.error('Price per token not found')
+            return
+          }
+
+          // Calculate total price
+          const totalPrice = pricePerToken * BigInt(quantity)
+
+          console.log('Mint contract call:', {
+            address: CONTRACTS.erc20Minter,
+            functionName: 'mint',
+            args: [
+              activeWallet.address,    // 1. mintTo
+              BigInt(quantity),        // 2. quantity
+              contractAddress,         // 3. tokenAddress
+              tokenId,                 // 4. tokenId
+              totalPrice,              // 5. totalValue
+              CONTRACTS.usdc,          // 6. currency
+              CONTRACTS.mintReferral,  // 7. mintReferral
+              ''                       // 8. comment
+            ]
           })
 
-          // Use Zora's mint functionality
-          const mintParameters = await mintTokens(
-            contractAddress,
-            tokenId.toString(),
-            Number(quantity),
-            activeWallet.address as `0x${string}`,
-            publicClient
-          )
-
           const hash = await walletClient.writeContract({
-            ...mintParameters,
+            address: CONTRACTS.erc20Minter,
+            abi: ZORA_ERC20_MINTER_ABI,
+            functionName: 'mint',
+            args: [
+              activeWallet.address,    // 1. mintTo
+              BigInt(quantity),        // 2. quantity
+              contractAddress,         // 3. tokenAddress
+              tokenId,                 // 4. tokenId
+              totalPrice,              // 5. totalValue
+              CONTRACTS.usdc,          // 6. currency
+              CONTRACTS.mintReferral,  // 7. mintReferral
+              ''                       // 8. comment
+            ],
             chain: base,
             account: activeWallet.address as `0x${string}`
           })
@@ -296,21 +404,20 @@ export function EnsureButtonsSpecific({
           })
           
           setModalOpen(false)
+          await fetchBalances()
           return
         } catch (error: any) {
-          console.error('Purchase failed:', error)
+          console.error('Trade failed:', error)
+          toast.dismiss(pendingToast)
           if (error?.code === 4001 || error?.message?.includes('rejected')) {
-            toast.dismiss(pendingToast)
-            toast.error('transaction cancelled')
+            toast.error('Transaction cancelled')
+          } else if (error?.status === 429 || error?.message?.includes('429')) {
+            toast.error('Rate limit exceeded. Please try again in a few seconds.')
+          } else if (error?.message?.includes('insufficient funds')) {
+            toast.error('Insufficient USDC balance')
           } else {
-            toast.update(pendingToast, {
-              render: 'purchase failed',
-              type: 'error',
-              isLoading: false,
-              autoClose: 5000
-            })
+            toast.error(error?.message || 'Failed to execute trade')
           }
-          return
         }
       }
     } catch (error: any) {
@@ -373,7 +480,7 @@ export function EnsureButtonsSpecific({
 
       {showBalance && (
         <div className="mt-2 text-sm text-gray-400 text-center">
-          balance: {formatBalance(tokenBalance)} {tokenSymbol}
+          balance: {formatBalance(tokenBalance)} {tokenName || 'Certificate'}
         </div>
       )}
 
@@ -443,7 +550,7 @@ export function EnsureButtonsSpecific({
                   </div>
                 )}
                 <div className="text-sm text-gray-400">
-                  your balance: {formatBalance(tokenBalance)}
+                  your balance: {formatUsdcAmount(usdcBalance)} USDC
                 </div>
                 
                 {pricePerToken && (
@@ -506,13 +613,13 @@ export function EnsureButtonsSpecific({
                   burn
                 </DialogTitle>
                 <div className="text-3xl font-bold text-white">
-                  {tokenName || tokenSymbol}
+                  {tokenName || 'Certificate'}
                 </div>
               </div>
               <div className="relative w-20 h-20 rounded-lg overflow-hidden mr-4">
                 <Image 
                   src={imageUrl}
-                  alt={tokenSymbol}
+                  alt={tokenName || 'Certificate'}
                   fill
                   className="object-cover"
                 />
@@ -546,13 +653,13 @@ export function EnsureButtonsSpecific({
                     <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
                       <Image
                         src={imageUrl}
-                        alt={tokenSymbol}
+                        alt={tokenName || 'Certificate'}
                         width={24}
                         height={24}
                         className="object-cover"
                       />
                     </div>
-                    {tokenSymbol}
+                    {tokenName || 'Certificate'}
                   </div>
                 </div>
 
@@ -580,11 +687,27 @@ export function EnsureButtonsSpecific({
 
                   <div className="mt-4 p-4 bg-gray-900/50 rounded-lg border border-gray-800">
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-400">You will burn:</span>
+                      <span className="text-gray-400">You will send:</span>
                       <span className="text-white">
-                        {amount ? `${formattedAmount} ${tokenSymbol}` : `0 ${tokenSymbol}`}
+                        {amount ? `${formattedAmount} ${tokenName || 'Certificate'}` : `0 ${tokenName || 'Certificate'}`}
                       </span>
                     </div>
+                  </div>
+
+                  <div className="text-sm text-gray-400 flex items-center gap-2">
+                    <Flame className="w-4 h-4 text-orange-500" />
+                    <span>
+                      burn sends these certificates to the protocol to create{' '}
+                      <a 
+                        href="https://ensurance.app/proceeds/0xa187F8CBdd36D63967c33f5BD4dD4B9ECA51270e" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-orange-400 hover:text-orange-300 inline-flex items-center gap-1"
+                      >
+                        ensurance proceeds
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </span>
                   </div>
                 </div>
               </div>

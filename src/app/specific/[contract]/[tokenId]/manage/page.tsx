@@ -82,6 +82,8 @@ export default function ManagePage() {
   const [isUpdating, setIsUpdating] = useState(false)
   const [description, setDescription] = useState<string>('')
   const [selectedCurrency, setSelectedCurrency] = useState<`0x${string}`>(CONTRACTS.usdc)
+  const [recipientAddress, setRecipientAddress] = useState('')
+  const [mintQuantity, setMintQuantity] = useState('')
 
   // Fetch token info on load
   useEffect(() => {
@@ -436,7 +438,7 @@ export default function ManagePage() {
                       />
                       <button
                         type="button"
-                        onClick={() => setSaleEnd('')}
+                        onClick={() => setSaleEnd('18446744073709551615')}
                         className="text-xs text-blue-400 hover:text-blue-300 mt-1"
                       >
                         Set to infinite
@@ -526,6 +528,99 @@ export default function ManagePage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Admin Mint Section */}
+        <Card className="max-w-7xl mx-auto mt-8 bg-primary-dark/30 border-gray-800">
+          <CardHeader>
+            <CardTitle>Admin Mint</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {tokenInfo && isSalesConfigUndefined(tokenInfo.salesConfig) ? (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Sales configuration must be set before admin minting is available.
+                </p>
+                <Button 
+                  onClick={handleInitialConfig}
+                  className="w-full"
+                  disabled={isUpdating}
+                >
+                  {isUpdating ? 'Setting Initial Config...' : 'Set Initial Sales Config'}
+                </Button>
+              </div>
+            ) : (
+              <form onSubmit={async (e: React.FormEvent) => {
+                e.preventDefault()
+                if (!activeWallet) {
+                  toast.error('Please connect your wallet')
+                  return
+                }
+
+                setIsUpdating(true)
+                try {
+                  const provider = await activeWallet.getEthereumProvider()
+                  const walletClient = createWalletClient({
+                    account: activeWallet.address as `0x${string}`,
+                    chain: base,
+                    transport: custom(provider)
+                  })
+
+                  const tx = await walletClient.writeContract({
+                    address: CONTRACTS.specific,
+                    abi: ABIS.specific,
+                    functionName: 'adminMint',
+                    args: [
+                      recipientAddress as `0x${string}`,
+                      BigInt(params.tokenId as string),
+                      BigInt(mintQuantity),
+                      '0x' // empty bytes data - standard for non-contract recipients
+                    ]
+                  })
+
+                  await publicClient.waitForTransactionReceipt({ hash: tx })
+                  toast.success('Successfully minted tokens')
+                } catch (error) {
+                  console.error('Error minting tokens:', error)
+                  toast.error(error instanceof Error ? error.message : 'Failed to mint tokens')
+                } finally {
+                  setIsUpdating(false)
+                }
+              }} className="space-y-4">
+                <div>
+                  <label htmlFor="recipientAddress" className="block text-sm font-medium mb-1">Recipient Address</label>
+                  <input
+                    id="recipientAddress"
+                    type="text"
+                    value={recipientAddress}
+                    onChange={(e) => setRecipientAddress(e.target.value)}
+                    className="mt-1 w-full rounded-md border border-gray-800 bg-black/20 px-3 py-2 text-sm text-white font-mono ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="0x..."
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="mintQuantity" className="block text-sm font-medium mb-1">Quantity</label>
+                  <input
+                    id="mintQuantity"
+                    type="number"
+                    min="1"
+                    value={mintQuantity}
+                    onChange={(e) => setMintQuantity(e.target.value)}
+                    className="mt-1 w-full rounded-md border border-gray-800 bg-black/20 px-3 py-2 text-sm text-white ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </div>
+
+                <Button 
+                  type="submit" 
+                  className="w-full"
+                  disabled={isUpdating || !recipientAddress || !mintQuantity || !isValidAddress(recipientAddress)}
+                >
+                  {isUpdating ? 'Minting...' : 'Mint Tokens'}
+                </Button>
+              </form>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
