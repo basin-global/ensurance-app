@@ -1267,92 +1267,187 @@ export function EnsureButtons0x({
                         {amountError}
                       </div>
                     )}
-                    <div className="text-sm text-gray-400 flex items-center gap-2">
-                      <span>your balance: {formatBalance(tokenBalance)}</span>
-                      <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
-                        <Image
-                          src={imageUrl}
-                          alt={tokenSymbol}
-                          width={24}
-                          height={24}
-                          className="object-cover"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Recipient Input */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-300">
-                      TO
-                    </label>
-                    <div className="relative">
-                      <Input
-                        type="text"
-                        value={accountSearchQuery}
-                        onChange={(e) => {
-                          setAccountSearchQuery(e.target.value)
-                          setSelectedAccount(null)
-                        }}
-                        placeholder="Search for an account..."
-                        className="w-full bg-gray-900/50 border-gray-800 text-white placeholder:text-gray-500 h-12 text-lg font-medium"
-                      />
-                      {isSearching && (
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                          <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-                        </div>
-                      )}
-                      {accountSearchResults.length > 0 && !selectedAccount && (
-                        <div className="absolute z-10 w-full mt-1 bg-gray-900 border border-gray-800 rounded-lg shadow-lg max-h-60 overflow-auto">
-                          {accountSearchResults.map((result) => (
-                            <button
-                              key={result.name}
-                              onClick={() => {
-                                setSelectedAccount(result)
-                                setAccountSearchQuery(result.name)
-                              }}
-                              className="w-full px-4 py-2 text-left hover:bg-gray-800 transition-colors flex items-center gap-2"
-                            >
-                              <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
-                                <AccountImage
-                                  tokenId={result.token_id}
-                                  groupName={result.name.split('.')[1]}
-                                  variant="circle"
-                                  className="w-6 h-6"
-                                />
-                              </div>
-                              <span className="font-mono">{result.name}</span>
-                              {result.is_agent && (
-                                <span className="text-xs px-2 py-1 bg-blue-500/20 text-blue-400 rounded">
-                                  agent
-                                </span>
-                              )}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    {selectedAccount && selectedToken?.address && (
-                      <div className="flex items-center gap-3 mt-2">
-                        <div className="flex-1 space-y-1">
-                          <div className="text-sm text-gray-400">
-                            {selectedAccount.name}
-                          </div>
-                          <div className="text-xs text-gray-500 font-mono">
-                            {truncateAddress(selectedToken.address)}
-                          </div>
-                        </div>
-                        <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
-                          <AccountImage
-                            tokenId={selectedAccount.token_id}
-                            groupName={selectedAccount.name.split('.')[1]}
-                            variant="circle"
-                            className="w-8 h-8"
+                    {tradeType !== 'buy' && (
+                      <div className="text-sm text-gray-400 flex items-center gap-2">
+                        <span>your balance: {formatBalance(tokenBalance)}</span>
+                        <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
+                          <Image
+                            src={imageUrl}
+                            alt={tokenSymbol}
+                            width={24}
+                            height={24}
+                            className="object-cover"
                           />
                         </div>
                       </div>
                     )}
                   </div>
+
+                  {/* Token Selection for Buy/Sell */}
+                  {(tradeType === 'buy' || tradeType === 'sell') && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-300">
+                        {tradeType === 'buy' ? 'PAY WITH' : 'TRANSFORM TO'}
+                      </label>
+                      <Select
+                        value={selectedToken?.address}
+                        onValueChange={(value) => {
+                          const token = availableTokens.find(t => t.address === value)
+                          if (token) setSelectedToken(token)
+                        }}
+                      >
+                        <SelectTrigger className="bg-gray-900/50 border-gray-800 text-white h-12 text-lg font-medium">
+                          <SelectValue placeholder="Select token" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-gray-900 border-gray-800">
+                          {isLoadingTokens ? (
+                            <div className="flex items-center justify-center p-4">
+                              <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                            </div>
+                          ) : (
+                            availableTokens.map((token) => (
+                              <SelectItem
+                                key={token.address}
+                                value={token.address}
+                                className="text-white hover:bg-gray-800 focus:bg-gray-800"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
+                                    {tokenImages[token.address] ? (
+                                      <Image
+                                        src={tokenImages[token.address]}
+                                        alt={token.symbol}
+                                        width={24}
+                                        height={24}
+                                        className="object-cover"
+                                      />
+                                    ) : (
+                                      <div className="w-6 h-6 bg-gray-700 rounded-full" />
+                                    )}
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{token.symbol}</span>
+                                    {token.balance && (
+                                      <span className="text-xs text-gray-400">
+                                        Balance: {formatNumber(formatTokenBalance(token.balance, token.decimals), token.decimals)}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {/* Estimated Output for Buy/Sell */}
+                  {(tradeType === 'buy' || tradeType === 'sell') && selectedToken && amount && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-300">
+                        ESTIMATED OUTPUT
+                      </label>
+                      <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
+                              <Image
+                                src={tradeType === 'buy' ? imageUrl : tokenImages[selectedToken.address] || '/assets/no-image-found.png'}
+                                alt={tradeType === 'buy' ? tokenSymbol : selectedToken.symbol}
+                                width={24}
+                                height={24}
+                                className="object-cover"
+                              />
+                            </div>
+                            <span className="text-lg font-medium">
+                              {isSimulating ? (
+                                <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                estimatedOutput
+                              )}
+                            </span>
+                          </div>
+                          <span className="text-gray-400">{tradeType === 'buy' ? tokenSymbol : selectedToken.symbol}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Recipient Input for Send */}
+                  {tradeType === 'send' && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-300">
+                        TO
+                      </label>
+                      <div className="relative">
+                        <Input
+                          type="text"
+                          value={accountSearchQuery}
+                          onChange={(e) => {
+                            setAccountSearchQuery(e.target.value)
+                            setSelectedAccount(null)
+                          }}
+                          placeholder="Search for an account..."
+                          className="w-full bg-gray-900/50 border-gray-800 text-white placeholder:text-gray-500 h-12 text-lg font-medium"
+                        />
+                        {isSearching && (
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                          </div>
+                        )}
+                        {accountSearchResults.length > 0 && !selectedAccount && (
+                          <div className="absolute z-10 w-full mt-1 bg-gray-900 border border-gray-800 rounded-lg shadow-lg max-h-60 overflow-auto">
+                            {accountSearchResults.map((result) => (
+                              <button
+                                key={result.name}
+                                onClick={() => {
+                                  setSelectedAccount(result)
+                                  setAccountSearchQuery(result.name)
+                                }}
+                                className="w-full px-4 py-2 text-left hover:bg-gray-800 transition-colors flex items-center gap-2"
+                              >
+                                <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
+                                  <AccountImage
+                                    tokenId={result.token_id}
+                                    groupName={result.name.split('.')[1]}
+                                    variant="circle"
+                                    className="w-6 h-6"
+                                  />
+                                </div>
+                                <span className="font-mono">{result.name}</span>
+                                {result.is_agent && (
+                                  <span className="text-xs px-2 py-1 bg-blue-500/20 text-blue-400 rounded">
+                                    agent
+                                  </span>
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {selectedAccount && selectedToken?.address && (
+                        <div className="flex items-center gap-3 mt-2">
+                          <div className="flex-1 space-y-1">
+                            <div className="text-sm text-gray-400">
+                              {selectedAccount.name}
+                            </div>
+                            <div className="text-xs text-gray-500 font-mono">
+                              {truncateAddress(selectedToken.address)}
+                            </div>
+                          </div>
+                          <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
+                            <AccountImage
+                              tokenId={selectedAccount.token_id}
+                              groupName={selectedAccount.name.split('.')[1]}
+                              variant="circle"
+                              className="w-8 h-8"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
