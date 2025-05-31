@@ -89,6 +89,7 @@ export const accounts = {
                         `SELECT DISTINCT
                             full_account_name,
                             is_agent,
+                            token_id,
                             '${group.group_name}' as group_name
                         FROM members.${tableName}
                         WHERE is_active = true`

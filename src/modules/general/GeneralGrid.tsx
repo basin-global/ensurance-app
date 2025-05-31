@@ -470,6 +470,7 @@ export default function GeneralGrid({
                         <EnsureButtons0x 
                           contractAddress={cert.contract_address as `0x${string}`}
                           showMinus={false} 
+                          showSend={false}
                           size="sm"
                           imageUrl={cert.image_url}
                           showBalance={false}

@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
 
         // Only fetch and search other data if we have a search query
         let groupsData: { group_name: string; name_front: string | null }[] = [];
-        let accountsData: { full_account_name: string; is_agent: boolean; group_name: string }[] = [];
+        let accountsData: { full_account_name: string; is_agent: boolean; group_name: string; token_id: number }[] = [];
 
         // Initialize from cache if valid
         groupsData = await getDataWithCache('groups', () => groups.getSearchResults());
@@ -146,7 +146,8 @@ export async function GET(request: NextRequest) {
                     path: `/${account.full_account_name}`,
                     type: 'account',
                     is_agent: account.is_agent,
-                    is_ensurance: account.group_name === '.ensurance' && account.full_account_name !== 'situs.ensurance'
+                    is_ensurance: account.group_name === '.ensurance' && account.full_account_name !== 'situs.ensurance',
+                    token_id: account.token_id
                 }))
         ]);
 

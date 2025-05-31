@@ -1,6 +1,6 @@
 'use client'
 
-import { PlusCircle, RefreshCw, Flame, ChevronDown } from 'lucide-react'
+import { PlusCircle, RefreshCw, Flame, ChevronDown, Send } from 'lucide-react'
 import { usePrivy, useWallets } from '@privy-io/react-auth'
 import { useGeneralService } from '@/modules/general/service/hooks'
 import { useState, useEffect, useCallback, useMemo } from 'react'
@@ -47,6 +47,7 @@ import { toast } from 'react-toastify'
 import Image from 'next/image'
 import { useDebounce } from '@/hooks/useDebounce'
 import { executeSwap } from '@/modules/0x/executeSwap'
+import AccountImage from '@/modules/accounts/AccountImage'
 
 interface TokenInfo {
   symbol: string
@@ -55,6 +56,16 @@ interface TokenInfo {
   balance?: string
   type?: 'native' | 'currency' | 'certificate'
   imageUrl?: string
+}
+
+// Add interface for account search results
+interface AccountSearchResult {
+  name: string
+  path: string
+  type: 'account'
+  is_agent: boolean
+  is_ensurance: boolean
+  token_id: number
 }
 
 // Add intermediate type for mapped tokens
@@ -69,13 +80,15 @@ interface EnsureButtons0xProps {
   contractAddress: Address
   showMinus?: boolean
   showBurn?: boolean
+  showSend?: boolean
   size?: 'sm' | 'lg'
   imageUrl?: string
   showBalance?: boolean
   tokenName?: string
 }
 
-type TradeType = 'buy' | 'sell' | 'burn'
+// Update trade type to be a union of all possible values
+type TradeType = 'buy' | 'sell' | 'burn' | 'send'
 
 const PERMIT2_ADDRESS = '0x000000000022D473030F116dDEE9F6B43aC78BA3'
 
@@ -169,10 +182,17 @@ const parseAmount = (amount: string, decimals: number = 18): bigint => {
   return BigInt(combined)
 }
 
+// Add helper function for truncating addresses
+const truncateAddress = (address: string) => {
+  if (!address) return ''
+  return `${address.slice(0, 6)}...${address.slice(-4)}`
+}
+
 export function EnsureButtons0x({ 
   contractAddress,
   showMinus = true,
   showBurn = false,
+  showSend = true,
   size = 'lg',
   imageUrl = '/assets/no-image-found.png',
   showBalance = true,
@@ -197,6 +217,11 @@ export function EnsureButtons0x({
   const [isLoadingTokens, setIsLoadingTokens] = useState(false)
   const [amountError, setAmountError] = useState<string>('')
   const [tokenImages, setTokenImages] = useState<Record<string, string>>({})
+  const [accountSearchQuery, setAccountSearchQuery] = useState('')
+  const [accountSearchResults, setAccountSearchResults] = useState<AccountSearchResult[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [selectedAccount, setSelectedAccount] = useState<AccountSearchResult | null>(null)
+  const debouncedAccountSearch = useDebounce(accountSearchQuery, 300)
 
   // Create a single publicClient instance
   const publicClient = useMemo(() => createPublicClient({
@@ -269,6 +294,10 @@ export function EnsureButtons0x({
     setSelectedToken(null)
     setAmountError('')
     setIsSimulating(false)
+    setAccountSearchQuery('')
+    setAccountSearchResults([])
+    setIsSearching(false)
+    setSelectedAccount(null)
     
     // Then set new type and open modal
     setTradeType(type)
@@ -524,7 +553,9 @@ export function EnsureButtons0x({
           !debouncedAmount || 
           !userAddress || 
           Number(debouncedAmount) <= 0 ||
-          !modalOpen) {
+          !modalOpen ||
+          tradeType === 'send' || // Skip quote for send operations
+          tradeType === 'burn') { // Skip quote for burn operations
         setEstimatedOutput('0')
         return
       }
@@ -745,7 +776,72 @@ export function EnsureButtons0x({
 
       const provider = await activeWallet.getEthereumProvider()
 
-      if (tradeType === 'burn') {
+      if (tradeType === 'send') {
+        if (!selectedToken?.address) {
+          toast.dismiss(pendingToast)
+          toast.error('Please enter a recipient address')
+          return
+        }
+
+        const tokenAmountInWei = parseEther(amount)
+        if (tokenAmountInWei > tokenBalance) {
+          toast.dismiss(pendingToast)
+          toast.error('Insufficient token balance')
+          return
+        }
+
+        try {
+          toast.update(pendingToast, {
+            render: 'confirming transfer...',
+            type: 'info',
+            isLoading: true
+          })
+
+          const walletClient = createWalletClient({
+            chain: base,
+            transport: custom(provider)
+          })
+
+          // Use the selected account's TBA address as the recipient
+          const recipientAddress = selectedToken.address
+
+          const hash = await walletClient.writeContract({
+            address: contractAddress,
+            abi: ZORA_COIN_ABI,
+            functionName: 'transfer',
+            args: [recipientAddress, tokenAmountInWei],
+            chain: base,
+            account: userAddress as `0x${string}`
+          })
+          
+          await publicClient.waitForTransactionReceipt({ hash })
+          
+          toast.update(pendingToast, {
+            render: 'transfer successful',
+            type: 'success',
+            isLoading: false,
+            autoClose: 5000,
+            className: '!bg-amber-500/20 !text-amber-200 !border-amber-500/30'
+          })
+          
+          setModalOpen(false)
+          return
+        } catch (error: any) {
+          console.error('Transfer failed:', error)
+          if (error?.code === 4001 || error?.message?.includes('rejected')) {
+            toast.dismiss(pendingToast)
+            toast.error('transaction cancelled')
+          } else {
+            toast.update(pendingToast, {
+              render: 'transfer failed',
+              type: 'error',
+              isLoading: false,
+              autoClose: 5000
+            })
+          }
+          return
+        }
+      } else if (tradeType === 'burn') {
         const tokenAmountInWei = parseEther(amount)
         if (tokenAmountInWei > tokenBalance) {
           toast.dismiss(pendingToast)
@@ -965,6 +1061,61 @@ export function EnsureButtons0x({
     }
   }
 
+  // Add effect for account search
+  useEffect(() => {
+    const searchAccounts = async () => {
+      if (!debouncedAccountSearch || debouncedAccountSearch.length < 2) {
+        setAccountSearchResults([])
+        return
+      }
+
+      setIsSearching(true)
+      try {
+        const response = await fetch(`/api/search?q=${encodeURIComponent(debouncedAccountSearch)}`)
+        if (!response.ok) throw new Error('Search failed')
+        
+        const data = await response.json()
+        // Filter to only account results
+        const accountResults = data.filter((item: any) => item.type === 'account')
+        setAccountSearchResults(accountResults)
+      } catch (error) {
+        console.error('Error searching accounts:', error)
+        setAccountSearchResults([])
+      } finally {
+        setIsSearching(false)
+      }
+    }
+
+    searchAccounts()
+  }, [debouncedAccountSearch])
+
+  // Add effect to fetch tba_address when account is selected
+  useEffect(() => {
+    const fetchAccountDetails = async () => {
+      if (!selectedAccount) return
+
+      try {
+        const response = await fetch(`/api/accounts/${encodeURIComponent(selectedAccount.name)}`)
+        if (!response.ok) throw new Error('Failed to fetch account details')
+        
+        const data = await response.json()
+        if (data.tba_address) {
+          setSelectedToken({ 
+            address: data.tba_address as Address,
+            symbol: selectedAccount.name,
+            decimals: 18,
+            type: 'native'
+          })
+        }
+      } catch (error) {
+        console.error('Error fetching account details:', error)
+        toast.error('Failed to fetch account details')
+      }
+    }
+
+    fetchAccountDetails()
+  }, [selectedAccount])
+
   return (
     <>
       <div className="flex gap-8">
@@ -1019,6 +1170,24 @@ export function EnsureButtons0x({
             </Tooltip>
           </TooltipProvider>
         )}
+
+        {showSend && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => handleOpenModal('send')}
+                  className="flex items-center gap-2 text-gray-300 hover:text-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Send className={`${iconSize} stroke-[1.5] stroke-amber-500 hover:stroke-amber-400 transition-colors`} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>send</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
       </div>
 
       {/* Add balance display */}
@@ -1034,14 +1203,17 @@ export function EnsureButtons0x({
             <div className="flex items-center justify-between">
               <div className="flex flex-col gap-2">
                 <DialogTitle className="text-xl font-bold text-white">
-                  {tradeType === 'buy' ? 'ensure' : tradeType === 'sell' ? 'transform' : 'burn'}
+                  {tradeType === 'buy' ? 'ensure' : 
+                   tradeType === 'sell' ? 'transform' : 
+                   tradeType === 'send' ? 'send' :
+                   'burn'}
                 </DialogTitle>
                 <div className="text-3xl font-bold text-white">
                   {tokenName || tokenSymbol || 'Token'}
                 </div>
               </div>
-              <div className="relative w-20 h-20 rounded-lg overflow-hidden mr-4">
-                <Image 
+              <div className="relative w-20 h-20 rounded-lg overflow-hidden">
+                <Image
                   src={imageUrl}
                   alt={tokenSymbol || 'Token'}
                   fill
@@ -1074,266 +1246,113 @@ export function EnsureButtons0x({
               </div>
             ) : (
               <div className="space-y-6">
-                {/* Header showing token flow */}
-                <div className="flex items-center justify-between">
-                  <div className="text-lg font-bold text-white flex items-center gap-2">
-                    {tradeType === 'burn' ? (
-                      <>
-                        <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
-                          <Image
-                            src={imageUrl}
-                            alt={tokenSymbol}
-                            width={24}
-                            height={24}
-                            className="object-cover"
-                          />
-                        </div>
-                        {tokenSymbol}
-                      </>
-                    ) : tradeType === 'buy' ? (
-                      selectedToken ? (
-                        <>
-                          <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
-                            {tokenImages[selectedToken.address] ? (
-                              <Image
-                                src={tokenImages[selectedToken.address]}
-                                alt={selectedToken.symbol}
-                                width={24}
-                                height={24}
-                                className="object-cover"
-                              />
-                            ) : (
-                              <span className="text-sm font-bold text-gray-600">
-                                {selectedToken.symbol.charAt(0)}
-                              </span>
-                            )}
-                          </div>
-                          {selectedToken.symbol}
-                        </>
-                      ) : (
-                        'Select token'
-                      )
-                    ) : (
-                      <>
-                        <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
-                          <Image
-                            src={imageUrl}
-                            alt={tokenSymbol}
-                            width={24}
-                            height={24}
-                            className="object-cover"
-                          />
-                        </div>
-                        {tokenSymbol}
-                      </>
+                {/* Main content grid */}
+                <div className="space-y-4">
+                  {/* Amount Input */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-300">
+                      AMOUNT
+                    </label>
+                    <Input
+                      type="text"
+                      value={formattedAmount}
+                      onChange={(e) => handleAmountChange(e.target.value)}
+                      placeholder="enter amount"
+                      className={`bg-gray-900/50 border-gray-800 text-white placeholder:text-gray-500 h-12 text-lg font-medium ${
+                        amountError ? 'border-red-500' : ''
+                      }`}
+                    />
+                    {amountError && (
+                      <div className="text-sm text-red-500">
+                        {amountError}
+                      </div>
                     )}
+                    <div className="text-sm text-gray-400 flex items-center gap-2">
+                      <span>your balance: {formatBalance(tokenBalance)}</span>
+                      <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
+                        <Image
+                          src={imageUrl}
+                          alt={tokenSymbol}
+                          width={24}
+                          height={24}
+                          className="object-cover"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  {tradeType !== 'burn' && (
-                    <div className="flex items-center gap-3">
-                      <div className="text-4xl font-black text-gray-400 hover:text-gray-300 transition-colors">→</div>
-                      <div className="text-lg font-bold text-white flex items-center gap-2">
-                        {tradeType === 'buy' ? (
-                          <>
-                            <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
-                              <Image
-                                src={imageUrl}
-                                alt={tokenSymbol}
-                                width={24}
-                                height={24}
-                                className="object-cover"
-                              />
-                            </div>
-                            {tokenSymbol}
-                          </>
-                        ) : selectedToken ? (
-                          <>
-                            <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
-                              {tokenImages[selectedToken.address] ? (
-                                <Image
-                                  src={tokenImages[selectedToken.address]}
-                                  alt={selectedToken.symbol}
-                                  width={24}
-                                  height={24}
-                                  className="object-cover"
+
+                  {/* Recipient Input */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-300">
+                      TO
+                    </label>
+                    <div className="relative">
+                      <Input
+                        type="text"
+                        value={accountSearchQuery}
+                        onChange={(e) => {
+                          setAccountSearchQuery(e.target.value)
+                          setSelectedAccount(null)
+                        }}
+                        placeholder="Search for an account..."
+                        className="w-full bg-gray-900/50 border-gray-800 text-white placeholder:text-gray-500 h-12 text-lg font-medium"
+                      />
+                      {isSearching && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      )}
+                      {accountSearchResults.length > 0 && !selectedAccount && (
+                        <div className="absolute z-10 w-full mt-1 bg-gray-900 border border-gray-800 rounded-lg shadow-lg max-h-60 overflow-auto">
+                          {accountSearchResults.map((result) => (
+                            <button
+                              key={result.name}
+                              onClick={() => {
+                                setSelectedAccount(result)
+                                setAccountSearchQuery(result.name)
+                              }}
+                              className="w-full px-4 py-2 text-left hover:bg-gray-800 transition-colors flex items-center gap-2"
+                            >
+                              <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
+                                <AccountImage
+                                  tokenId={result.token_id}
+                                  groupName={result.name.split('.')[1]}
+                                  variant="circle"
+                                  className="w-6 h-6"
                                 />
-                              ) : (
-                                <span className="text-sm font-bold text-gray-600">
-                                  {selectedToken.symbol.charAt(0)}
+                              </div>
+                              <span className="font-mono">{result.name}</span>
+                              {result.is_agent && (
+                                <span className="text-xs px-2 py-1 bg-blue-500/20 text-blue-400 rounded">
+                                  agent
                                 </span>
                               )}
-                            </div>
-                            {selectedToken.symbol}
-                          </>
-                        ) : (
-                          'Select token'
-                        )}
-                      </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-
-                {/* Main content grid */}
-                <div className="grid grid-cols-[1fr,1fr] gap-4 items-start">
-                  {/* Left Column - Input */}
-                  <div className="space-y-3">
-                    {tradeType === 'burn' ? (
-                      <>
-                        <label className="text-sm font-medium text-gray-300">
-                          quantity to burn
-                        </label>
-                        <Input
-                          type="text"
-                          value={formattedAmount}
-                          onChange={(e) => handleAmountChange(e.target.value)}
-                          placeholder="enter amount"
-                          className={`bg-gray-900/50 border-gray-800 text-white placeholder:text-gray-500 h-12 text-lg font-medium ${
-                            amountError ? 'border-red-500' : ''
-                          }`}
-                        />
-                        {amountError && (
-                          <div className="text-sm text-red-500">
-                            {amountError}
+                    {selectedAccount && selectedToken?.address && (
+                      <div className="flex items-center gap-3 mt-2">
+                        <div className="flex-1 space-y-1">
+                          <div className="text-sm text-gray-400">
+                            {selectedAccount.name}
                           </div>
-                        )}
-                        <div className="text-sm text-gray-400">
-                          your balance: {formatBalance(tokenBalance)}
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <Input
-                          type="text"
-                          value={formattedAmount}
-                          onChange={(e) => handleAmountChange(e.target.value)}
-                          placeholder="enter amount"
-                          className={`bg-gray-900/50 border-gray-800 text-white placeholder:text-gray-500 h-12 text-lg font-medium ${
-                            amountError ? 'border-red-500' : ''
-                          }`}
-                        />
-                        {amountError && (
-                          <div className="text-sm text-red-500">
-                            {amountError}
+                          <div className="text-xs text-gray-500 font-mono">
+                            {truncateAddress(selectedToken.address)}
                           </div>
-                        )}
-                        <div className="text-sm text-gray-400">
-                          {selectedToken?.balance && (
-                            <>your balance: {formatNumber(
-                              formatTokenBalance(selectedToken.balance, selectedToken.decimals),
-                              selectedToken.decimals
-                            )}</>
-                          )}
-                          {!selectedToken?.balance && tradeType === 'sell' && (
-                            <>your balance: {formatBalance(tokenBalance)}</>
-                          )}
                         </div>
-                        
-                        <div className="mt-6">
-                          <label className="text-sm font-medium text-gray-300">
-                            {tradeType === 'buy' ? 'buy with' : 'to'}
-                          </label>
-                          <Select
-                            value={selectedToken?.address}
-                            onValueChange={(value) => {
-                              const token = availableTokens.find(t => t.address === value)
-                              if (token) setSelectedToken(token)
-                            }}
-                          >
-                            <SelectTrigger className="w-full mt-2 bg-gray-900/50 border-gray-800/50 hover:border-gray-700/50 transition-colors focus:ring-0 focus:ring-offset-0 focus:border-gray-700/50 data-[state=open]:border-gray-700/50">
-                              <SelectValue>
-                                {isLoadingTokens ? (
-                                  "Loading tokens..."
-                                ) : selectedToken ? (
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
-                                      {tokenImages[selectedToken.address] ? (
-                                        <Image
-                                          src={tokenImages[selectedToken.address]}
-                                          alt={selectedToken.symbol}
-                                          width={24}
-                                          height={24}
-                                          className="object-cover"
-                                        />
-                                      ) : (
-                                        <span className="text-sm font-bold text-gray-600">
-                                          {selectedToken.symbol.charAt(0)}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <span>{selectedToken.symbol}</span>
-                                  </div>
-                                ) : (
-                                  "Select token"
-                                )}
-                              </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent className="bg-gray-900 border border-gray-800">
-                              {isLoadingTokens ? (
-                                <SelectItem value="loading" disabled>
-                                  Loading tokens...
-                                </SelectItem>
-                              ) : (
-                                availableTokens
-                                  .filter(token => {
-                                    if (tradeType === 'sell') return true;
-                                    const hasBalance = (t: any): t is { balance: string } => 
-                                      'balance' in t && typeof t.balance === 'string';
-                                    if (!hasBalance(token)) return false;
-                                    // Handle different token decimals
-                                    const decimals = getTokenDecimals(token)
-                                    const balance = Number(token.balance) / Math.pow(10, decimals)
-                                    return balance >= 0.000001;
-                                  })
-                                  .map((token) => (
-                                    <SelectItem 
-                                      key={token.address} 
-                                      value={token.address}
-                                      className="hover:bg-gray-800"
-                                    >
-                                      <div className="flex justify-between items-center w-full gap-4">
-                                        <div className="flex items-center gap-2">
-                                          <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
-                                            {tokenImages[token.address] ? (
-                                              <Image
-                                                src={tokenImages[token.address]}
-                                                alt={token.symbol}
-                                                width={24}
-                                                height={24}
-                                                className="object-cover"
-                                              />
-                                            ) : (
-                                              <span className="text-sm font-bold text-gray-600">
-                                                {token.symbol.charAt(0)}
-                                              </span>
-                                            )}
-                                          </div>
-                                          <span className="font-medium">{token.symbol}</span>
-                                        </div>
-                                        {'balance' in token && token.balance && (
-                                          <span className="text-gray-400 text-sm">
-                                            {formatNumber(formatTokenBalance(token.balance, token.decimals), token.decimals)}
-                                          </span>
-                                        )}
-                                      </div>
-                                    </SelectItem>
-                                  ))
-                              )}
-                            </SelectContent>
-                          </Select>
+                        <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
+                          <AccountImage
+                            tokenId={selectedAccount.token_id}
+                            groupName={selectedAccount.name.split('.')[1]}
+                            variant="circle"
+                            className="w-8 h-8"
+                          />
                         </div>
-                      </>
+                      </div>
                     )}
                   </div>
-
-                  {/* Right Column - Output */}
-                  {tradeType !== 'burn' && (
-                    <div className="space-y-3">
-                      <div className="text-right">
-                        <div className="text-2xl font-medium text-white">
-                          {isSimulating ? 'calculating...' : estimatedOutput}
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             )}
@@ -1350,12 +1369,14 @@ export function EnsureButtons0x({
             </Button>
             <Button
               onClick={handleTrade}
-              disabled={isLoading || (tradeType === 'burn' ? !amount || Number(amount) <= 0 : !selectedToken || !amount || Number(amount) <= 0)}
+              disabled={isLoading || (tradeType === 'burn' || tradeType === 'send' ? !amount || Number(amount) <= 0 : !selectedToken || !amount || Number(amount) <= 0)}
               className={`min-w-[120px] ${
                 tradeType === 'buy' 
                   ? 'bg-green-600 hover:bg-green-500' 
                   : tradeType === 'sell'
                   ? 'bg-blue-600 hover:bg-blue-500'
+                  : tradeType === 'send'
+                  ? 'bg-amber-600 hover:bg-amber-500'
                   : 'bg-orange-600 hover:bg-orange-500'
               }`}
             >
@@ -1365,7 +1386,10 @@ export function EnsureButtons0x({
                   <span>Processing...</span>
                 </div>
               ) : (
-                tradeType === 'buy' ? 'ENSURE' : tradeType === 'sell' ? 'TRANSFORM' : 'BURN'
+                tradeType === 'buy' ? 'ENSURE' : 
+                tradeType === 'sell' ? 'TRANSFORM' : 
+                tradeType === 'send' ? 'SEND' :
+                'BURN'
               )}
             </Button>
           </div>
