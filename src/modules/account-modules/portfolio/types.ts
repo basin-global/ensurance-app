@@ -1,3 +1,5 @@
+import { EnsuranceFlags } from '@/types';
+
 export interface BaseToken {
   type: 'native' | 'erc20' | 'erc721' | 'erc1155';
   address: string;
@@ -8,6 +10,7 @@ export interface BaseToken {
   value?: {
     usd: number | null;
   };
+  ensurance?: EnsuranceFlags;
 }
 
 export interface NativeToken extends BaseToken {

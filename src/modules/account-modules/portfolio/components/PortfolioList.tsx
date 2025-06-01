@@ -1,5 +1,8 @@
 import { PortfolioToken } from '../types';
 import Card from './Card';
+import { identifyEnsurancePortfolioTokens } from '@/lib/ensurance';
+import { useEffect, useState } from 'react';
+import { cn } from '@/lib/utils';
 
 interface PortfolioListProps {
   tokens: PortfolioToken[];
@@ -7,7 +10,17 @@ interface PortfolioListProps {
 }
 
 export default function PortfolioList({ tokens, isOverview = false }: PortfolioListProps) {
-  if (!tokens.length) {
+  const [processedTokens, setProcessedTokens] = useState<PortfolioToken[]>(tokens);
+
+  useEffect(() => {
+    const processTokens = async () => {
+      const tokensWithEnsurance = await identifyEnsurancePortfolioTokens(tokens);
+      setProcessedTokens(tokensWithEnsurance);
+    };
+    processTokens();
+  }, [tokens]);
+
+  if (!processedTokens.length) {
     return (
       <div className="text-center py-8">
         <p className="text-gray-500">No tokens found</p>
@@ -17,14 +30,14 @@ export default function PortfolioList({ tokens, isOverview = false }: PortfolioL
 
   // If in overview mode, sort by USD value and limit to 10 items
   const displayTokens = isOverview 
-    ? [...tokens]
+    ? [...processedTokens]
         .sort((a, b) => {
           const aValue = a.value?.usd || 0;
           const bValue = b.value?.usd || 0;
           return bValue - aValue; // Sort descending
         })
         .slice(0, 10)
-    : tokens;
+    : processedTokens;
 
   return (
     <div className="overflow-x-auto">

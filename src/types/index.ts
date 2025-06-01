@@ -62,6 +62,22 @@ interface BaseAsset {
     }>;
 }
 
+// -----------------------------------------------------------------------------
+// Ensurance Asset Types
+// -----------------------------------------------------------------------------
+
+/**
+ * These types identify if an asset is an Ensurance asset based on its contract.
+ * This is different from the database-level isEnsurance check (in accounts.ts) which
+ * is used to identify if a group is the ensurance group and include additional fields
+ * like stock_or_flow and display_name in database queries.
+ */
+export interface EnsuranceFlags {
+    isEnsuranceGeneral?: boolean;  // For ERC20 certificates from certificates.general
+    isEnsuranceSpecific?: boolean; // For ERC1155 certificates from specific contract
+    isEnsuranceGroup?: boolean;    // For ERC721 accounts from members.groups
+}
+
 export interface Asset extends BaseAsset {
     name?: string;
     image_url?: string;
@@ -87,6 +103,7 @@ export interface Asset extends BaseAsset {
         animation_original_url?: string;
     };
     symbol?: string;
+    ensurance?: EnsuranceFlags;
 }
 
 export interface TokenBalance {

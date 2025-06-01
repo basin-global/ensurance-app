@@ -1,6 +1,8 @@
 import { PortfolioToken, NFTToken, ERC20Token } from '../types';
 import Image from 'next/image';
 import { formatUnits } from 'viem';
+import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 interface CardProps {
   token: PortfolioToken;
@@ -79,30 +81,71 @@ export default function Card({ token, variant }: CardProps) {
       : "w-8 h-8 bg-gray-800 rounded-md overflow-hidden flex items-center justify-center";
   };
 
+  const EnsuranceDot = () => (
+    <span className={cn(
+      "w-2 h-2 rounded-full relative after:content-[''] after:absolute after:inset-0 after:rounded-full after:animate-pulse",
+      "bg-yellow-500 after:bg-yellow-500/50"
+    )} />
+  );
+
+  const getTokenLink = (token: PortfolioToken) => {
+    // Don't create links in overview mode
+    if (variant === 'overview') return '#';
+
+    // Handle Ensurance tokens
+    if (token.ensurance?.isEnsuranceGeneral) {
+      return `/general/${token.address}`;
+    }
+    if (token.ensurance?.isEnsuranceSpecific && (token.type === 'erc721' || token.type === 'erc1155')) {
+      const nftToken = token as NFTToken;
+      return `/specific/${token.address}/${nftToken.tokenId}`;
+    }
+    // Handle account tokens (NFTs that are part of a group)
+    if (token.ensurance?.isEnsuranceGroup && (token.type === 'erc721' || token.type === 'erc1155')) {
+      const nftToken = token as NFTToken;
+      return `/${nftToken.name}`;
+    }
+    return '#';
+  };
+
+  const showEnsuranceDot = variant !== 'overview' && 
+    (token.ensurance?.isEnsuranceGeneral || token.ensurance?.isEnsuranceSpecific || token.ensurance?.isEnsuranceGroup);
+
   if (variant === 'grid') {
     return (
       <div className="flex flex-col gap-4">
-        <div className={getImageContainerClasses(token, 'grid')}>
-          {getTokenImage(token) ? (
-            <Image
-              src={getTokenImage(token)!}
-              alt={getTokenName(token)}
-              fill
-              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              priority={false}
-              loading="lazy"
-              className="object-cover"
-            />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className={fallbackSize + " font-bold text-gray-600"}>
-                {getTokenName(token).charAt(0)}
-              </div>
-            </div>
+        <Link 
+          href={getTokenLink(token)}
+          className={cn(
+            "block cursor-pointer",
+            getTokenLink(token) === '#' && "cursor-default"
           )}
-        </div>
-        <div className="text-lg font-semibold text-white text-center">
-          {getTokenName(token)}
+        >
+          <div className={getImageContainerClasses(token, 'grid')}>
+            {getTokenImage(token) ? (
+              <Image
+                src={getTokenImage(token)!}
+                alt={getTokenName(token)}
+                fill
+                sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                priority={false}
+                loading="lazy"
+                className="object-cover"
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className={fallbackSize + " font-bold text-gray-600"}>
+                  {getTokenName(token).charAt(0)}
+                </div>
+              </div>
+            )}
+          </div>
+        </Link>
+        <div className="flex items-center justify-center gap-2">
+          <div className="text-lg font-semibold text-white">
+            {getTokenName(token)}
+          </div>
+          {showEnsuranceDot && <EnsuranceDot />}
         </div>
         <div className="flex items-center justify-between text-sm text-gray-400 px-2">
           <div className="flex gap-4">
@@ -118,23 +161,34 @@ export default function Card({ token, variant }: CardProps) {
     <tr className="hover:bg-gray-900/30 transition-colors">
       <td className="py-4 pr-4">
         <div className="flex items-center gap-3">
-          <div className={getImageContainerClasses(token, 'list')}>
-            {getTokenImage(token) ? (
-              <Image
-                src={getTokenImage(token)!}
-                alt={getTokenName(token)}
-                width={32}
-                height={32}
-                className="object-cover"
-              />
-            ) : (
-              <div className={fallbackSize + " font-bold text-gray-600"}>
-                {getTokenName(token).charAt(0)}
-              </div>
+          <Link 
+            href={getTokenLink(token)}
+            className={cn(
+              "block cursor-pointer",
+              getTokenLink(token) === '#' && "cursor-default"
             )}
-          </div>
-          <div className="font-medium text-white">
-            {getTokenName(token)}
+          >
+            <div className={getImageContainerClasses(token, 'list')}>
+              {getTokenImage(token) ? (
+                <Image
+                  src={getTokenImage(token)!}
+                  alt={getTokenName(token)}
+                  width={32}
+                  height={32}
+                  className="object-cover"
+                />
+              ) : (
+                <div className={fallbackSize + " font-bold text-gray-600"}>
+                  {getTokenName(token).charAt(0)}
+                </div>
+              )}
+            </div>
+          </Link>
+          <div className="flex items-center gap-2">
+            <div className="font-medium text-white">
+              {getTokenName(token)}
+            </div>
+            {showEnsuranceDot && <EnsuranceDot />}
           </div>
         </div>
       </td>
