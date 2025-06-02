@@ -5,6 +5,10 @@ import { getChainByName } from '@/config/chains';
 import type { Asset } from '@/types/index';
 
 export interface TokenboundActions {
+  // TODO: Consider ERC721 transfer safety:
+  // 1. Add token ID validation to prevent self-transfers
+  // 2. Consider disabling ERC721 transfers in favor of external tools
+  // 3. If keeping ERC721 transfers, implement user confirmation flow with risk warning
   transferNFT: (asset: Asset, toAddress: `0x${string}`, amount?: number) => Promise<{ hash: string; isCrossChain?: boolean }>;
   isAccountDeployed: (asset: Asset) => Promise<boolean>;
   transferETH: (params: {
