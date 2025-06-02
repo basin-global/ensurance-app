@@ -2,10 +2,10 @@
 
 import { useState } from 'react'
 import { PageHeader } from '@/components/layout/PageHeader'
-import GeneralGrid, { GeneralCertificate } from '@/modules/general/GeneralGrid'
+import EnsureGrid from '@/modules/ensure/EnsureGrid'
 
 export default function MarketsPage() {
-  const [marketData, setMarketData] = useState<GeneralCertificate[]>([])
+  const [marketData, setMarketData] = useState<any[]>([])
   const [searchQuery, setSearchQuery] = useState('')
 
   return (
@@ -19,11 +19,8 @@ export default function MarketsPage() {
             searchPlaceholder="what do you want to ensure?"
             showSearch={true}
           />
-          <div className="flex flex-col items-center justify-start text-center space-y-2 mb-8">
-            <p className="text-lg font-medium">general ensurance values what matters - available now 👇</p>
-            <p className="text-lg text-gray-500">specific ensurance protects what matters - coming soon 🚀</p>
-          </div>
-          <GeneralGrid 
+          <EnsureGrid 
+            types={['general', 'specific']}
             urlPrefix=""
             searchQuery={searchQuery}
             onDataChange={setMarketData}

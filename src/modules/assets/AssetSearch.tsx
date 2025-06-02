@@ -9,6 +9,7 @@ interface AssetSearchProps {
   autoFocus?: boolean;
   typewriterWords?: { text: string }[];
   className?: string;
+  onFocus?: () => void;
 }
 
 export function AssetSearch({ 
@@ -17,7 +18,8 @@ export function AssetSearch({
   placeholder = "search assets...",
   autoFocus,
   typewriterWords,
-  className
+  className,
+  onFocus
 }: AssetSearchProps) {
   return (
     <div className={cn("w-full max-w-md relative", className)}>
@@ -27,6 +29,7 @@ export function AssetSearch({
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         autoFocus={autoFocus}
+        onFocus={onFocus}
         className={cn(
           "w-full px-4 py-2 rounded-lg text-center",
           "bg-[rgb(var(--background-rgb))]",

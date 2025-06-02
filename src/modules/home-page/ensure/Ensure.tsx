@@ -1,108 +1,96 @@
 import { AssetSearch } from '@/modules/assets/AssetSearch'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { TypewriterInput } from '@/components/ui/typewriter-input'
+import { ensurePhrases } from '@/modules/ensure/ensurePhrases'
+import { motion, AnimatePresence } from 'framer-motion'
+import EnsureGrid from '@/modules/ensure/EnsureGrid'
+import { cn } from '@/lib/utils'
+import Link from 'next/link'
 
 export function Ensure() {
   const [searchQuery, setSearchQuery] = useState('')
+  const [showTypewriter, setShowTypewriter] = useState(true)
+  const [showGrid, setShowGrid] = useState(false)
+  const [isInitialLoad, setIsInitialLoad] = useState(true)
+  const [gridData, setGridData] = useState<any[]>([])
 
-  const typewriterWords = [
-    { text: "clean water...", typingSpeed: 60, deletingSpeed: 30, pauseTime: 600 },
-    { text: "natural capital...", typingSpeed: 70, deletingSpeed: 35, pauseTime: 800 },
-    { text: "climate stability...", typingSpeed: 75, deletingSpeed: 37, pauseTime: 700 },
-    { text: "clean air...", typingSpeed: 60, deletingSpeed: 30, pauseTime: 600 },
-    { text: "biodiversity...", typingSpeed: 65, deletingSpeed: 32, pauseTime: 700 },
-    { text: "healthy soil...", typingSpeed: 65, deletingSpeed: 32, pauseTime: 600 },
-    { text: "wildfire protection...", typingSpeed: 75, deletingSpeed: 37, pauseTime: 700 },
-    { text: "ecosystem services...", typingSpeed: 75, deletingSpeed: 37, pauseTime: 800 },
-    { text: "resilience...", typingSpeed: 60, deletingSpeed: 30, pauseTime: 600 },
-    { text: "well-being...", typingSpeed: 65, deletingSpeed: 32, pauseTime: 600 },
-    { text: "coastal protection...", typingSpeed: 75, deletingSpeed: 37, pauseTime: 700 },
-    { text: "health...", typingSpeed: 55, deletingSpeed: 28, pauseTime: 500 },
-    { text: "impact...", typingSpeed: 55, deletingSpeed: 28, pauseTime: 500 },
-    { text: "colorado river...", typingSpeed: 70, deletingSpeed: 35, pauseTime: 600 },
-    { text: "my legacy...", typingSpeed: 60, deletingSpeed: 30, pauseTime: 600 },
-    { text: "the amazon river...", typingSpeed: 65, deletingSpeed: 32, pauseTime: 600 },
-    { text: "risk reduction...", typingSpeed: 70, deletingSpeed: 35, pauseTime: 700 },
-    { text: "victoria falls...", typingSpeed: 75, deletingSpeed: 37, pauseTime: 700 },
-    { text: "cenotes...", typingSpeed: 55, deletingSpeed: 28, pauseTime: 500 },
-    { text: "water abundance...", typingSpeed: 70, deletingSpeed: 35, pauseTime: 600 },
-    { text: "flood control...", typingSpeed: 65, deletingSpeed: 32, pauseTime: 600 },
-    { text: "coral reefs...", typingSpeed: 60, deletingSpeed: 30, pauseTime: 600 },
-    { text: "sea turtles...", typingSpeed: 65, deletingSpeed: 32, pauseTime: 600 },
-    { text: "humpback whales...", typingSpeed: 70, deletingSpeed: 35, pauseTime: 700 },
-    { text: "vaquita porpoise...", typingSpeed: 75, deletingSpeed: 37, pauseTime: 700 },
-    { text: "monarch butterflies...", typingSpeed: 70, deletingSpeed: 35, pauseTime: 700 },
-    { text: "koala bear...", typingSpeed: 65, deletingSpeed: 32, pauseTime: 600 },
-    { text: "spirit bear...", typingSpeed: 60, deletingSpeed: 30, pauseTime: 600 },
-    { text: "elk...", typingSpeed: 55, deletingSpeed: 28, pauseTime: 500 },
-    { text: "salmon...", typingSpeed: 60, deletingSpeed: 30, pauseTime: 600 },
-    { text: "amur leopard...", typingSpeed: 70, deletingSpeed: 35, pauseTime: 700 },
-    { text: "carbon sequestration...", typingSpeed: 75, deletingSpeed: 37, pauseTime: 700 },
-    { text: "sumatran tiger...", typingSpeed: 75, deletingSpeed: 37, pauseTime: 700 },
-    { text: "iberian lynx...", typingSpeed: 70, deletingSpeed: 35, pauseTime: 700 },
-    { text: "habitat...", typingSpeed: 60, deletingSpeed: 30, pauseTime: 600 },
-    { text: "wetlands...", typingSpeed: 65, deletingSpeed: 32, pauseTime: 600 },
-    { text: "grasslands...", typingSpeed: 70, deletingSpeed: 35, pauseTime: 700 },
-    { text: "erosion control...", typingSpeed: 70, deletingSpeed: 35, pauseTime: 700 },
-    { text: "fungi...", typingSpeed: 55, deletingSpeed: 28, pauseTime: 500 },
-    { text: "mycelium...", typingSpeed: 65, deletingSpeed: 32, pauseTime: 600 },
-    { text: "heat reduction...", typingSpeed: 70, deletingSpeed: 35, pauseTime: 700 },
-    { text: "climate adaptation...", typingSpeed: 70, deletingSpeed: 35, pauseTime: 700 },
-    { text: "adaptive capacity...", typingSpeed: 65, deletingSpeed: 32, pauseTime: 600 },
-    { text: "mount thielsen...", typingSpeed: 70, deletingSpeed: 35, pauseTime: 700 },
-    { text: "cascadia bioregion...", typingSpeed: 75, deletingSpeed: 37, pauseTime: 700 },
-    { text: "open space...", typingSpeed: 60, deletingSpeed: 30, pauseTime: 600 },
-    { text: "place...", typingSpeed: 55, deletingSpeed: 28, pauseTime: 500 },
-    { text: "my town...", typingSpeed: 60, deletingSpeed: 30, pauseTime: 600 },
-    { text: "flint mi...", typingSpeed: 65, deletingSpeed: 32, pauseTime: 600 },
-    { text: "mumbai...", typingSpeed: 60, deletingSpeed: 30, pauseTime: 600 },
-    { text: "sydney...", typingSpeed: 55, deletingSpeed: 28, pauseTime: 500 },
-    { text: "cape town...", typingSpeed: 60, deletingSpeed: 30, pauseTime: 600 },
-    { text: "buenos aires...", typingSpeed: 65, deletingSpeed: 32, pauseTime: 600 },
-    { text: "los angeles...", typingSpeed: 70, deletingSpeed: 35, pauseTime: 700 },
-    { text: "the congo river basin...", typingSpeed: 75, deletingSpeed: 37, pauseTime: 700 },
-    { text: "lake creek...", typingSpeed: 65, deletingSpeed: 32, pauseTime: 600 },
-    { text: "natural assets...", typingSpeed: 65, deletingSpeed: 32, pauseTime: 600 },
-    { text: "green infra...", typingSpeed: 60, deletingSpeed: 30, pauseTime: 600 },
-    { text: "pollination...", typingSpeed: 65, deletingSpeed: 32, pauseTime: 600 },
-    { text: "my business...", typingSpeed: 65, deletingSpeed: 32, pauseTime: 600 },
-    { text: "lake winnipausake...", typingSpeed: 80, deletingSpeed: 40, pauseTime: 700 },
-    { text: "my portfolio...", typingSpeed: 70, deletingSpeed: 35, pauseTime: 700 },
-    { text: "my investments...", typingSpeed: 75, deletingSpeed: 37, pauseTime: 700 },
-    { text: "my health...", typingSpeed: 60, deletingSpeed: 30, pauseTime: 600 },
-    { text: "happiness...", typingSpeed: 60, deletingSpeed: 30, pauseTime: 600 },
-    { text: "ubi...", typingSpeed: 50, deletingSpeed: 25, pauseTime: 500 },
-    { text: "living wages...", typingSpeed: 65, deletingSpeed: 32, pauseTime: 600 },
-    { text: "my family...", typingSpeed: 60, deletingSpeed: 30, pauseTime: 600 },
-    { text: "my groups work...", typingSpeed: 70, deletingSpeed: 35, pauseTime: 700 },
-    { text: "my organization...", typingSpeed: 75, deletingSpeed: 37, pauseTime: 700 },
-    { text: "my company...", typingSpeed: 65, deletingSpeed: 32, pauseTime: 600 },
-    { text: "beauty...", typingSpeed: 55, deletingSpeed: 28, pauseTime: 500 },
-    { text: "the earth...", typingSpeed: 65, deletingSpeed: 32, pauseTime: 600 }
-  ]
+  // Show grid when user starts typing
+  useEffect(() => {
+    if (searchQuery.length > 0) {
+      setShowGrid(true)
+      setShowTypewriter(false)
+      setIsInitialLoad(false)
+    } else {
+      setShowGrid(false)
+      setShowTypewriter(true)
+    }
+  }, [searchQuery])
 
   return (
-    <section className="relative w-full h-screen flex items-center justify-center bg-black">
+    <section className={cn(
+      "relative w-full min-h-screen flex items-center justify-center bg-black",
+      (!isInitialLoad || showGrid) && "items-start pt-8"
+    )}>
       <div className="container mx-auto px-6 text-center">
-        <h2 className="text-6xl md:text-7xl font-bold mb-8 text-white">what do you want to ensure?</h2>
-        <div className="w-full max-w-4xl mx-auto mb-12">
+        <h2 className={cn(
+          "text-6xl md:text-7xl font-bold mb-8 text-white",
+          (!isInitialLoad || showGrid) && "text-4xl md:text-5xl mb-4"
+        )}>what do you want to ensure?</h2>
+        <div className={cn(
+          "w-full max-w-4xl mx-auto",
+          showGrid ? "mb-6" : "mb-12"
+        )}>
           <div className="relative">
             <AssetSearch 
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
               placeholder=""
-              className="text-4xl md:text-5xl !max-w-none"
+              className={cn(
+                "text-4xl md:text-5xl !max-w-none",
+                showTypewriter && "caret-transparent"
+              )}
+              autoFocus
             />
-            {!searchQuery && (
+            {showTypewriter && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <TypewriterInput words={typewriterWords} />
+                <TypewriterInput words={ensurePhrases} />
               </div>
             )}
           </div>
         </div>
-        <div className="grid gap-8">
-          {/* Content will go here */}
-        </div>
+        
+        <AnimatePresence>
+          {showGrid && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <EnsureGrid 
+                searchQuery={searchQuery}
+                types={['general', 'specific', 'syndicate', 'account', 'group']}
+                variant="home"
+                onDataChange={setGridData}
+              />
+              {gridData.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="mt-8"
+                >
+                  <Link 
+                    href="/ensure"
+                    className="text-white/60 hover:text-white text-lg transition-colors duration-200"
+                  >
+                    see more
+                  </Link>
+                </motion.div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </section>
   )

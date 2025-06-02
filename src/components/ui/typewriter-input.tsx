@@ -14,9 +14,10 @@ interface TypewriterWord {
 interface TypewriterInputProps {
   words: TypewriterWord[]
   className?: string
+  size?: 'default' | 'small'
 }
 
-export function TypewriterInput({ words, className }: TypewriterInputProps) {
+export function TypewriterInput({ words, className, size = 'default' }: TypewriterInputProps) {
   const [currentWordIndex, setCurrentWordIndex] = useState(0)
   const [currentText, setCurrentText] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
@@ -67,7 +68,10 @@ export function TypewriterInput({ words, className }: TypewriterInputProps) {
         key={currentWordIndex}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className={cn("text-4xl md:text-5xl text-white/80")}
+        className={cn(
+          "text-white/80",
+          size === 'default' ? "text-4xl md:text-5xl" : "text-2xl md:text-3xl"
+        )}
       >
         {currentText}
         <span className="animate-blink">|</span>

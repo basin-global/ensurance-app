@@ -1,11 +1,8 @@
 'use client'
 
-import { RiskToResilience } from '@/modules/home-page/risk-to-resilience/RiskToResilience'
-import { Solution } from '@/modules/home-page/solution/Solution'
-import { Truth } from '@/modules/home-page/truth/Truth'
-import { Proof } from '@/modules/home-page/proof/Proof'
-import { CTA } from '@/modules/home-page/cta/CTA'
 import { Ensure } from '@/modules/home-page/ensure/Ensure'
+import { DeclarativeHero } from '@/components/layout/DeclarativeHero'
+import { DeclarativeSection } from '@/components/layout/DeclarativeSection'
 import { useEffect } from 'react'
 
 export default function HomePage() {
@@ -21,7 +18,7 @@ export default function HomePage() {
         header.style.top = '0'
         header.style.zIndex = '100'
         
-        // Start fading in when we're closer to the Risk section
+        // Start fading in when we're closer to the DeclarativeHero section
         if (scrollPosition > windowHeight * 0.7) {
           header.style.opacity = '1'
           header.style.backgroundColor = 'black'
@@ -61,11 +58,8 @@ export default function HomePage() {
   return (
     <main>
       <Ensure />
-      <RiskToResilience />
-      <Truth />
-      <Solution />
-      <Proof />
-      <CTA />
+      <DeclarativeHero />
+      <DeclarativeSection />
     </main>
   )
 }
