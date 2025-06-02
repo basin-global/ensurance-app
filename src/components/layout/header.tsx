@@ -5,9 +5,11 @@ import { ConnectOperator } from './ConnectOperator'
 import { HeaderLogo } from './HeaderLogo'
 import { SubNavigation } from './SubNavigation'
 import { usePathname } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 export default function Header() {
   const pathname = usePathname()
+  const [isVisible, setIsVisible] = useState(true)
 
   // Determine if and what type of sub-navigation to show
   const getSubNavConfig = () => {
@@ -34,10 +36,32 @@ export default function Header() {
     return { show: false, type: 'accounts' as const } // Provide default type even when not shown
   }
 
+  useEffect(() => {
+    const handleScroll = () => {
+      // Only apply scroll-based visibility on the home page
+      if (pathname === '/') {
+        const scrollPosition = window.scrollY
+        const windowHeight = window.innerHeight
+        
+        // Show header after scrolling past the first section (Ensure)
+        setIsVisible(scrollPosition > windowHeight * 0.5)
+      } else {
+        // Always show header on other pages
+        setIsVisible(true)
+      }
+    }
+
+    // Set initial visibility
+    handleScroll()
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [pathname])
+
   const navConfig = getSubNavConfig()
 
   return (
-    <header className="w-full border-b border-gray-800 relative z-10">
+    <header className={`w-full border-b border-gray-800 relative z-10 transition-opacity duration-500 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
       <div className="container mx-auto px-6 py-4">
         <nav className="flex items-center">
           <HeaderLogo />
