@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { forwardRef } from 'react'
 import { cn } from '@/lib/utils'
 import { TypewriterEffect } from '@/components/ui/typewriter-effect'
 
@@ -12,7 +12,7 @@ interface AssetSearchProps {
   onFocus?: () => void;
 }
 
-export function AssetSearch({ 
+export const AssetSearch = forwardRef<HTMLInputElement, AssetSearchProps>(function AssetSearch({ 
   searchQuery, 
   setSearchQuery, 
   placeholder = "search assets...",
@@ -20,10 +20,11 @@ export function AssetSearch({
   typewriterWords,
   className,
   onFocus
-}: AssetSearchProps) {
+}, ref) {
   return (
     <div className={cn("w-full max-w-md relative", className)}>
       <input
+        ref={ref}
         type="text"
         placeholder={typewriterWords ? '' : placeholder.toLowerCase()}
         value={searchQuery}
@@ -50,4 +51,4 @@ export function AssetSearch({
       )}
     </div>
   )
-}
+});

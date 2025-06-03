@@ -7,68 +7,12 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowUpDown } from 'lucide-react'
+import { ArrowUpDown, PlusCircle } from 'lucide-react'
 import { getContractTokens, type TokenDisplayInfo } from '@/modules/specific/collect'
 import { CONTRACTS } from '@/modules/specific/config'
 import AccountImage from '@/modules/accounts/AccountImage'
 import { cn } from '@/lib/utils'
-
-// Cache for API responses
-const cache = {
-  general: null as any,
-  specific: null as any,
-  syndicates: null as any,
-  accounts: null as any,
-  groups: null as any,
-  metadata: {} as Record<string, any>
-}
-
-// Types for different certificate types
-interface GeneralCertificate {
-  contract_address: string
-  name: string
-  token_uri: string
-  image_url?: string
-  video_url?: string
-  type: 'general'
-}
-
-interface SpecificCertificate extends TokenDisplayInfo {
-  type: 'specific'
-  metadata?: {
-    name?: string
-    image?: string
-  }
-}
-
-interface Syndicate {
-  name: string
-  image_url: string
-  media?: {
-    banner?: string
-  }
-  type: 'syndicate'
-}
-
-interface Account {
-  full_account_name: string
-  token_id: number
-  group_name: string
-  is_agent: boolean
-  type: 'account'
-}
-
-interface Group {
-  group_name: string
-  name_front: string | null
-  tagline: string | null
-  total_supply: number
-  contract_address: string
-  is_active: boolean
-  type: 'group'
-}
-
-type Certificate = GeneralCertificate | SpecificCertificate | Syndicate | Account | Group
+import { useEnsureData, Certificate } from '@/hooks/useEnsureData'
 
 interface EnsureGridProps {
   searchQuery?: string
@@ -128,10 +72,8 @@ export default function EnsureGrid({
   types = ['general', 'specific', 'syndicate', 'account', 'group'],
   variant = 'default'
 }: EnsureGridProps) {
-  const [items, setItems] = useState<Certificate[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [tokenMetadata, setTokenMetadata] = useState<Record<string, any>>({})
+  // Use the new hook for data
+  const { items, loading, error, tokenMetadata } = useEnsureData({ waitForAll: false })
   const [page, setPage] = useState(1)
   const [selectedTypes, setSelectedTypes] = useState<typeof types>(types)
   const [sort, setSort] = useState<SortConfig>({ field: 'general' })
@@ -149,153 +91,6 @@ export default function EnsureGrid({
   useEffect(() => {
     setPage(1)
   }, [searchQuery])
-
-  // Fetch metadata for general certificates
-  const fetchGeneralMetadata = async (cert: GeneralCertificate) => {
-    try {
-      const fetchUrl = convertIpfsUrl(cert.token_uri)
-      const response = await fetch(fetchUrl)
-      if (!response.ok) throw new Error('Failed to fetch metadata')
-      const data = await response.json()
-      
-      let imageUrl = data.image || data.content?.uri || FALLBACK_IMAGE
-      imageUrl = convertIpfsUrl(imageUrl)
-      
-      return {
-        ...cert,
-        image_url: imageUrl
-      }
-    } catch (error) {
-      console.error('Error fetching general metadata:', error)
-      return {
-        ...cert,
-        image_url: FALLBACK_IMAGE
-      }
-    }
-  }
-
-  // Fetch metadata for specific certificates
-  const fetchSpecificMetadata = async (token: TokenDisplayInfo) => {
-    try {
-      if (token.tokenURI.startsWith('http')) {
-        const response = await fetch(token.tokenURI)
-        return await response.json()
-      } else {
-        return JSON.parse(token.tokenURI)
-      }
-    } catch (err) {
-      console.error('Error fetching specific metadata:', err)
-      return { error: true }
-    }
-  }
-
-  useEffect(() => {
-    let mounted = true
-
-    const fetchAllItems = async () => {
-      try {
-        setLoading(true)
-        
-        // Fetch general certificates (with cache)
-        if (!cache.general) {
-          const generalResponse = await fetch('/api/general')
-          if (!generalResponse.ok) throw new Error('Failed to fetch general certificates')
-          cache.general = await generalResponse.json()
-        }
-        
-        const validGeneralCerts = (cache.general || [])
-          .filter((cert: GeneralCertificate) => cert && cert.contract_address)
-          .map((cert: GeneralCertificate) => ({ ...cert, type: 'general' as const }))
-        
-        const generalWithMetadata = await Promise.all(
-          validGeneralCerts.map(fetchGeneralMetadata)
-        )
-
-        // Fetch specific certificates (with cache)
-        if (!cache.specific) {
-          cache.specific = await getContractTokens(CONTRACTS.specific)
-        }
-        const specificWithType = cache.specific.map((token: TokenDisplayInfo) => ({ 
-          ...token, 
-          type: 'specific' as const 
-        }))
-        
-        // Fetch metadata for specific tokens (with cache)
-        const metadata: Record<string, any> = {}
-        for (const token of cache.specific) {
-          if (!cache.metadata[token.tokenURI]) {
-            cache.metadata[token.tokenURI] = await fetchSpecificMetadata(token)
-          }
-          metadata[token.tokenURI] = cache.metadata[token.tokenURI]
-        }
-
-        // Fetch syndicates (with cache)
-        if (!cache.syndicates) {
-          const syndicateResponse = await fetch('/api/syndicates')
-          if (!syndicateResponse.ok) throw new Error('Failed to fetch syndicates')
-          cache.syndicates = await syndicateResponse.json()
-        }
-        const syndicatesWithType = cache.syndicates.map((syndicate: Syndicate) => ({ 
-          ...syndicate, 
-          type: 'syndicate' as const 
-        }))
-
-        // Fetch accounts (with cache)
-        if (!cache.accounts) {
-          const accountsResponse = await fetch('/api/accounts')
-          if (!accountsResponse.ok) throw new Error('Failed to fetch accounts')
-          cache.accounts = await accountsResponse.json()
-        }
-        const accountsWithType = cache.accounts.map((account: Account) => ({
-          ...account,
-          type: 'account' as const
-        }))
-        
-        // Fetch groups (with cache)
-        if (!cache.groups) {
-          const groupsResponse = await fetch('/api/groups')
-          if (!groupsResponse.ok) throw new Error('Failed to fetch groups')
-          cache.groups = await groupsResponse.json()
-        }
-        const groupsWithType = cache.groups
-          .filter((group: Group) => group.is_active)
-          .map((group: Group) => ({
-            ...group,
-            type: 'group' as const
-          }))
-        
-        if (mounted) {
-          setTokenMetadata(metadata)
-          const allItems = [
-            ...generalWithMetadata, 
-            ...specificWithType, 
-            ...syndicatesWithType,
-            ...accountsWithType,
-            ...groupsWithType
-          ]
-          setItems(allItems)
-          if (onDataChange) {
-            onDataChange(allItems)
-          }
-        }
-      } catch (err) {
-        console.error('Error loading data:', err)
-        if (mounted) {
-          setError(err instanceof Error ? err.message : 'Failed to load data')
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false)
-        }
-      }
-    }
-
-    fetchAllItems()
-
-    return () => {
-      mounted = false
-    }
-  }, [onDataChange])
 
   const handleSortClick = () => {
     const fields = SORT_CYCLES
@@ -386,7 +181,7 @@ export default function EnsureGrid({
     return () => window.removeEventListener('scroll', handleScroll);
   }, [loading, loadMore, displayedItems.length, sortedItems.length]);
 
-  if (loading && items.length === 0) {
+  if (items.length === 0 && loading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {[...Array(8)].map((_, index) => (
@@ -512,9 +307,9 @@ export default function EnsureGrid({
                         {item.name || 'Unnamed Certificate'}
                       </div>
                       {variant === 'default' && (
-                        <Button className="w-full bg-green-600 hover:bg-green-500">
-                          ensure
-                        </Button>
+                        <button className="w-full flex justify-center items-center py-2">
+                          <PlusCircle className="w-7 h-7 stroke-[1.5] stroke-green-500 hover:stroke-green-400 transition-colors" />
+                        </button>
                       )}
                     </div>
                   </CardContent>
@@ -573,9 +368,9 @@ export default function EnsureGrid({
                         {metadata && !metadataError ? metadata.name || 'Unnamed Token' : 'Unnamed Token'}
                       </div>
                       {variant === 'default' && (
-                        <Button className="w-full bg-green-600 hover:bg-green-500">
-                          ensure
-                        </Button>
+                        <button className="w-full flex justify-center items-center py-2">
+                          <PlusCircle className="w-7 h-7 stroke-[1.5] stroke-green-500 hover:stroke-green-400 transition-colors" />
+                        </button>
                       )}
                     </div>
                   </CardContent>
@@ -622,9 +417,9 @@ export default function EnsureGrid({
                         {item.full_account_name}
                       </div>
                       {variant === 'default' && (
-                        <Button className="w-full bg-green-600 hover:bg-green-500">
-                          ensure
-                        </Button>
+                        <button className="w-full flex justify-center items-center py-2">
+                          <PlusCircle className="w-7 h-7 stroke-[1.5] stroke-green-500 hover:stroke-green-400 transition-colors" />
+                        </button>
                       )}
                     </div>
                   </CardContent>
@@ -674,9 +469,9 @@ export default function EnsureGrid({
                         {item.group_name}
                       </div>
                       {variant === 'default' && (
-                        <Button className="w-full bg-green-600 hover:bg-green-500">
-                          ensure
-                        </Button>
+                        <button className="w-full flex justify-center items-center py-2">
+                          <PlusCircle className="w-7 h-7 stroke-[1.5] stroke-green-500 hover:stroke-green-400 transition-colors" />
+                        </button>
                       )}
                     </div>
                   </CardContent>
@@ -726,9 +521,9 @@ export default function EnsureGrid({
                         {item.name}
                       </div>
                       {variant === 'default' && (
-                        <Button className="w-full bg-green-600 hover:bg-green-500">
-                          ensure
-                        </Button>
+                        <button className="w-full flex justify-center items-center py-2">
+                          <PlusCircle className="w-7 h-7 stroke-[1.5] stroke-green-500 hover:stroke-green-400 transition-colors" />
+                        </button>
                       )}
                     </div>
                   </CardContent>

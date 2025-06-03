@@ -1,6 +1,6 @@
 'use client'
 
-import { Ensure } from '@/modules/home-page/ensure/Ensure'
+import { EnsureMagnet } from '@/modules/ensure/EnsureMagnet'
 import { DeclarativeHero } from '@/components/layout/DeclarativeHero'
 import { DeclarativeSection } from '@/components/layout/DeclarativeSection'
 import { useEffect } from 'react'
@@ -57,7 +57,7 @@ export default function HomePage() {
 
   return (
     <main>
-      <Ensure />
+      <EnsureMagnet />
       <DeclarativeHero />
       <DeclarativeSection />
     </main>

@@ -351,22 +351,26 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
       // 3. Draw bars (segments) with isolation effect
       const mainGroup = svg.append('g');
       
+      // Create a separate group for labels that will be rendered on top
+      const labelGroup = svg.append('g').style('z-index', '10');
+
       // Add row labels
       const rowLabels = ['SECTORS', 'FLOWS', 'STOCKS'];
       [0, 1, 2].forEach(layer => {
-        const yPos = layerYPositions[layer] + (barHeight / 2) - 25; // Moved up more
+        const yPos = layerYPositions[layer] + (barHeight / 2) - 25;
         mainGroup.append('text')
           .attr('x', margin.left - 10)
           .attr('y', yPos)
           .attr('text-anchor', 'end')
           .attr('transform', `rotate(-90, ${margin.left - 10}, ${yPos})`)
           .text(rowLabels[layer])
-          .style('font-size', '12px')
+          .style('font-size', '14px')
           .style('font-family', 'Inter, system-ui, sans-serif')
-          .style('font-weight', '600')
-          .style('fill', '#666')
+          .style('font-weight', '700')
+          .style('fill', '#aaa')  // Softer white/gray
           .style('text-transform', 'uppercase')
-          .style('letter-spacing', '0.05em');
+          .style('letter-spacing', '0.05em')
+          .style('z-index', '10');
       });
 
       // Color scale
@@ -452,7 +456,7 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
             .on('mouseout', () => { if (!selectedNode) setHoveredNode(null); })
             .on('click', () => updateSelection(n.name));
           // Add label
-          const label = group.append('text')
+          const label = labelGroup.append('text')
             .attr('x', (pos.x0 + pos.x1) / 2)
             .attr('y', pos.y0 - 36)  // Increased spacing slightly more
             .attr('text-anchor', 'middle')
@@ -470,7 +474,7 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
           // Add background for better readability
           const bbox = label.node()?.getBBox();
           if (bbox) {
-            group.insert('rect', 'text')
+            labelGroup.insert('rect', 'text')
               .attr('x', bbox.x - 4)
               .attr('y', bbox.y - 2)
               .attr('width', bbox.width + 8)
