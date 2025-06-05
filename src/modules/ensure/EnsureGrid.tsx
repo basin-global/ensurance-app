@@ -124,22 +124,36 @@ export default function EnsureGrid({
     const searchLower = searchQuery.toLowerCase()
     return filtered.filter(item => {
       if (item.type === 'general') {
-        return item.name?.toLowerCase().includes(searchLower)
+        return (
+          item.name?.toLowerCase().includes(searchLower) ||
+          item.description?.toLowerCase().includes(searchLower)
+        )
       } else if (item.type === 'specific') {
         const metadata = tokenMetadata[item.tokenURI]
         if (!metadata || metadata.error) return false
-        return metadata.name?.toLowerCase().includes(searchLower)
+        return (
+          metadata.name?.toLowerCase().includes(searchLower) ||
+          metadata.description?.toLowerCase().includes(searchLower)
+        )
       } else if (item.type === 'account') {
-        return item.full_account_name?.toLowerCase().includes(searchLower)
+        return (
+          item.full_account_name?.toLowerCase().includes(searchLower) ||
+          item.description?.toLowerCase().includes(searchLower)
+        )
       } else if (item.type === 'group') {
         return (
           item.group_name.toLowerCase().includes(searchLower) ||
           (item.name_front?.toLowerCase().includes(searchLower)) ||
-          (item.tagline?.toLowerCase().includes(searchLower))
+          (item.tagline?.toLowerCase().includes(searchLower)) ||
+          (item.description?.toLowerCase().includes(searchLower))
         )
-      } else {
-        return item.name?.toLowerCase().includes(searchLower)
+      } else if (item.type === 'syndicate') {
+        return (
+          item.name?.toLowerCase().includes(searchLower) ||
+          item.description?.toLowerCase().includes(searchLower)
+        )
       }
+      return false
     })
   }, [items, searchQuery, tokenMetadata, selectedTypes])
 

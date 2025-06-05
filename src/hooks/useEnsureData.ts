@@ -9,6 +9,7 @@ export interface GeneralCertificate {
   token_uri: string
   image_url?: string
   video_url?: string
+  description?: string
   type: 'general'
 }
 
@@ -16,17 +17,10 @@ export interface SpecificCertificate extends TokenDisplayInfo {
   type: 'specific'
   metadata?: {
     name?: string
+    description?: string
     image?: string
+    error?: boolean
   }
-}
-
-export interface Syndicate {
-  name: string
-  image_url: string
-  media?: {
-    banner?: string
-  }
-  type: 'syndicate'
 }
 
 export interface Account {
@@ -34,6 +28,7 @@ export interface Account {
   token_id: number
   group_name: string
   is_agent: boolean
+  description?: string
   type: 'account'
 }
 
@@ -41,13 +36,45 @@ export interface Group {
   group_name: string
   name_front: string | null
   tagline: string | null
+  description?: string
   total_supply: number
   contract_address: string
   is_active: boolean
   type: 'group'
 }
 
-export type Certificate = GeneralCertificate | SpecificCertificate | Syndicate | Account | Group
+export interface Syndicate {
+  name: string
+  description?: string
+  media?: {
+    banner?: string
+  }
+  image_url?: string
+  type: 'syndicate'
+}
+
+export type Certificate = GeneralCertificate | SpecificCertificate | Account | Group | Syndicate
+
+// Type guard functions
+export function isGeneralCertificate(item: Certificate): item is GeneralCertificate {
+  return item.type === 'general'
+}
+
+export function isSpecificCertificate(item: Certificate): item is SpecificCertificate {
+  return item.type === 'specific'
+}
+
+export function isAccount(item: Certificate): item is Account {
+  return item.type === 'account'
+}
+
+export function isGroup(item: Certificate): item is Group {
+  return item.type === 'group'
+}
+
+export function isSyndicate(item: Certificate): item is Syndicate {
+  return item.type === 'syndicate'
+}
 
 const FALLBACK_IMAGE = '/assets/no-image-found.png'
 
@@ -84,7 +111,7 @@ function getItemId(item: Certificate): string {
     case 'account':
       return 'account-' + (item as Account).full_account_name
     default:
-      return item.type + '-' + Math.random().toString(36).slice(2)
+      return 'unknown-' + Math.random().toString(36).slice(2)
   }
 }
 
@@ -93,6 +120,46 @@ export function useEnsureData({ waitForAll = false }: { waitForAll?: boolean } =
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [tokenMetadata, setTokenMetadata] = useState<Record<string, any>>({})
+  const [searchQuery, setSearchQuery] = useState('')
+
+  // Filter items by search
+  const filtered = searchQuery
+    ? items.filter(item => {
+        const searchLower = searchQuery.toLowerCase();
+        if (item.type === 'general') {
+          return (
+            item.name?.toLowerCase().includes(searchLower) ||
+            item.description?.toLowerCase().includes(searchLower)
+          )
+        } else if (item.type === 'specific') {
+          const meta = tokenMetadata[item.tokenURI]
+          if (!meta || meta.error) return false
+          return (
+            meta.name?.toLowerCase().includes(searchLower) ||
+            meta.description?.toLowerCase().includes(searchLower)
+          )
+        } else if (item.type === 'account') {
+          return (
+            item.full_account_name?.toLowerCase().includes(searchLower) ||
+            item.description?.toLowerCase().includes(searchLower)
+          )
+        } else if (item.type === 'group') {
+          return (
+            item.group_name.toLowerCase().includes(searchLower) ||
+            (item.name_front?.toLowerCase().includes(searchLower)) ||
+            (item.tagline?.toLowerCase().includes(searchLower)) ||
+            (item.description?.toLowerCase().includes(searchLower))
+          )
+        } else if (item.type === 'syndicate') {
+          return (
+            item.name?.toLowerCase().includes(searchLower) ||
+            item.description?.toLowerCase().includes(searchLower)
+          )
+        } else {
+          return false
+        }
+      })
+    : items
 
   useEffect(() => {
     let mounted = true
@@ -127,7 +194,8 @@ export function useEnsureData({ waitForAll = false }: { waitForAll?: boolean } =
           .map((cert: GeneralCertificate) => ({ ...cert, type: 'general' as const, image_url: FALLBACK_IMAGE }))
         const specificWithType = (specific || []).map((token: TokenDisplayInfo) => ({
           ...token,
-          type: 'specific' as const
+          type: 'specific' as const,
+          metadata: undefined
         }))
         const syndicatesWithType = (syndicates || []).map((syndicate: Syndicate) => ({
           ...syndicate,
@@ -204,14 +272,14 @@ export function useEnsureData({ waitForAll = false }: { waitForAll?: boolean } =
             specificMetadata[token.tokenURI] = metadata
             const imageUrl = metadata.image ? convertIpfsUrl(metadata.image) : FALLBACK_IMAGE
             // Update in map
-            const id = getItemId(token)
-            itemMap[id] = { ...token, type: 'specific', metadata }
+            const id = getItemId({ ...token, type: 'specific', metadata } as SpecificCertificate)
+            itemMap[id] = { ...token, type: 'specific', metadata } as SpecificCertificate
             updateItems()
             await preloadImage(imageUrl)
           } catch {
             specificMetadata[token.tokenURI] = { error: true }
-            const id = getItemId(token)
-            itemMap[id] = { ...token, type: 'specific', metadata: { error: true } }
+            const id = getItemId({ ...token, type: 'specific', metadata: { error: true } } as SpecificCertificate)
+            itemMap[id] = { ...token, type: 'specific', metadata: { error: true } } as SpecificCertificate
             updateItems()
           }
         }))
@@ -219,7 +287,8 @@ export function useEnsureData({ waitForAll = false }: { waitForAll?: boolean } =
 
         // Syndicate images
         await Promise.all(syndicatesWithType.map(async (syndicate: Syndicate) => {
-          const imageUrl = convertIpfsUrl(syndicate.media?.banner || syndicate.image_url)
+          const bannerOrImage = syndicate.media?.banner || syndicate.image_url
+          const imageUrl = bannerOrImage ? convertIpfsUrl(bannerOrImage) : FALLBACK_IMAGE
           await preloadImage(imageUrl)
         }))
 
@@ -245,5 +314,5 @@ export function useEnsureData({ waitForAll = false }: { waitForAll?: boolean } =
     return () => { mounted = false }
   }, [waitForAll])
 
-  return { items, loading, error, tokenMetadata }
+  return { items: filtered, loading, error, tokenMetadata, setSearchQuery }
 }

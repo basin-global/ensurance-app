@@ -193,6 +193,8 @@ export default function SpecificTokenPage({
                     console.warn('Image failed to load:', imageUrl)
                     e.target.src = FALLBACK_IMAGE
                   }}
+                  loading="eager"
+                  fetchPriority="high"
                 />
               </div>
             </CardContent>

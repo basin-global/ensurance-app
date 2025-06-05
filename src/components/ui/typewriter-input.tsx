@@ -74,7 +74,7 @@ export function TypewriterInput({ words, className, size = 'default' }: Typewrit
         )}
       >
         {currentText}
-        <span className="animate-blink">|</span>
+        <span className="inline-block w-[2px] h-[1.2em] bg-white/80 animate-blink align-middle ml-[2px]"></span>
       </motion.span>
     </div>
   )
