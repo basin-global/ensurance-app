@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import Link from 'next/link'
 import Image from 'next/image'
-import { EnsureButtons0x } from '@/components/layout/EnsureButtons0x'
+import { EnsureButtons0x } from '@/components/layout/EnsureButtonsGeneral'
 import { Grid, List, ArrowUpDown } from 'lucide-react'
 import GeneralList from './GeneralList'
 

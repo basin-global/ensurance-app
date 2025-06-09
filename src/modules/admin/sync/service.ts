@@ -399,6 +399,14 @@ async function syncGeneralCertificatesMarketData(): Promise<SyncOperationResult>
           
           // Debug logging
           console.log('Full Zora API response:', JSON.stringify(response, null, 2));
+          console.log('Response data structure:', {
+            hasResponse: !!response,
+            hasData: !!response?.data,
+            hasZora20Token: !!response?.data?.zora20Token,
+            responseKeys: response ? Object.keys(response) : [],
+            dataKeys: response?.data ? Object.keys(response.data) : [],
+            tokenKeys: response?.data?.zora20Token ? Object.keys(response.data.zora20Token) : []
+          });
           
           if (!response?.data?.zora20Token) {
             console.log(`❌ No market data available for ${cert.contract_address}`);
@@ -448,7 +456,7 @@ async function syncGeneralCertificatesMarketData(): Promise<SyncOperationResult>
               name: cert.name || '',
               symbol: cert.symbol || '',
               token_uri: cert.token_uri || '',
-              pool_address: cert.pool_address || '',
+              pool_address: cert.pool_address || undefined,
               total_supply: coinData.totalSupply || '0',
               total_volume: coinData.totalVolume || '0',
               volume_24h: coinData.volume24h || '0',
@@ -583,7 +591,7 @@ async function syncGeneralCertificatesMarketDataBatch(): Promise<SyncOperationRe
                   name: cert.name || '',
                   symbol: cert.symbol || '',
                   token_uri: cert.token_uri || '',
-                  pool_address: cert.pool_address || '',
+                  pool_address: cert.pool_address || undefined,
                   total_supply: tokenData.totalSupply || '0',
                   total_volume: tokenData.totalVolume || '0',
                   volume_24h: tokenData.volume24h || '0',

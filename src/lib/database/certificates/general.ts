@@ -43,20 +43,24 @@ export const generalCertificates = {
   },
 
   /**
-   * Update certificate with on-chain data
+   * Update certificate data from chain
    */
-  async updateFromChain(cert: GeneralCertificate, data: UpdateFromChainData): Promise<void> {
+  async updateFromChain(cert: GeneralCertificate, data: {
+    name: string;
+    symbol: string;
+    token_uri: string;
+    pool_address?: string;
+    payout_recipient: string;
+  }): Promise<void> {
     await sql`
-      UPDATE certificates.general 
+      UPDATE certificates.general
       SET 
         name = ${data.name},
         symbol = ${data.symbol},
         token_uri = ${data.token_uri},
         pool_address = ${data.pool_address},
         payout_recipient = ${data.payout_recipient}
-      WHERE 
-        contract_address = ${cert.contract_address} 
-        AND chain = ${cert.chain}
+      WHERE contract_address = ${cert.contract_address}
     `;
   },
 
@@ -111,8 +115,8 @@ export const generalCertificates = {
    */
   async syncFromChain(cert: GeneralCertificate): Promise<SyncResult> {
     try {
-      // Get data from chain
-      const [name, symbol, tokenUri, poolAddress, payoutRecipient] = await Promise.all([
+      // Get basic data from chain (these are common to both V3 and V4)
+      const [name, symbol, tokenUri, payoutRecipient] = await Promise.all([
         client.readContract({
           address: cert.contract_address as `0x${string}`,
           abi: ZORA_COIN_ABI,
@@ -131,14 +135,22 @@ export const generalCertificates = {
         client.readContract({
           address: cert.contract_address as `0x${string}`,
           abi: ZORA_COIN_ABI,
-          functionName: 'poolAddress'
-        }) as Promise<string>,
-        client.readContract({
-          address: cert.contract_address as `0x${string}`,
-          abi: ZORA_COIN_ABI,
           functionName: 'payoutRecipient'
         }) as Promise<string>
       ]);
+
+      // Try to get pool address (V3 only)
+      let poolAddress: string | undefined;
+      try {
+        poolAddress = await client.readContract({
+          address: cert.contract_address as `0x${string}`,
+          abi: ZORA_COIN_ABI,
+          functionName: 'poolAddress'
+        }) as string;
+      } catch (err) {
+        // If poolAddress() fails, it's likely a V4 contract
+        console.log(`No pool address for ${cert.contract_address} (likely V4 contract)`);
+      }
 
       // Update certificate in database
       await this.updateFromChain(cert, {

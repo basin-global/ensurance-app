@@ -1,5 +1,5 @@
 import { GeneralCertificate } from './GeneralGrid';
-import { EnsureButtons0x } from '@/components/layout/EnsureButtons0x';
+import { EnsureButtons0x } from '@/components/layout/EnsureButtonsGeneral';
 import Image from 'next/image';
 import Link from 'next/link';
 

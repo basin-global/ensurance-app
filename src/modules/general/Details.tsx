@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ChevronDown, ChevronUp } from 'lucide-react'
-import { EnsureButtons0x } from '@/components/layout/EnsureButtons0x'
+import { EnsureButtons0x } from '@/components/layout/EnsureButtonsGeneral'
 import { Proceeds } from '@/modules/proceeds/components/Proceeds'
 import { createPublicClient, http } from 'viem'
 import { base } from 'viem/chains'
@@ -118,21 +118,32 @@ export default function Details({
         })
 
         // Get max supply and current supply
-        const [max, current] = await Promise.all([
-          publicClient.readContract({
-            address: contractAddress,
-            abi: ZORA_COIN_ABI,
-            functionName: 'MAX_TOTAL_SUPPLY'
-          }),
-          publicClient.readContract({
-            address: contractAddress,
-            abi: ZORA_COIN_ABI,
-            functionName: 'totalSupply'
-          })
-        ])
+        try {
+          const [max, current] = await Promise.all([
+            publicClient.readContract({
+              address: contractAddress,
+              abi: ZORA_COIN_ABI,
+              functionName: 'MAX_TOTAL_SUPPLY'
+            }).catch(() => {
+              // If MAX_TOTAL_SUPPLY fails, it's likely a V4 contract
+              // Use 1 billion as fallback
+              return BigInt(1_000_000_000)
+            }),
+            publicClient.readContract({
+              address: contractAddress,
+              abi: ZORA_COIN_ABI,
+              functionName: 'totalSupply'
+            })
+          ])
 
-        setMaxSupply(max as bigint)
-        setCurrentSupply(current as bigint)
+          setMaxSupply(max as bigint)
+          setCurrentSupply(current as bigint)
+        } catch (error) {
+          console.error('Error fetching supply data:', error)
+          // Set fallback values
+          setMaxSupply(BigInt(1_000_000_000))
+          setCurrentSupply(BigInt(0))
+        }
       } catch (error) {
         console.error('Error fetching data:', error)
       } finally {
