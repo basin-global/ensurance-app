@@ -23,7 +23,7 @@ export default function PortfolioList({ tokens, isOverview = false }: PortfolioL
   if (!processedTokens.length) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-500">No tokens found</p>
+        <p className="text-gray-500">None found</p>
       </div>
     );
   }

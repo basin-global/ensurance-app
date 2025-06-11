@@ -30,7 +30,7 @@ export default function SpecificList({ tokens, tokenMetadata }: SpecificListProp
   if (!tokens.length) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-500">No tokens found</p>
+        <p className="text-gray-500">None found</p>
       </div>
     )
   }

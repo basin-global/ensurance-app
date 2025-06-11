@@ -179,8 +179,8 @@ export default function SpecificGrid({
     return (
       <div className="space-y-4">
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <h2 className="text-yellow-800 font-medium">No Tokens Found</h2>
-          <p className="text-yellow-600">No tokens found matching your search</p>
+          <h2 className="text-yellow-800 font-medium">None Found</h2>
+          <p className="text-yellow-600">No matches found</p>
         </div>
       </div>
     )

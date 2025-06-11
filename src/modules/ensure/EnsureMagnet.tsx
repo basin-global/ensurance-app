@@ -109,6 +109,7 @@ const MagnetImage = forwardRef<HTMLImageElement, any>(({ src, alt, style, item, 
   if (!src && !hasError) {
     return (
       <div 
+        className="hover:scale-125 transition-transform duration-200 ease-out"
         style={{ 
           width: 64, 
           height: 64, 
@@ -124,10 +125,11 @@ const MagnetImage = forwardRef<HTMLImageElement, any>(({ src, alt, style, item, 
     )
   }
   return (
-    <motion.img
+    <img
       ref={ref}
       src={hasError || !src ? FALLBACK_IMAGE : src}
       alt={alt}
+      className="hover:scale-125 transition-transform duration-200 ease-out"
       style={{ 
         width: 64, 
         height: 64, 
@@ -524,6 +526,7 @@ export function EnsureMagnet() {
                   border: isNaturalCapital(m.item) ? '2px solid rgba(255, 215, 0, 0.8)' : 'none',
                   cursor: 'pointer'
                 }}
+                className="hover:scale-125 transition-transform duration-200 ease-out"
               >
                 <a 
                   href={`/${(m.item as Account).full_account_name}`}

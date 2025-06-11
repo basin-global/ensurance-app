@@ -41,7 +41,7 @@ export default function PortfolioGrid({ tokens, isLoading = false }: PortfolioGr
     return (
       <div className="text-center py-8">
         <p className="text-lg text-gray-600 dark:text-gray-400">
-          No tokens found in this portfolio.
+          No matches found in this portfolio.
         </p>
       </div>
     );

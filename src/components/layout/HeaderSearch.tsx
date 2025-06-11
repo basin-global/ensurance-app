@@ -49,6 +49,12 @@ export function HeaderSearch() {
   // Handle keyboard shortcuts
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
+      // Don't handle shortcuts if any search input is focused
+      const activeElement = document.activeElement
+      if (activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement) {
+        return
+      }
+
       if (!isOpen) {
         // Handle ⌘K to open search
         if ((event.metaKey || event.ctrlKey) && event.key === 'k') {

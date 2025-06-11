@@ -23,6 +23,7 @@ export function EnsureTooltip({ children, content, className }: EnsureTooltipPro
             "text-white/90 text-sm font-medium",
             "px-3 py-2",
             "z-50",
+            "animate-in fade-in-0 zoom-in-95 duration-75",
             className
           )}
         >
