@@ -5,8 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import * as Tooltip from '@radix-ui/react-tooltip'
 
 // Export tab components so pages can import what they need
-export { default as AssetsTab } from './assets'
-export { default as CurrencyTab } from './currency'
+export { default as PortfolioTab } from './portfolio'
 export { default as ReputationTab } from './reputation'
 export { default as PlaceTab } from './place'
 export { default as ImpactTab } from './impact'
@@ -78,7 +77,7 @@ export default function TabbedModules({
   }
 
   const getTabStyle = (tabValue: string) => {
-    const isPortfolioTab = tabValue === 'assets' || tabValue === 'currency'
+    const isPortfolioTab = tabValue === 'portfolio'
     const isActive = activeTab === tabValue
 
     if (isPortfolioTab) {

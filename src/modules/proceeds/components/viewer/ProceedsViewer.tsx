@@ -345,6 +345,15 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
           splitMetadata.recipients.map(async (recipient: { recipient: { address: string }, percentAllocation: string }) => {
             const recipientAddress = recipient.recipient.address.toLowerCase();
             
+            // Special case for 0x4dDEdf9e5e101A9D865FbC5401829EbD9Fda1370
+            if (recipientAddress === '0x4ddedf9e5e101a9d865fbc5401829ebd9fda1370') {
+              return {
+                address: recipientAddress,
+                isSplit: true, // Force it to be treated as a node
+                percentage: recipient.percentAllocation
+              };
+            }
+            
             // If we've already processed this address or have it in knownSplits, use cached info
             if (processedAddresses.has(recipientAddress)) {
               return {

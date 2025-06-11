@@ -53,9 +53,10 @@ export const createTokenboundActions = (activeWallet: any, tbaAddress: string): 
     }
 
     const signer = provider.getSigner();
-    const client = new TokenboundClient(
-      getTokenBoundClientConfig(chainConfig.id, { signer })
-    );
+    const client = new TokenboundClient({
+      chainId: chainConfig.id,
+      signer
+    });
 
     const tx = await client.transferNFT({
       account: tbaAddress as `0x${string}`,
@@ -63,8 +64,7 @@ export const createTokenboundActions = (activeWallet: any, tbaAddress: string): 
       tokenContract: asset.contract_address as `0x${string}`,
       tokenId: asset.token_id,
       recipientAddress: toAddress,
-      amount: asset.contract?.type === 'ERC1155' ? amount : undefined,
-      chainId: chainConfig.id
+      amount: asset.contract?.type === 'ERC1155' ? amount : undefined
     });
 
     return {
@@ -95,9 +95,10 @@ export const createTokenboundActions = (activeWallet: any, tbaAddress: string): 
       const provider = await activeWallet.getEthersProvider();
       const signer = provider.getSigner();
 
-      const client = new TokenboundClient(
-        getTokenBoundClientConfig(chainConfig.id, { signer })
-      );
+      const client = new TokenboundClient({
+        chainId: chainConfig.id,
+        signer
+      });
 
       return client.checkAccountDeployment({
         accountAddress: tbaAddress as `0x${string}`,
@@ -116,9 +117,10 @@ export const createTokenboundActions = (activeWallet: any, tbaAddress: string): 
     let provider = await activeWallet.getEthersProvider();
     const signer = provider.getSigner();
 
-    const client = new TokenboundClient(
-      getTokenBoundClientConfig(chainId, { signer })
-    );
+    const client = new TokenboundClient({
+      chainId: chainId,
+      signer
+    });
 
     await client.transferETH({
       account: tbaAddress as `0x${string}`,
@@ -136,9 +138,10 @@ export const createTokenboundActions = (activeWallet: any, tbaAddress: string): 
     let provider = await activeWallet.getEthersProvider();
     const signer = provider.getSigner();
 
-    const client = new TokenboundClient(
-      getTokenBoundClientConfig(chainId, { signer })
-    );
+    const client = new TokenboundClient({
+      chainId: chainId,
+      signer
+    });
 
     await client.transferERC20({
       account: tbaAddress as `0x${string}`,

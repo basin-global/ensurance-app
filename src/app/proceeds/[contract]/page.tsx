@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { SplitsClient } from '@0xsplits/splits-sdk';
 import { base } from 'viem/chains';
 import { Copy } from 'lucide-react';
+import Portfolio from '@/modules/account-modules/portfolio';
 
 interface ContractPageProps {
   params: {
@@ -26,8 +27,16 @@ interface AddressInfo {
   description?: string;
 }
 
+interface ProceedsData {
+  split: any | null;
+  stream: any | null;
+  swapper: any | null;
+  team: any | null;
+}
+
 export default function ContractPage({ params }: ContractPageProps) {
   const [splitData, setSplitData] = useState<SplitData | null>(null);
+  const [proceedsData, setProceedsData] = useState<ProceedsData | null>(null);
   const [addressInfo, setAddressInfo] = useState<AddressInfo | null>(null);
   const [recipientNames, setRecipientNames] = useState<Record<string, AddressInfo>>({});
   const [loading, setLoading] = useState(true);
@@ -46,49 +55,62 @@ export default function ContractPage({ params }: ContractPageProps) {
       try {
         setLoading(true);
         
-        // Fetch split data
-        const client = new SplitsClient({
-          chainId: base.id,
-          includeEnsNames: false,
-          apiConfig: {
-            apiKey: process.env.NEXT_PUBLIC_SPLITS_API_KEY as string
-          }
-        }).dataClient;
-
-        if (!client) {
-          throw new Error('Failed to initialize Splits client');
-        }
-
-        const [splitMetadata, namesResponse] = await Promise.all([
-          client.getSplitMetadata({
-            chainId: base.id,
-            splitAddress: params.contract
-          }),
+        // Fetch proceeds data and names in parallel
+        const [proceedsResponse, namesResponse] = await Promise.all([
+          fetch(`/api/proceeds?address=${params.contract}`),
           fetch('/api/proceeds')
         ]);
 
-        if (!namesResponse.ok) {
-          console.error('Failed to fetch names:', namesResponse.status);
-        } else {
-          const names = await namesResponse.json();
-          // Set contract info
-          const info = Object.entries(names).find(
-            ([addr]) => addr.toLowerCase() === params.contract.toLowerCase()
-          )?.[1] as AddressInfo;
-          
-          if (info) {
-            setAddressInfo(info);
-          }
-
-          // Set recipient names
-          const recipientInfo = Object.entries(names).reduce((acc, [addr, info]) => {
-            acc[addr.toLowerCase()] = info as AddressInfo;
-            return acc;
-          }, {} as Record<string, AddressInfo>);
-          setRecipientNames(recipientInfo);
+        if (!proceedsResponse.ok) {
+          throw new Error('Failed to fetch proceeds data');
         }
 
-        setSplitData(splitMetadata);
+        if (!namesResponse.ok) {
+          console.error('Failed to fetch names:', namesResponse.status);
+        }
+
+        const proceedsData = await proceedsResponse.json();
+        setProceedsData(proceedsData);
+
+        // Only fetch split data if this is a split
+        if (proceedsData.split) {
+          const client = new SplitsClient({
+            chainId: base.id,
+            includeEnsNames: false,
+            apiConfig: {
+              apiKey: process.env.NEXT_PUBLIC_SPLITS_API_KEY as string
+            }
+          }).dataClient;
+
+          if (!client) {
+            throw new Error('Failed to initialize Splits client');
+          }
+
+          const splitMetadata = await client.getSplitMetadata({
+            chainId: base.id,
+            splitAddress: params.contract
+          });
+          setSplitData(splitMetadata);
+        }
+
+        // Process names data
+        const names = await namesResponse.json();
+        // Set contract info
+        const info = Object.entries(names).find(
+          ([addr]) => addr.toLowerCase() === params.contract.toLowerCase()
+        )?.[1] as AddressInfo;
+        
+        if (info) {
+          setAddressInfo(info);
+        }
+
+        // Set recipient names
+        const recipientInfo = Object.entries(names).reduce((acc, [addr, info]) => {
+          acc[addr.toLowerCase()] = info as AddressInfo;
+          return acc;
+        }, {} as Record<string, AddressInfo>);
+        setRecipientNames(recipientInfo);
+
       } catch (err) {
         console.error('Error fetching data:', err);
         setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -120,13 +142,24 @@ export default function ContractPage({ params }: ContractPageProps) {
     );
   }
 
+  // If no data found for any type
+  if (!proceedsData?.split && !proceedsData?.stream && !proceedsData?.swapper && !proceedsData?.team) {
+    return (
+      <div className="container mx-auto p-8">
+        <div className="text-gray-300">
+          No proceeds data found for address {params.contract} on chain {base.id}. Please confirm you have entered the correct address.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-8 space-y-6">
       {/* Contract Info */}
       <div className="space-y-4">
         <div className="space-y-2">
           <h1 className="text-2xl font-bold text-gray-100">
-            {addressInfo?.name || 'Split Contract'}
+            {addressInfo?.name || 'Proceeds Contract'}
           </h1>
           {addressInfo?.description && (
             <p className="text-gray-300 text-lg">
@@ -157,39 +190,9 @@ export default function ContractPage({ params }: ContractPageProps) {
         </div>
       </div>
 
-      {/* Split Bar */}
-      {splitData && splitData.recipients && (
-        <div className="space-y-4">
-          <h2 className="text-lg font-medium text-gray-200">
-            ensurance proceeds
-          </h2>
-          <div className="w-full h-12 rounded-lg overflow-hidden bg-gray-800 flex">
-            {splitData.recipients.map((recipient, index) => {
-              const percentage = Math.max(0, Math.min(100, recipient.percentAllocation || 0));
-              const hue = (index * 137.508) % 360; // Golden ratio for color spacing
-              return (
-                <div
-                  key={recipient.recipient.address}
-                  className="h-full transition-all duration-300 relative group"
-                  style={{
-                    backgroundColor: `hsl(${hue}, 70%, 65%)`,
-                    width: `${percentage}%`,
-                  }}
-                >
-                  <div className="opacity-0 group-hover:opacity-100 absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-gray-900 px-3 py-1.5 rounded text-sm whitespace-nowrap">
-                    <span className="font-mono text-gray-300">
-                      {recipient.recipient.address.slice(0, 6)}...{recipient.recipient.address.slice(-4)}
-                    </span>
-                    <span className="text-gray-400 ml-2">
-                      {percentage}%
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Recipients Table */}
+      {/* Split Data */}
+      {splitData && (
+        <div className="space-y-6">
           <div className="mt-8">
             <h3 className="text-lg font-medium text-gray-200 mb-4">recipients</h3>
             <div className="overflow-x-auto">
@@ -211,39 +214,19 @@ export default function ContractPage({ params }: ContractPageProps) {
                     const recipientType = recipientInfo?.type || 'account';
 
                     return (
-                      <tr 
-                        key={address} 
-                        className="border-b border-gray-800 hover:bg-gray-800/50 transition-colors"
-                      >
+                      <tr key={address} className="border-b border-gray-800/50">
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
                             <div 
-                              className="w-3 h-3 rounded-full flex-shrink-0" 
-                              style={{ backgroundColor: `hsl(${hue}, 70%, 65%)` }}
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: `hsl(${hue}, 70%, 60%)` }}
                             />
-                            <div className="flex items-center justify-between w-full">
+                            <div className="flex flex-col">
                               {recipientInfo?.name ? (
-                                <span className="text-gray-200">
-                                  {recipientInfo.name}
-                                </span>
+                                <span className="text-gray-200">{recipientInfo.name}</span>
                               ) : (
-                                <span className="text-gray-400">—</span>
+                                <span className="text-gray-400 font-mono">{shortAddress}</span>
                               )}
-                              <div className="flex items-center gap-2">
-                                <span className="font-mono text-gray-400">
-                                  {shortAddress}
-                                </span>
-                                <button
-                                  onClick={() => handleCopy(address)}
-                                  className="p-1 hover:bg-gray-700 rounded transition-colors flex-shrink-0"
-                                  title="Copy address"
-                                >
-                                  <Copy 
-                                    size={14} 
-                                    className={copiedAddress === address ? 'text-green-400' : 'text-gray-400'}
-                                  />
-                                </button>
-                              </div>
                             </div>
                           </div>
                         </td>
@@ -272,6 +255,41 @@ export default function ContractPage({ params }: ContractPageProps) {
               </table>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Stream Data */}
+      {proceedsData.stream && (
+        <div className="space-y-6">
+          <div className="mt-8">
+            <h3 className="text-lg font-medium text-gray-200 mb-4">stream details</h3>
+            <div className="bg-gray-800/50 rounded-lg p-4">
+              <pre className="text-gray-300 text-sm overflow-x-auto">
+                {JSON.stringify(proceedsData.stream, null, 2)}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Swapper Data */}
+      {proceedsData.swapper && (
+        <div className="space-y-6">
+          <div className="mt-8">
+            <h3 className="text-lg font-medium text-gray-200 mb-4">swapper details</h3>
+            <div className="bg-gray-800/50 rounded-lg p-4">
+              <pre className="text-gray-300 text-sm overflow-x-auto">
+                {JSON.stringify(proceedsData.swapper, null, 2)}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Team Data */}
+      {proceedsData.team && (
+        <div className="mt-8">
+          <Portfolio tbaAddress={params.contract} />
         </div>
       )}
     </div>

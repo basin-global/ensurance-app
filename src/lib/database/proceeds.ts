@@ -61,9 +61,12 @@ export const proceeds = {
    * Get all proceeds data for an address
    */
   async getByAddress(address: string) {
+    // Normalize address to lowercase
+    const normalizedAddress = address.toLowerCase();
+
     // Check if this is a source address
-    if (address.startsWith('source_')) {
-      const sourceId = address.replace('source_', '');
+    if (normalizedAddress.startsWith('source_')) {
+      const sourceId = normalizedAddress.replace('source_', '');
       const sourceResult = await sql`
         SELECT * FROM proceeds.sources
         WHERE id = ${sourceId}
@@ -76,28 +79,28 @@ export const proceeds = {
     // Get split data
     const splitResult = await sql`
       SELECT * FROM proceeds.splits 
-      WHERE contract_address = ${address}
+      WHERE LOWER(contract_address) = ${normalizedAddress}
       AND chain = 'base'
     `;
 
     // Get stream data
     const streamResult = await sql`
       SELECT * FROM proceeds.streams
-      WHERE contract_address = ${address}
+      WHERE LOWER(contract_address) = ${normalizedAddress}
       AND chain = 'base'
     `;
 
     // Get swapper data
     const swapperResult = await sql`
       SELECT * FROM proceeds.swappers
-      WHERE contract_address = ${address}
+      WHERE LOWER(contract_address) = ${normalizedAddress}
       AND chain = 'base'
     `;
 
     // Get team data
     const teamResult = await sql`
       SELECT * FROM proceeds.teams
-      WHERE contract_address = ${address}
+      WHERE LOWER(contract_address) = ${normalizedAddress}
       AND chain = 'base'
     `;
 

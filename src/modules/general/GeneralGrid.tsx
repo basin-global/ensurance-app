@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import Link from 'next/link'
 import Image from 'next/image'
-import { EnsureButtons0x } from '@/components/layout/EnsureButtonsGeneral'
+import { EnsureButtonsGeneral } from '@/components/layout/EnsureButtonsGeneral'
 import { Grid, List, ArrowUpDown } from 'lucide-react'
 import GeneralList from './GeneralList'
 
@@ -467,7 +467,7 @@ export default function GeneralGrid({
                         </div>
                       )}
                       <div onClick={(e) => e.preventDefault()}>
-                        <EnsureButtons0x 
+                        <EnsureButtonsGeneral 
                           contractAddress={cert.contract_address as `0x${string}`}
                           showMinus={false} 
                           showSend={false}

@@ -76,7 +76,7 @@ interface MappedToken {
   type: 'currency' | 'certificate'
 }
 
-interface EnsureButtons0xProps {
+interface EnsureButtonsGeneralProps {
   contractAddress: Address
   showMinus?: boolean
   showBurn?: boolean
@@ -188,7 +188,7 @@ const truncateAddress = (address: string) => {
   return `${address.slice(0, 6)}...${address.slice(-4)}`
 }
 
-export function EnsureButtons0x({ 
+export function EnsureButtonsGeneral({ 
   contractAddress,
   showMinus = true,
   showBurn = false,
@@ -197,7 +197,7 @@ export function EnsureButtons0x({
   imageUrl = '/assets/no-image-found.png',
   showBalance = true,
   tokenName
-}: EnsureButtons0xProps) {
+}: EnsureButtonsGeneralProps) {
   const { login, authenticated } = usePrivy()
   const { wallets } = useWallets()
   const { userAddress } = useGeneralService()

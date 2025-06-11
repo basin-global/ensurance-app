@@ -1,4 +1,3 @@
-import { supportedChains, getActiveChains } from './chains'
 import { type WalletClient, type Account } from 'viem'
 
 // @keep TokenBound requires either a signer or walletClient for initialization
@@ -7,36 +6,18 @@ interface TokenBoundWalletConfig {
   walletClient?: WalletClient;
 }
 
-interface TokenBoundConfig {
-  // @keep:chain Base chain where 721 collections live - this is where the TBA Registry exist
-  collectionChain: {
-    id: number;
-    name: string;
-  };
-  // @keep:chain Chains where TBA can operate - these chains have implementations that can execute transactions
-  activeChains: {
-    id: number;
-    name: string;
-  }[];
-}
-
-export const tokenboundConfig: TokenBoundConfig = {
-  collectionChain: {
-    id: 8453,  // @keep:chain Base - where your 721 collections live
-    name: 'base'
-  },
-  // @keep:chain These are chains where TBAs can execute transactions via bridge
-  activeChains: getActiveChains().map(chain => ({
-    id: chain.id,
-    name: chain.viemName
-  }))
+// @keep Base chain configuration for TokenBound
+export const tokenboundConfig = {
+  chainId: 8453,  // Base chain ID
+  name: 'base'
 };
 
-// @keep Helper functions for TokenBound client configuration
-export const getTokenBoundClientConfig = (operationChainId?: number, wallet?: TokenBoundWalletConfig) => ({
-  chainId: operationChainId || tokenboundConfig.collectionChain.id,
+// @keep Helper function for TokenBound client configuration
+export const getTokenBoundClientConfig = (wallet?: TokenBoundWalletConfig) => ({
+  chainId: tokenboundConfig.chainId,
   ...wallet  // Spread either signer or walletClient
 });
 
+// @keep Validate we are operating on Base chain
 export const isTokenBoundSupportedChain = (chainId: number) => 
-  tokenboundConfig.activeChains.some(chain => chain.id === chainId);
+  chainId === tokenboundConfig.chainId;

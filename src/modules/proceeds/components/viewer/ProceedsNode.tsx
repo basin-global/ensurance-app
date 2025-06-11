@@ -89,12 +89,19 @@ export function FlowNode({ data }: FlowNodeProps) {
 
         {/* Address and name labels */}
         <div className="flex flex-col items-center gap-1">
-          {isNamedAddress && (
+          {(isNamedAddress || data.fullAddress.toLowerCase() === '0x4ddedf9e5e101a9d865fbc5401829ebd9fda1370') && (
             <div className="text-gray-200 font-medium text-sm text-center flex items-center gap-2">
-              {data.label}
-              {!data.isSource && data.percentage && (
-                <span className="text-blue-300">({Math.round(parseFloat(data.percentage))}%)</span>
-              )}
+              {data.fullAddress.toLowerCase() === '0x4ddedf9e5e101a9d865fbc5401829ebd9fda1370'
+                ? <>
+                    REWARDS <span className="text-blue-300">(20%)</span>
+                  </>
+                : <>
+                    {data.label}
+                    {!data.isSource && data.percentage && (
+                      <span className="text-blue-300">({Math.round(parseFloat(data.percentage))}%)</span>
+                    )}
+                  </>
+              }
             </div>
           )}
           {data.fullAddress && !data.isSource && (

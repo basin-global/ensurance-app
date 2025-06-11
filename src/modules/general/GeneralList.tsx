@@ -1,5 +1,5 @@
 import { GeneralCertificate } from './GeneralGrid';
-import { EnsureButtons0x } from '@/components/layout/EnsureButtonsGeneral';
+import { EnsureButtonsGeneral } from '@/components/layout/EnsureButtonsGeneral';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -86,7 +86,7 @@ export default function GeneralList({ certificates, urlPrefix = '', isMiniApp = 
               </td>
               <td className="py-4 text-right">
                 <div className="flex justify-end">
-                  <EnsureButtons0x 
+                  <EnsureButtonsGeneral 
                     contractAddress={cert.contract_address as `0x${string}`}
                     showMinus={false} 
                     size="sm"
