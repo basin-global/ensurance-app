@@ -93,7 +93,7 @@ export function FlowNode({ data }: FlowNodeProps) {
             <div className="text-gray-200 font-medium text-sm text-center flex items-center gap-2">
               {data.fullAddress.toLowerCase() === '0x4ddedf9e5e101a9d865fbc5401829ebd9fda1370'
                 ? <>
-                    REWARDS <span className="text-blue-300">(20%)</span>
+                    DISTRIBUTIONS <span className="text-blue-300">(20%)</span>
                   </>
                 : <>
                     {data.label}
