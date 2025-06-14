@@ -70,7 +70,7 @@ export default function SpecificList({ tokens, tokenMetadata }: SpecificListProp
                           width={48}
                           height={48}
                           className="object-cover"
-                          unoptimized={imageUrl?.toLowerCase?.()?.endsWith('.gif') || false}
+                          unoptimized={true}
                           onError={(e) => {
                             const img = e.target as HTMLImageElement
                             img.src = FALLBACK_IMAGE
@@ -78,7 +78,16 @@ export default function SpecificList({ tokens, tokenMetadata }: SpecificListProp
                         />
                       </div>
                       <div className="font-medium text-white">
-                        {metadata && !metadataError ? metadata.name || 'Unnamed Token' : 'Unnamed Token'}
+                        {metadata && !metadataError ? (
+                          <>
+                            {metadata.name.split('|')[0].trim()}
+                            {metadata.name.includes('|') && (
+                              <div className="text-sm text-gray-400">
+                                {metadata.name.split('|')[1].trim()}
+                              </div>
+                            )}
+                          </>
+                        ) : 'Unnamed Token'}
                       </div>
                     </div>
                   </Link>

@@ -243,22 +243,26 @@ export default function SpecificGrid({
                             fill
                             sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                             className="object-cover"
-                            unoptimized={imageUrl?.toLowerCase?.()?.endsWith('.gif') || false}
+                            unoptimized={true}
                             onError={(e: any) => {
                               e.target.src = FALLBACK_IMAGE
                             }}
                           />
                         </div>
-                        <div className="text-lg font-semibold text-white text-center">
-                          {metadata && !metadataError ? metadata.name || 'Unnamed Token' : 'Unnamed Token'}
+                        <div className="flex flex-col gap-1">
+                          <div className="text-lg font-semibold text-white text-center truncate">
+                            {metadata && !metadataError ? metadata.name.split('|')[0].trim() || 'Unnamed Token' : 'Unnamed Token'}
+                          </div>
+                          {metadata && !metadataError && metadata.name.includes('|') && (
+                            <div className="text-sm text-gray-400 text-center">
+                              {metadata.name.split('|')[1].trim()}
+                            </div>
+                          )}
                         </div>
                         {metadataError && (
                           <div className="text-yellow-500 text-sm text-center">
                             Metadata not available
                           </div>
-                        )}
-                        {metadata && !metadataError && metadata.description && (
-                          <div className="text-gray-400 text-sm text-center">{metadata.description}</div>
                         )}
                         <div className="flex items-center justify-between text-sm text-gray-400 px-2">
                           <div className="flex gap-4">
@@ -294,22 +298,26 @@ export default function SpecificGrid({
                           fill
                           sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                           className="object-cover"
-                          unoptimized={imageUrl?.toLowerCase?.()?.endsWith('.gif') || false}
+                          unoptimized={true}
                           onError={(e: any) => {
                             e.target.src = FALLBACK_IMAGE
                           }}
                         />
                       </div>
-                      <div className="text-lg font-semibold text-white text-center">
-                        {metadata && !metadataError ? metadata.name || 'Unnamed Token' : 'Unnamed Token'}
+                      <div className="flex flex-col gap-1">
+                        <div className="text-lg font-semibold text-white text-center truncate">
+                          {metadata && !metadataError ? metadata.name.split('|')[0].trim() || 'Unnamed Token' : 'Unnamed Token'}
+                        </div>
+                        {metadata && !metadataError && metadata.name.includes('|') && (
+                          <div className="text-sm text-gray-400 text-center">
+                            {metadata.name.split('|')[1].trim()}
+                          </div>
+                        )}
                       </div>
                       {metadataError && (
                         <div className="text-yellow-500 text-sm text-center">
                           Metadata not available
                         </div>
-                      )}
-                      {metadata && !metadataError && metadata.description && (
-                        <div className="text-gray-400 text-sm text-center">{metadata.description}</div>
                       )}
                       <div className="flex items-center justify-between text-sm text-gray-400 px-2">
                         <div className="flex gap-4">

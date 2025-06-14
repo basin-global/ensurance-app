@@ -44,14 +44,54 @@ export function FlowNode({ data }: FlowNodeProps) {
   ];
 
   // Format address for display
-  const shortAddress = `${data.fullAddress.slice(0, 6)}...${data.fullAddress.slice(-4)}`;
-  const isNamedAddress = data.label !== shortAddress;
+  const shortAddress = data.fullAddress ? `${data.fullAddress.slice(0, 6)}...${data.fullAddress.slice(-4)}` : '';
+  const isNamedAddress = data.fullAddress && data.label !== shortAddress;
 
   console.log('Rendering node:', {
     address: data.fullAddress,
     percentage: data.percentage,
     isSource: data.isSource
   });
+
+  if (data.type === 'naturalAssets') {
+    // Render the custom NATURAL ASSETS node with standard node style, just wider
+    return (
+      <div
+        className={`relative p-6 rounded-xl w-[75vw] flex flex-col items-center bg-gray-800/80 backdrop-blur-sm ring-2 ring-blue-500/20 group`}
+        style={{ minHeight: 120 }}
+      >
+        {/* Heading styled like standard node label */}
+        <div className="text-gray-200 font-medium text-lg text-center flex items-center gap-2 mb-2">
+          NATURAL ASSETS
+        </div>
+        {/* Link styled like address link in other nodes, now directly under heading */}
+        <a
+          href="https://binder.ensurance.app/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-gray-400 font-mono text-xs text-center hover:text-blue-300 transition-colors relative z-50 cursor-pointer px-2 py-1 hover:bg-gray-700/50 rounded"
+          onClick={e => e.stopPropagation()}
+        >
+          binder
+        </a>
+        {/* Split bar styled like recipients bar */}
+        <div className="w-full h-8 rounded-lg overflow-hidden bg-gray-900/50 flex mb-2">
+          {[...Array(9)].map((_, i) => (
+            <div
+              key={i}
+              className="h-full transition-all duration-300"
+              style={{
+                backgroundColor: colors[i % colors.length],
+                width: `${100 / 9}%`,
+                opacity: 0.9
+              }}
+            />
+          ))}
+        </div>
+        <div className="absolute inset-0 rounded-xl ring-2 ring-blue-500/20 group-hover:ring-blue-500/30 transition-all duration-300"/>
+      </div>
+    );
+  }
 
   return (
     <div 

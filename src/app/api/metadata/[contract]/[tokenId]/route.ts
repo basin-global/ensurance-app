@@ -5,6 +5,13 @@ import { CONTRACTS } from '@/modules/specific/config';
 // Force dynamic route to ensure fresh data
 export const dynamic = 'force-dynamic';
 
+// Constants for blob storage
+const BLOB_BASE_URL = 'https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com';
+const BLOB_DIR = 'specific-ensurance';
+
+// Helper to get fallback image URL
+const getFallbackImageUrl = () => `${BLOB_BASE_URL}/${BLOB_DIR}/0.png`;
+
 export async function GET(
     request: Request,
     { params }: { params: { contract: string; tokenId: string } }
@@ -32,6 +39,18 @@ export async function GET(
                 { error: nftMetadata.error },
                 { status: nftMetadata.status || 500 }
             );
+        }
+
+        // If this is a specific certificate and the image is from our blob storage,
+        // ensure we have a valid image URL
+        if (isSpecificContract && nftMetadata.image?.startsWith(BLOB_BASE_URL)) {
+            // If the image URL is for a specific token, use it
+            // Otherwise, use the fallback image
+            const tokenId = params.tokenId;
+            if (!tokenId || tokenId === '0') {
+                nftMetadata.image = getFallbackImageUrl();
+                nftMetadata.animation_url = getFallbackImageUrl();
+            }
         }
         
         console.log('Metadata generated:', nftMetadata);

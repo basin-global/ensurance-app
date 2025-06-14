@@ -164,29 +164,15 @@ export function EnsureButtonsSpecific({
     // Remove existing commas first
     const withoutCommas = value.replace(/,/g, '')
     
-    // Only allow numbers and one decimal point
-    const cleanValue = withoutCommas.replace(/[^\d.]/g, '')
+    // Only allow whole numbers
+    const cleanValue = withoutCommas.replace(/[^\d]/g, '')
     
-    // Prevent multiple decimal points
-    const decimalCount = (cleanValue.match(/\./g) || []).length
-    if (decimalCount > 1) return
-
-    // Handle decimal places for USDC (6 decimals)
-    if (cleanValue.includes('.')) {
-      const [whole, fraction] = cleanValue.split('.')
-      if (fraction.length > 6) return
-    }
-
     // Store the clean value for calculations
     setAmount(cleanValue)
 
     // Format with commas for display
     if (cleanValue) {
-      const parts = cleanValue.split('.')
-      const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-      const formattedValue = parts.length > 1 
-        ? `${integerPart}.${parts[1]}`
-        : integerPart
+      const formattedValue = cleanValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
       setFormattedAmount(formattedValue)
     } else {
       setFormattedAmount('')
@@ -562,7 +548,9 @@ export function EnsureButtonsSpecific({
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-gray-400">Total price:</span>
                       <span className="text-white">
-                        {amount ? `$${formatUsdcAmount(pricePerToken * BigInt(Math.floor(Number(amount))))} USDC` : '$0.00 USDC'}
+                        {amount && !isNaN(Number(amount)) && Number.isInteger(Number(amount)) && Number(amount) > 0
+                          ? `$${formatUsdcAmount(pricePerToken * BigInt(Number(amount)))} USDC` 
+                          : '$0.00 USDC'}
                       </span>
                     </div>
                     <div className="flex justify-between items-center pt-2 border-t border-gray-800">

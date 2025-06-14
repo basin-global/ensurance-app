@@ -188,7 +188,7 @@ export default function SpecificTokenPage({
                   sizes="(max-width: 768px) 100vw, 50vw"
                   priority
                   className="object-cover"
-                  unoptimized={imageUrl?.toLowerCase?.()?.endsWith('.gif') || false}
+                  unoptimized={true}
                   onError={(e: any) => {
                     console.warn('Image failed to load:', imageUrl)
                     e.target.src = FALLBACK_IMAGE
@@ -205,7 +205,16 @@ export default function SpecificTokenPage({
             {/* Header */}
             <div>
               <h1 className="text-3xl font-bold text-white">
-                {metadata?.name || 'Unnamed Token'}
+                {metadata?.name ? (
+                  <>
+                    {metadata.name.split('|')[0].trim()}
+                    {metadata.name.includes('|') && (
+                      <div className="text-lg text-gray-400 mt-1">
+                        {metadata.name.split('|')[1].trim()}
+                      </div>
+                    )}
+                  </>
+                ) : 'Unnamed Token'}
               </h1>
               {metadata?.description && (
                 <p className="mt-2 text-gray-400">{metadata.description}</p>

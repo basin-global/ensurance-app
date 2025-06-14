@@ -495,6 +495,27 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
         
         setNodes(newNodes);
         setEdges(newEdges);
+
+        // Add NATURAL ASSETS node below all others
+        if (newNodes.length > 0) {
+          // Find the max y position among all nodes
+          const maxY = Math.max(...newNodes.map(n => n.position.y));
+          // Center horizontally (average x of all nodes)
+          const avgX = newNodes.reduce((sum, n) => sum + n.position.x, 0) / newNodes.length;
+          newNodes.push({
+            id: 'natural-assets',
+            type: 'flowNode',
+            data: {
+              type: 'naturalAssets',
+            },
+            position: {
+              x: avgX - 360, // Center the long node (width 720px)
+              y: maxY + 300
+            },
+            draggable: false
+          });
+        }
+        setNodes(newNodes);
       } catch (err) {
         console.error('Error loading split data:', err);
         setError(err instanceof Error ? err.message : 'Failed to load split data');

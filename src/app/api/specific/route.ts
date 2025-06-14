@@ -15,6 +15,15 @@ const getMetadataUrl = (tokenId: string) =>
 const getMediaUrl = (tokenId: string) => 
   `${BLOB_BASE_URL}/${BLOB_DIR}/${tokenId}.png`;
 
+// Simple function to get image URL with fallback
+const getImageUrl = (tokenId: string) => {
+  // If tokenId is 0 or invalid, use fallback
+  if (!tokenId || tokenId === '0') {
+    return `${BLOB_BASE_URL}/${BLOB_DIR}/0.png`;
+  }
+  return getMediaUrl(tokenId);
+};
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -48,15 +57,18 @@ export async function POST(request: NextRequest) {
       token: process.env.BLOB_READ_WRITE_TOKEN
     });
 
+    // Get the image URL
+    const imageUrl = getImageUrl(tokenId);
+
     // Prepare metadata for storage
     const specificMetadata: SpecificMetadata = {
       name: metadata.name,
       description: metadata.description,
-      image: mediaUrl,
-      animation_url: mediaUrl,
+      image: imageUrl,
+      animation_url: imageUrl,
       content: {
         mime: file.type,
-        uri: mediaUrl
+        uri: imageUrl
       }
     };
 
