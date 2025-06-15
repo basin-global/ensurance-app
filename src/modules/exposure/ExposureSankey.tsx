@@ -2,6 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import { sankey, sankeyLinkHorizontal } from 'd3-sankey';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { SpecificAsset } from '../specific/SpecificAsset';
+import { getAssetIdForNode, hasAsset } from './assetMapping';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { CONTRACTS } from '../specific/config';
 
 interface SankeyData {
   source: string;
@@ -356,21 +360,69 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
 
       // Add row labels
       const rowLabels = ['SECTORS', 'FLOWS', 'STOCKS'];
+      const rowAssetIds = [null, 5, 4]; // Asset IDs for each row
       [0, 1, 2].forEach(layer => {
         const yPos = layerYPositions[layer] + (barHeight / 2) - 25;
-        mainGroup.append('text')
-          .attr('x', margin.left - 10)
-          .attr('y', yPos)
+        const labelGroup = mainGroup.append('g')
+          .attr('transform', `translate(${margin.left - 10}, ${yPos})`);
+
+        // Add the row label
+        const textElement = labelGroup.append('text')
           .attr('text-anchor', 'end')
-          .attr('transform', `rotate(-90, ${margin.left - 10}, ${yPos})`)
+          .attr('transform', `rotate(-90, 0, 0)`)
           .text(rowLabels[layer])
           .style('font-size', '14px')
           .style('font-family', 'Inter, system-ui, sans-serif')
           .style('font-weight', '700')
-          .style('fill', '#aaa')  // Softer white/gray
+          .style('fill', '#aaa')
           .style('text-transform', 'uppercase')
           .style('letter-spacing', '0.05em')
           .style('z-index', '10');
+
+        // Add + button if there's an asset ID
+        if (rowAssetIds[layer] !== null) {
+          // Aggressively move the + button left and tightly inline with the end of the label
+          const buttonGroup = labelGroup.append('g')
+            .attr('transform', `translate(-4, -12) rotate(-90)`)
+            .style('cursor', 'pointer')
+            .on('click', (e) => {
+              e.stopPropagation();
+              window.location.href = `/specific/${CONTRACTS.specific}/${rowAssetIds[layer]}`;
+            });
+
+          // Add button background
+          buttonGroup.append('circle')
+            .attr('r', 8)
+            .style('fill', 'rgba(0,0,0,0.4)');
+
+          // Add plus icon (white by default)
+          const plusPath = buttonGroup.append('path')
+            .attr('d', 'M-4,0 L4,0 M0,-4 L0,4')
+            .style('stroke', '#fff')
+            .style('stroke-width', '1.5')
+            .style('stroke-linecap', 'round');
+
+          // Add tooltip
+          const tooltip = buttonGroup.append('text')
+            .attr('y', -12)
+            .attr('text-anchor', 'middle')
+            .style('font-size', '10px')
+            .style('fill', '#fff')
+            .style('opacity', 0)
+            .style('pointer-events', 'none')
+            .text(`Purchase ${rowLabels[layer].toLowerCase()} Natural Capital Ensurance`);
+
+          // Show tooltip and change plus color on hover
+          buttonGroup
+            .on('mouseover', () => {
+              tooltip.style('opacity', 1);
+              plusPath.style('stroke', '#22c55e');
+            })
+            .on('mouseout', () => {
+              tooltip.style('opacity', 0);
+              plusPath.style('stroke', '#fff');
+            });
+        }
       });
 
       // Color scale
@@ -485,6 +537,58 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
               .style('opacity', 0.85 * opacity)
               .style('transform', `translateY(-${bbox.height/2}px)`); // Shift background up to avoid node overlap
           }
+
+          // Add SpecificAsset button if node is active and has an asset
+          if (n.name === activeNode && hasAsset(n.name) && bbox) {
+            // Place the + button at the end of the diagonal label, with more space
+            const padding = 12;
+            const angle = -45 * (Math.PI / 180); // radians
+            const dx = (bbox.width / 2 + padding) * Math.cos(angle);
+            const dy = (bbox.width / 2 + padding) * Math.sin(angle);
+            const buttonGroup = labelGroup.append('g')
+              .attr('transform', `translate(${(pos.x0 + pos.x1) / 2 + dx}, ${pos.y0 - 36 + dy})`)
+              .style('cursor', 'pointer')
+              .on('click', (e) => {
+                e.stopPropagation(); // Prevent node selection
+                window.location.href = `/specific/${CONTRACTS.specific}/${getAssetIdForNode(n.name)}`;
+              });
+
+            // Add button background
+            buttonGroup.append('circle')
+              .attr('r', 8)
+              .style('fill', 'rgba(0,0,0,0.4)')
+              .style('opacity', 0.85 * opacity);
+
+            // Add plus icon (white by default)
+            const plusPath = buttonGroup.append('path')
+              .attr('d', 'M-4,0 L4,0 M0,-4 L0,4')
+              .style('stroke', '#fff')
+              .style('stroke-width', '1.5')
+              .style('stroke-linecap', 'round');
+
+            // Add tooltip
+            const tooltip = buttonGroup.append('text')
+              .attr('y', -12)
+              .attr('text-anchor', 'middle')
+              .style('font-size', '10px')
+              .style('fill', '#fff')
+              .style('opacity', 0)
+              .style('pointer-events', 'none')
+              .text(getNodeCategory(n.name).type === 'SECTOR' 
+                ? `Purchase ${n.name} Industry Ensurance`
+                : `Purchase ${n.name} Natural Capital Ensurance`);
+
+            // Show tooltip and change plus color on hover
+            buttonGroup
+              .on('mouseover', () => {
+                tooltip.style('opacity', 1);
+                plusPath.style('stroke', '#22c55e');
+              })
+              .on('mouseout', () => {
+                tooltip.style('opacity', 0);
+                plusPath.style('stroke', '#fff');
+              });
+          }
         });
       });
 
@@ -583,7 +687,28 @@ export default function ExposureSankey({ data }: ExposureSankeyProps) {
               </button>
             )}
             <div className="border-b border-gray-200 pb-4">
-              <h3 className="font-bold text-xl mb-1">{selectedNode || hoveredNode}</h3>
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-bold text-xl">{selectedNode || hoveredNode}</h3>
+                {(() => {
+                  const nodeName = selectedNode || hoveredNode;
+                  if (!nodeName) return null;
+                  return hasAsset(nodeName) && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <SpecificAsset tokenId={getAssetIdForNode(nodeName)!} />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {getNodeCategory(nodeName).type === 'SECTOR' 
+                            ? `Purchase ${nodeName} Industry Ensurance`
+                            : `Purchase ${nodeName} Natural Capital Ensurance`
+                          }
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  );
+                })()}
+              </div>
               {(() => {
                 const nodeName = selectedNode || hoveredNode;
                 if (!nodeName) return null;

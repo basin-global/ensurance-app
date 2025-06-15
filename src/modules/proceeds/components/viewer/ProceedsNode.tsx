@@ -3,7 +3,7 @@
 import { Handle, Position } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useRouter } from 'next/navigation';
-import { SpecificAsset } from '@/modules/specific/components/SpecificAsset';
+import { SpecificAsset } from '@/modules/specific/SpecificAsset';
 
 interface FlowNodeProps {
   data: {

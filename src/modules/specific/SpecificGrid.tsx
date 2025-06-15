@@ -226,8 +226,8 @@ export default function SpecificGrid({
 
             if (metadata && !metadataError && metadata.image) {
               imageUrl = metadata.image.startsWith('ipfs://') 
-                ? metadata.image.replace('ipfs://', 'https://magic.decentralized-content.com/ipfs/')
-                : metadata.image
+                ? metadata.image.replace('ipfs://', 'https://magic.decentralized-content.com/ipfs/') + `?t=${Date.now()}`
+                : metadata.image + `?t=${Date.now()}`
             }
 
             return (

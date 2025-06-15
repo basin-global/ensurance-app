@@ -2,7 +2,7 @@
 
 import { PlusCircle } from 'lucide-react'
 import Link from 'next/link'
-import { CONTRACTS } from '../config'
+import { CONTRACTS } from './config'
 
 interface SpecificAssetProps {
   tokenId: number
