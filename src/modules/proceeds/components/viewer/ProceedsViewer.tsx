@@ -113,9 +113,10 @@ const MAX_ZOOM = 1.5;
 const ZOOM_STEP = 0.1;
 
 interface AddressInfo {
-  name: string;
+  name: string | null;
   type: string;
   description?: string;
+  specific_asset_id?: number;
 }
 
 export function FlowViewer({ address, chainId }: FlowViewerProps) {
@@ -257,6 +258,7 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
         address: normalizedAddress,
         level,
         percentage: nodePercentage,
+        addressInfo,
         splitMetadata: splitMetadata?.recipients?.map((r: { recipient: { address: string }, percentAllocation: string }) => ({
           address: r.recipient.address.toLowerCase(),
           percentage: r.percentAllocation
@@ -333,7 +335,8 @@ export function FlowViewer({ address, chainId }: FlowViewerProps) {
           isSplit: Boolean(splitMetadata?.recipients?.length),
           isSource: false,
           type: addressInfo?.type || 'account',
-          percentage: nodePercentage
+          percentage: nodePercentage,
+          specific_asset_id: addressInfo?.specific_asset_id
         },
         position,
         draggable: true

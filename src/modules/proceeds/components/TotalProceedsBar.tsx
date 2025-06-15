@@ -76,9 +76,9 @@ const getAllRecipients = async (
       allRecipients.push({
         address: normalizedAddress,
         type: 'account' as const,
-        percentage: parentPercentage,  // For bar chart
-        isDirect: true,
-        directPercentage: 100  // For direct list
+        percentage: parentPercentage,
+        isDirect: depth === 0,  // Only direct if at root level
+        directPercentage: depth === 0 ? 100 : undefined
       });
       return allRecipients;
     }
@@ -88,14 +88,16 @@ const getAllRecipients = async (
       const recipientAddress = recipient.recipient.address.toLowerCase();
       const adjustedPercentage = (recipient.percentAllocation * parentPercentage) / 100;
 
-      // Add this recipient
-      allRecipients.push({
-        address: recipientAddress,
-        type: 'account' as const,
-        percentage: adjustedPercentage,  // For bar chart
-        isDirect: true,
-        directPercentage: recipient.percentAllocation  // For direct list
-      });
+      // Only add as direct recipient if we're at the root level
+      if (depth === 0) {
+        allRecipients.push({
+          address: recipientAddress,
+          type: 'account' as const,
+          percentage: adjustedPercentage,
+          isDirect: true,
+          directPercentage: recipient.percentAllocation
+        });
+      }
 
       if (!processedAddresses.has(recipientAddress) && depth < MAX_DEPTH) {
         // Recursively process this recipient for indirect recipients
@@ -106,12 +108,8 @@ const getAllRecipients = async (
           processedAddresses,
           []
         );
-        // Add all indirect recipients with isDirect: false
-        allRecipients.push(...indirectRecipients.map(r => ({ 
-          ...r, 
-          isDirect: false,
-          directPercentage: undefined  // No direct percentage for indirect recipients
-        })));
+        // Add all indirect recipients
+        allRecipients.push(...indirectRecipients);
       }
     }
 
@@ -122,9 +120,9 @@ const getAllRecipients = async (
       allRecipients.push({
         address: normalizedAddress,
         type: 'account' as const,
-        percentage: parentPercentage,  // For bar chart
-        isDirect: true,
-        directPercentage: 100  // For direct list
+        percentage: parentPercentage,
+        isDirect: depth === 0,  // Only direct if at root level
+        directPercentage: depth === 0 ? 100 : undefined
       });
       return allRecipients;
     }
@@ -198,35 +196,44 @@ export function TotalProceedsBar({ address, onRecipientsUpdate }: TotalProceedsB
         throw new Error('Splits client not initialized');
       }
 
-      // Get split metadata for direct recipients
-      const splitMetadata = await splitsClient.getSplitMetadata({
-        chainId: base.id,
-        splitAddress: address
-      });
-
       // Get all recipients recursively with a fresh processedAddresses set
       const allRecipients = await getAllRecipients(address, 100, 0, new Set());
 
       // Debug logging
       console.log(`[${address}] All recipients before combining:`, allRecipients.map(r => ({
         address: r.address.slice(-4),
-        percentage: r.percentage.toFixed(2)
+        percentage: r.percentage.toFixed(2),
+        isDirect: r.isDirect
       })));
 
-      // Combine duplicate recipients
-      const combinedRecipients = combineRecipients(allRecipients);
+      // Combine duplicate recipients, preserving direct/indirect status
+      const combinedRecipients = allRecipients.reduce((acc: Recipient[], curr) => {
+        const existing = acc.find(r => r.address === curr.address);
+        if (existing) {
+          existing.percentage += curr.percentage;
+          // Keep isDirect true if either is direct
+          existing.isDirect = existing.isDirect || curr.isDirect;
+          // Keep directPercentage if it exists
+          existing.directPercentage = existing.directPercentage || curr.directPercentage;
+        } else {
+          acc.push({ ...curr });
+        }
+        return acc;
+      }, []);
 
       // Debug logging
       console.log(`[${address}] Final combined recipients:`, combinedRecipients.map(r => ({
         address: r.address.slice(-4),
-        percentage: r.percentage.toFixed(2)
+        percentage: r.percentage.toFixed(2),
+        isDirect: r.isDirect
       })));
 
       return combinedRecipients.length > 0 ? combinedRecipients : [{
         address,
         type: 'account' as const,
         percentage: 100,
-        isDirect: true
+        isDirect: true,
+        directPercentage: 100
       }];
     },
     staleTime: 1000 * 60 * 60, // 1 hour
@@ -237,34 +244,16 @@ export function TotalProceedsBar({ address, onRecipientsUpdate }: TotalProceedsB
     refetchOnReconnect: false,
   });
 
-  // Get direct recipients from split metadata
-  const { data: directRecipients = [] } = useQuery<Recipient[]>({
-    queryKey: ['direct-split-data', address],
-    queryFn: async () => {
-      if (!splitsClient) {
-        throw new Error('Splits client not initialized');
-      }
+  // Remove the separate direct recipients query since we now handle it in the main query
+  const directRecipients = useMemo(() => 
+    recipients.filter(r => r.isDirect),
+    [recipients]
+  );
 
-      const splitMetadata = await splitsClient.getSplitMetadata({
-        chainId: base.id,
-        splitAddress: address
-      });
-
-      return splitMetadata?.recipients?.map((r: { recipient: { address: string }, percentAllocation: number }) => ({
-        address: r.recipient.address.toLowerCase(),
-        type: 'account' as const,
-        percentage: r.percentAllocation,
-        isDirect: true,
-        directPercentage: r.percentAllocation
-      })) || [];
-    },
-    staleTime: 1000 * 60 * 60, // 1 hour
-    gcTime: 1000 * 60 * 60 * 24, // 24 hours
-    retry: 2,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
-  });
+  const indirectRecipients = useMemo(() => 
+    recipients.filter(r => !r.isDirect),
+    [recipients]
+  );
 
   // Generate colors based on recipient type and index
   const colors = useMemo(() => 
@@ -289,12 +278,6 @@ export function TotalProceedsBar({ address, onRecipientsUpdate }: TotalProceedsB
       [r.address]: r.directPercentage ? r.directPercentage / 100 : 0
     }), {})
   }], [directRecipients]);
-
-  // Split recipients into direct and indirect
-  const { indirectRecipients } = useMemo(() => {
-    const indirect = recipients.filter((r: Recipient) => !r.isDirect);
-    return { indirectRecipients: indirect };
-  }, [recipients]);
 
   // Update parent component with recipient counts
   useEffect(() => {

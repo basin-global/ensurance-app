@@ -87,11 +87,17 @@ export async function GET(request: Request) {
         acc[row.address.toLowerCase()] = {
           name: row.name,
           type: row.type,
-          description: row.description
+          description: row.description,
+          specific_asset_id: row.specific_asset_id
         };
       }
       return acc;
-    }, {} as Record<string, { name: string | null; type: string; description: string | null }>);
+    }, {} as Record<string, { 
+      name: string | null; 
+      type: string; 
+      description: string | null;
+      specific_asset_id?: number;
+    }>);
 
     console.log('Final address map:', addressMap);
     return NextResponse.json(addressMap);

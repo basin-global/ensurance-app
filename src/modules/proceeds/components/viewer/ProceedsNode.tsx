@@ -3,6 +3,7 @@
 import { Handle, Position } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useRouter } from 'next/navigation';
+import { SpecificAsset } from '@/modules/specific/components/SpecificAsset';
 
 interface FlowNodeProps {
   data: {
@@ -24,6 +25,7 @@ interface FlowNodeProps {
       name: string;
       description: string | null;
     }>;
+    specific_asset_id?: number;
   };
 }
 
@@ -50,7 +52,9 @@ export function FlowNode({ data }: FlowNodeProps) {
   console.log('Rendering node:', {
     address: data.fullAddress,
     percentage: data.percentage,
-    isSource: data.isSource
+    isSource: data.isSource,
+    specific_asset_id: data.specific_asset_id,
+    label: data.label
   });
 
   if (data.type === 'naturalAssets') {
@@ -139,6 +143,9 @@ export function FlowNode({ data }: FlowNodeProps) {
                     {data.label}
                     {!data.isSource && data.percentage && (
                       <span className="text-blue-300">({Math.round(parseFloat(data.percentage))}%)</span>
+                    )}
+                    {data.specific_asset_id && (
+                      <SpecificAsset tokenId={data.specific_asset_id} />
                     )}
                   </>
               }

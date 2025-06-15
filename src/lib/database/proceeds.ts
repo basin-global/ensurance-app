@@ -5,6 +5,7 @@ export interface ProceedsAddress {
   name: string | null;
   type: 'split' | 'stream' | 'swapper' | 'team' | 'source';
   description: string | null;
+  specific_asset_id?: number;
 }
 
 export const proceeds = {
