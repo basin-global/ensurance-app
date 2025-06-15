@@ -1,3 +1,6 @@
+// TODO: Consider moving this component to the page level for consistency with specific/[contract]/[tokenId]/page.tsx
+// Current separation provides better code organization but creates inconsistency in the codebase
+// Need to evaluate if the benefits of separation outweigh the inconsistency
 'use client'
 
 import { useEffect, useState } from 'react'

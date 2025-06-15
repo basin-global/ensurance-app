@@ -32,6 +32,7 @@ export const accounts = {
                             full_account_name,
                             token_id,
                             is_agent,
+                            tba_address,
                             '${group.group_name}' as group_name
                         FROM members.${tableName}`
                     );
@@ -90,6 +91,7 @@ export const accounts = {
                             full_account_name,
                             is_agent,
                             token_id,
+                            tba_address,
                             '${group.group_name}' as group_name
                         FROM members.${tableName}
                         WHERE is_active = true`
@@ -211,6 +213,7 @@ export const accounts = {
                     full_account_name,
                     token_id,
                     is_agent,
+                    tba_address,
                     '.${cleanGroupName}' as group_name
                     ${isEnsurance ? ', stock_or_flow, display_name' : ''}
                 FROM members.${tableName}`

@@ -1,277 +1,515 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import { SplitsClient } from '@0xsplits/splits-sdk';
 import { base } from 'viem/chains';
 import { useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import Link from 'next/link';
 
 interface Recipient {
   address: string;
   type: 'split' | 'stream' | 'swapper' | 'team' | 'account';
   name?: string;
-  percentage: number;
+  percentage: number;  // For bar chart
+  isDirect: boolean;
+  directPercentage?: number;  // For direct list
+}
+
+// Add interface for proceeds data
+interface ProceedsData {
+  name: string | null;
+  type: string;
+  description: string | null;
+}
+
+// Add interface for account data
+interface AccountData {
+  full_account_name: string | null;
+  group_name: string;
 }
 
 interface TotalProceedsBarProps {
   address: string;
-  title?: string;
-  description?: string;
-  onClick?: () => void;
+  onRecipientsUpdate?: (counts: { direct: number; indirect: number }) => void;
 }
 
 const MAX_DEPTH = 3; // Maximum depth to traverse split relationships
 
-export function TotalProceedsBar({ address, title, description, onClick }: TotalProceedsBarProps) {
-  const router = useRouter();
-  const [recipients, setRecipients] = useState<Recipient[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+// Initialize splits client
+const splitsClient = new SplitsClient({
+  chainId: base.id,
+  includeEnsNames: false,
+  apiConfig: {
+    apiKey: process.env.NEXT_PUBLIC_SPLITS_API_KEY || ''
+  }
+}).dataClient as any;
 
-  // TODO: Consider updating visualization to use simpler div-based approach like ProceedsNode
-  // - Current: Uses Recharts with complex chart setup
-  // - Potential: Use flex-based divs with percentage widths
-  // - Benefits: Faster rendering, simpler code, more reliable
-  // - Note: Keep the complex recursive percentage calculations as they serve a different purpose
-  // Reference: See ProceedsNode.tsx implementation
+// Helper function to get all recipients recursively
+const getAllRecipients = async (
+  splitAddress: string,
+  parentPercentage: number = 100,
+  depth: number = 0,
+  processedAddresses: Set<string> = new Set(),
+  allRecipients: Recipient[] = []
+): Promise<Recipient[]> => {
+  const normalizedAddress = splitAddress.toLowerCase();
+  
+  // If we've seen this address before or hit max depth, stop recursion
+  if (processedAddresses.has(normalizedAddress) || depth >= MAX_DEPTH) {
+    return allRecipients;
+  }
 
-  // Initialize splits client
-  const splitsClient = useMemo(() => {
-    const apiKey = process.env.NEXT_PUBLIC_SPLITS_API_KEY;
-    if (!apiKey) {
-      console.warn('NEXT_PUBLIC_SPLITS_API_KEY is not set');
-    }
-    return new SplitsClient({
+  // Track that we've processed this address
+  processedAddresses.add(normalizedAddress);
+  
+  try {
+    const splitMetadata = await splitsClient.getSplitMetadata({
       chainId: base.id,
-      includeEnsNames: false,
-      apiConfig: {
-        apiKey: apiKey || ''
-      }
-    }).dataClient;
-  }, []) as any; // TODO: Replace with proper type when available
+      splitAddress
+    });
 
-  // Helper function to get all recipients recursively
-  const getAllRecipients = async (
-    splitAddress: string,
-    parentPercentage: number = 100,
-    depth: number = 0,
-    processedAddresses: Set<string> = new Set(),
-    allRecipients: Recipient[] = []
-  ): Promise<Recipient[]> => {
-    const normalizedAddress = splitAddress.toLowerCase();
-    
-    // If we've seen this address before or hit max depth, stop recursion
-    if (processedAddresses.has(normalizedAddress) || depth >= MAX_DEPTH) {
+    // If not a split or no recipients, add as single recipient
+    if (!splitMetadata?.recipients?.length) {
+      allRecipients.push({
+        address: normalizedAddress,
+        type: 'account' as const,
+        percentage: parentPercentage,  // For bar chart
+        isDirect: true,
+        directPercentage: 100  // For direct list
+      });
       return allRecipients;
     }
 
-    // Track that we've processed this address
-    processedAddresses.add(normalizedAddress);
-    
-    try {
-      const splitMetadata = await splitsClient.getSplitMetadata({
-        chainId: base.id,
-        splitAddress
+    // Process each recipient sequentially
+    for (const recipient of splitMetadata.recipients) {
+      const recipientAddress = recipient.recipient.address.toLowerCase();
+      const adjustedPercentage = (recipient.percentAllocation * parentPercentage) / 100;
+
+      // Add this recipient
+      allRecipients.push({
+        address: recipientAddress,
+        type: 'account' as const,
+        percentage: adjustedPercentage,  // For bar chart
+        isDirect: true,
+        directPercentage: recipient.percentAllocation  // For direct list
       });
 
-      // If not a split or no recipients, add as single recipient
-      if (!splitMetadata?.recipients?.length) {
-        allRecipients.push({
-          address: normalizedAddress,
-          type: 'account' as const,
-          percentage: parentPercentage
-        });
-        return allRecipients;
+      if (!processedAddresses.has(recipientAddress) && depth < MAX_DEPTH) {
+        // Recursively process this recipient for indirect recipients
+        const indirectRecipients = await getAllRecipients(
+          recipientAddress,
+          adjustedPercentage,
+          depth + 1,
+          processedAddresses,
+          []
+        );
+        // Add all indirect recipients with isDirect: false
+        allRecipients.push(...indirectRecipients.map(r => ({ 
+          ...r, 
+          isDirect: false,
+          directPercentage: undefined  // No direct percentage for indirect recipients
+        })));
       }
+    }
 
-      // Process each recipient sequentially
-      for (const recipient of splitMetadata.recipients) {
-        const recipientAddress = recipient.recipient.address.toLowerCase();
-        const adjustedPercentage = (recipient.percentAllocation * parentPercentage) / 100;
-
-        if (!processedAddresses.has(recipientAddress) && depth < MAX_DEPTH) {
-          // Recursively process this recipient
-          await getAllRecipients(
-            recipientAddress,
-            adjustedPercentage,
-            depth + 1,
-            processedAddresses,
-            allRecipients
-          );
-        } else {
-          // Add as direct recipient if already seen or at max depth
-          allRecipients.push({
-            address: recipientAddress,
-            type: 'account' as const,
-            percentage: adjustedPercentage
-          });
-        }
-      }
-
-      return allRecipients;
-    } catch (err: any) {
-      // If not a split, add as single recipient
-      if (err.message?.includes('No split found at address')) {
-        allRecipients.push({
-          address: normalizedAddress,
-          type: 'account' as const,
-          percentage: parentPercentage
-        });
-        return allRecipients;
-      }
-      console.warn(`Error processing split ${splitAddress} at depth ${depth}:`, err);
+    return allRecipients;
+  } catch (err: any) {
+    // If not a split, add as single recipient
+    if (err.message?.includes('No split found at address')) {
+      allRecipients.push({
+        address: normalizedAddress,
+        type: 'account' as const,
+        percentage: parentPercentage,  // For bar chart
+        isDirect: true,
+        directPercentage: 100  // For direct list
+      });
       return allRecipients;
     }
-  };
+    console.warn(`Error processing split ${splitAddress} at depth ${depth}:`, err);
+    return allRecipients;
+  }
+};
 
-  useEffect(() => {
-    let isMounted = true;
+// Helper function to combine recipients
+const combineRecipients = (recipients: Recipient[]): Recipient[] => {
+  return recipients.reduce((acc: Recipient[], curr) => {
+    const existing = acc.find(r => r.address === curr.address);
+    if (existing) {
+      existing.percentage += curr.percentage;
+    } else {
+      acc.push({ ...curr });
+    }
+    return acc;
+  }, []);
+};
 
-    const fetchSplitsData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+// Add helper function for truncating addresses
+const truncateAddress = (address: string) => {
+  if (!address) return '';
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+};
 
-        if (!splitsClient) {
-          throw new Error('Splits client not initialized');
-        }
+export function TotalProceedsBar({ address, onRecipientsUpdate }: TotalProceedsBarProps) {
+  const router = useRouter();
+  const [loadingAddress, setLoadingAddress] = useState<string | null>(null);
 
-        // Get all recipients recursively with a fresh processedAddresses set
-        const allRecipients = await getAllRecipients(address, 100, 0, new Set());
-
-        if (!isMounted) return;
-
-        // Debug logging
-        console.log(`[${title || address}] All recipients before combining:`, allRecipients.map(r => ({
-          address: r.address.slice(-4),
-          percentage: r.percentage.toFixed(2)
-        })));
-
-        // Combine duplicate recipients
-        const combinedRecipients = allRecipients.reduce((acc, curr) => {
-          const existing = acc.find(r => r.address === curr.address);
-          if (existing) {
-            console.log(`[${title || address}] Combining ${curr.address.slice(-4)}: ${existing.percentage.toFixed(2)}% + ${curr.percentage.toFixed(2)}%`);
-            existing.percentage += curr.percentage;
-          } else {
-            acc.push({ ...curr });
-          }
-          return acc;
-        }, [] as Recipient[]);
-
-        // Debug logging
-        console.log(`[${title || address}] Final combined recipients:`, combinedRecipients.map(r => ({
-          address: r.address.slice(-4),
-          percentage: r.percentage.toFixed(2)
-        })));
-
-        // Set final state
-        setRecipients(combinedRecipients.length > 0 ? combinedRecipients : [{
-          address,
-          type: 'account' as const,
-          percentage: 100
-        }]);
-      } catch (err) {
-        console.error(`[${title || address}] Error fetching splits:`, err);
-        if (isMounted) {
-          setError(err instanceof Error ? err.message : 'Failed to load recipient data');
-          setRecipients([{
-            address,
-            type: 'account' as const,
-            percentage: 100
-          }]);
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchSplitsData();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [address, splitsClient, title]);
-
-  // Generate colors based on recipient type and index
-  const colors = recipients.map((_, index) => {
-    const hue = (index * 137.508) % 360;
-    return `hsl(${hue}, 70%, 65%)`;
+  // Add query for proceeds data
+  const { data: proceedsData = {} } = useQuery<Record<string, ProceedsData>>({
+    queryKey: ['proceeds-data'],
+    queryFn: async () => {
+      const response = await fetch('/api/proceeds');
+      if (!response.ok) throw new Error('Failed to fetch proceeds data');
+      return response.json();
+    },
+    staleTime: 1000 * 60, // 1 minute
+    gcTime: 1000 * 60 * 5, // 5 minutes
   });
 
-  // Format data for the chart
-  const data = [{
+  // Add query for account data
+  const { data: accountData = {} } = useQuery<Record<string, AccountData>>({
+    queryKey: ['account-data'],
+    queryFn: async () => {
+      const response = await fetch('/api/accounts');
+      if (!response.ok) throw new Error('Failed to fetch account data');
+      const accounts = await response.json();
+      // Convert array to map for easy lookup
+      return accounts.reduce((acc: Record<string, AccountData>, account: any) => {
+        if (account.tba_address) {
+          acc[account.tba_address.toLowerCase()] = {
+            full_account_name: account.full_account_name,
+            group_name: account.group_name
+          };
+        }
+        return acc;
+      }, {});
+    },
+    staleTime: 1000 * 60, // 1 minute
+    gcTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  // Use React Query to fetch and cache split data
+  const { data: recipients = [], isLoading, error } = useQuery<Recipient[]>({
+    queryKey: ['split-data', address],
+    queryFn: async () => {
+      if (!splitsClient) {
+        throw new Error('Splits client not initialized');
+      }
+
+      // Get split metadata for direct recipients
+      const splitMetadata = await splitsClient.getSplitMetadata({
+        chainId: base.id,
+        splitAddress: address
+      });
+
+      // Get all recipients recursively with a fresh processedAddresses set
+      const allRecipients = await getAllRecipients(address, 100, 0, new Set());
+
+      // Debug logging
+      console.log(`[${address}] All recipients before combining:`, allRecipients.map(r => ({
+        address: r.address.slice(-4),
+        percentage: r.percentage.toFixed(2)
+      })));
+
+      // Combine duplicate recipients
+      const combinedRecipients = combineRecipients(allRecipients);
+
+      // Debug logging
+      console.log(`[${address}] Final combined recipients:`, combinedRecipients.map(r => ({
+        address: r.address.slice(-4),
+        percentage: r.percentage.toFixed(2)
+      })));
+
+      return combinedRecipients.length > 0 ? combinedRecipients : [{
+        address,
+        type: 'account' as const,
+        percentage: 100,
+        isDirect: true
+      }];
+    },
+    staleTime: 1000 * 60 * 60, // 1 hour
+    gcTime: 1000 * 60 * 60 * 24, // 24 hours
+    retry: 2,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+  });
+
+  // Get direct recipients from split metadata
+  const { data: directRecipients = [] } = useQuery<Recipient[]>({
+    queryKey: ['direct-split-data', address],
+    queryFn: async () => {
+      if (!splitsClient) {
+        throw new Error('Splits client not initialized');
+      }
+
+      const splitMetadata = await splitsClient.getSplitMetadata({
+        chainId: base.id,
+        splitAddress: address
+      });
+
+      return splitMetadata?.recipients?.map((r: { recipient: { address: string }, percentAllocation: number }) => ({
+        address: r.recipient.address.toLowerCase(),
+        type: 'account' as const,
+        percentage: r.percentAllocation,
+        isDirect: true,
+        directPercentage: r.percentAllocation
+      })) || [];
+    },
+    staleTime: 1000 * 60 * 60, // 1 hour
+    gcTime: 1000 * 60 * 60 * 24, // 24 hours
+    retry: 2,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+  });
+
+  // Generate colors based on recipient type and index
+  const colors = useMemo(() => 
+    recipients.map((_, index: number) => {
+      const hue = (index * 137.508) % 360;
+      return `hsl(${hue}, 70%, 65%)`;
+    }), [recipients]);
+
+  // Format data for the charts
+  const data = useMemo(() => [{
     name: "Allocations",
-    ...recipients.reduce((acc, r) => ({
+    ...recipients.reduce((acc: Record<string, number>, r) => ({
       ...acc,
       [r.address]: r.percentage / 100
     }), {})
-  }];
+  }], [recipients]);
 
-  if (loading) {
+  const directData = useMemo(() => [{
+    name: "Direct Allocations",
+    ...directRecipients.reduce((acc: Record<string, number>, r: Recipient) => ({
+      ...acc,
+      [r.address]: r.directPercentage ? r.directPercentage / 100 : 0
+    }), {})
+  }], [directRecipients]);
+
+  // Split recipients into direct and indirect
+  const { indirectRecipients } = useMemo(() => {
+    const indirect = recipients.filter((r: Recipient) => !r.isDirect);
+    return { indirectRecipients: indirect };
+  }, [recipients]);
+
+  // Update parent component with recipient counts
+  useEffect(() => {
+    if (onRecipientsUpdate) {
+      onRecipientsUpdate({
+        direct: directRecipients.length,
+        indirect: indirectRecipients.length
+      });
+    }
+  }, [directRecipients.length, indirectRecipients.length, onRecipientsUpdate]);
+
+  // Helper function to get display name
+  const getDisplayName = (address: string) => {
+    const normalizedAddress = address.toLowerCase();
+    const displayName = proceedsData[normalizedAddress]?.name || 
+                       accountData[normalizedAddress]?.full_account_name || 
+                       truncateAddress(address);
+    
+    const handleClick = (e: React.MouseEvent) => {
+      e.preventDefault();
+      setLoadingAddress(normalizedAddress);
+      router.push(proceedsData[normalizedAddress] ? 
+        `/proceeds/${normalizedAddress}` : 
+        `/${accountData[normalizedAddress]?.full_account_name || normalizedAddress}`
+      );
+    };
+    
+    return (
+      <Link 
+        href={proceedsData[normalizedAddress] ? 
+          `/proceeds/${normalizedAddress}` : 
+          `/${accountData[normalizedAddress]?.full_account_name || normalizedAddress}`
+        }
+        onClick={handleClick}
+        className={`text-gray-400 hover:text-gray-200 transition-colors ${loadingAddress === normalizedAddress ? 'opacity-50' : ''}`}
+      >
+        {displayName}
+      </Link>
+    );
+  };
+
+  if (isLoading) {
     return <div className="h-12 bg-gray-800 rounded-full animate-pulse" />;
   }
 
   if (error) {
-    return <div className="text-red-500 text-sm">{error}</div>;
+    return <div className="text-red-500 text-sm">{error instanceof Error ? error.message : 'Failed to load recipient data'}</div>;
   }
 
   return (
-    <div className="flex flex-col gap-2 group-hover:opacity-95 transition-all">
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          {title && <h3 className="text-lg font-semibold text-gray-200">{title}</h3>}
-          <p className="text-sm font-medium text-gray-400">
-            {recipients.length} {recipients.length === 1 ? 'Beneficiary' : 'Beneficiaries'}
-          </p>
-        </div>
-        {description && <p className="text-sm text-gray-400">{description}</p>}
-      </div>
+    <div className="flex flex-col gap-2">
+      {/* Recipient Lists */}
+      <div className="space-y-4">
+        {/* Direct Recipients with Percentages */}
+        {directRecipients.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-medium text-gray-300">direct recipients ({directRecipients.length})</h4>
+            </div>
+            
+            {/* Direct Bar Chart */}
+            <div 
+              className="w-full h-12 rounded-full overflow-hidden bg-transparent hover:ring-1 hover:ring-gray-500 transition-all cursor-[pointer] hover:opacity-90"
+              onClick={() => router.push('/proceeds')}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  layout="vertical"
+                  data={directData}
+                  stackOffset="expand"
+                  margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
+                  barSize={24}
+                >
+                  <XAxis type="number" hide domain={[0, 1]} />
+                  <YAxis type="category" hide />
+                  <RechartsTooltip
+                    wrapperStyle={{ 
+                      zIndex: 9999,
+                      pointerEvents: 'none',
+                      cursor: 'pointer'
+                    }}
+                    cursor={false}
+                    content={({ active, payload }) => {
+                      if (active && payload?.length) {
+                        return (
+                          <div className="bg-gray-900 px-3 py-1.5 rounded-lg border border-gray-700 shadow-lg">
+                            <span className="text-gray-400 text-sm">
+                              view ensurance proceeds
+                            </span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  {directRecipients.map((recipient, index) => (
+                    <Bar
+                      key={recipient.address}
+                      dataKey={recipient.address}
+                      stackId="a"
+                      fill={colors[index]}
+                      radius={0}
+                      className="cursor-pointer hover:opacity-90"
+                    />
+                  ))}
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
 
-      <div className="w-full h-12 rounded-full overflow-hidden bg-transparent group-hover:ring-1 group-hover:ring-gray-500 transition-all">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            layout="vertical"
-            data={data}
-            stackOffset="expand"
-            margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
-            barSize={24}
-          >
-            <XAxis type="number" hide domain={[0, 1]} />
-            <YAxis type="category" hide />
-            <Tooltip
-              wrapperStyle={{ 
-                zIndex: 9999,
-                pointerEvents: 'none',
-                cursor: 'inherit'
-              }}
-              cursor={false}
-              content={({ active, payload }) => {
-                if (active && payload?.length) {
-                  return (
-                    <div className="bg-gray-900 px-3 py-1.5 rounded-lg border border-gray-700 shadow-lg">
-                      <span className="text-gray-400 text-sm">
-                        view ensurance proceeds
-                      </span>
-                    </div>
-                  );
-                }
-                return null;
-              }}
-            />
-            {recipients.map((recipient, index) => (
-              <Bar
-                key={recipient.address}
-                dataKey={recipient.address}
-                stackId="a"
-                fill={colors[index]}
-                radius={0}
-              />
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
+            <div className="space-y-1">
+              {directRecipients
+                .sort((a, b) => (b.directPercentage || 0) - (a.directPercentage || 0))
+                .map((r) => (
+                <div key={r.address} className="flex justify-between items-center text-sm">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="font-mono">
+                          {getDisplayName(r.address)}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs font-mono">{truncateAddress(r.address)}</p>
+                        {proceedsData[r.address]?.description && (
+                          <p className="text-xs text-gray-400 mt-1">{proceedsData[r.address].description}</p>
+                        )}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <span className="text-gray-300">{r.directPercentage?.toFixed(2)}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Indirect Recipients Section */}
+        {indirectRecipients.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-medium text-gray-300">indirect recipients ({indirectRecipients.length})</h4>
+            </div>
+            
+            {/* Bar Chart */}
+            <div 
+              className="w-full h-12 rounded-full overflow-hidden bg-transparent hover:ring-1 hover:ring-gray-500 transition-all cursor-[pointer] hover:opacity-90"
+              onClick={() => router.push('/proceeds')}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  layout="vertical"
+                  data={data}
+                  stackOffset="expand"
+                  margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
+                  barSize={24}
+                >
+                  <XAxis type="number" hide domain={[0, 1]} />
+                  <YAxis type="category" hide />
+                  <RechartsTooltip
+                    wrapperStyle={{ 
+                      zIndex: 9999,
+                      pointerEvents: 'none',
+                      cursor: 'pointer'
+                    }}
+                    cursor={false}
+                    content={({ active, payload }) => {
+                      if (active && payload?.length) {
+                        return (
+                          <div className="bg-gray-900 px-3 py-1.5 rounded-lg border border-gray-700 shadow-lg">
+                            <span className="text-gray-400 text-sm">
+                              view ensurance proceeds
+                            </span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  {recipients.map((recipient, index) => (
+                    <Bar
+                      key={recipient.address}
+                      dataKey={recipient.address}
+                      stackId="a"
+                      fill={colors[index]}
+                      radius={0}
+                      className="cursor-pointer hover:opacity-90"
+                    />
+                  ))}
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+              {indirectRecipients.map((r) => (
+                <div key={r.address} className="text-sm">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="font-mono">
+                          {getDisplayName(r.address)}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs font-mono">{truncateAddress(r.address)}</p>
+                        {proceedsData[r.address]?.description && (
+                          <p className="text-xs text-gray-400 mt-1">{proceedsData[r.address].description}</p>
+                        )}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

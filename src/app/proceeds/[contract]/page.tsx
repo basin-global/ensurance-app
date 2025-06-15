@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { SplitsClient } from '@0xsplits/splits-sdk';
 import { base } from 'viem/chains';
 import { Copy } from 'lucide-react';
@@ -34,12 +34,25 @@ interface ProceedsData {
   team: any | null;
 }
 
-export default function ContractPage({ params }: ContractPageProps) {
+// Add loading component
+function LoadingState() {
+  return (
+    <div className="container mx-auto p-8">
+      <div className="animate-pulse">
+        <div className="h-8 w-64 bg-gray-700 rounded mb-4" />
+        <div className="h-4 w-96 bg-gray-700 rounded mb-8" />
+        <div className="h-12 bg-gray-700 rounded-lg" />
+      </div>
+    </div>
+  );
+}
+
+// Split the data fetching into a separate component
+function ContractData({ contract }: { contract: string }) {
   const [splitData, setSplitData] = useState<SplitData | null>(null);
   const [proceedsData, setProceedsData] = useState<ProceedsData | null>(null);
   const [addressInfo, setAddressInfo] = useState<AddressInfo | null>(null);
   const [recipientNames, setRecipientNames] = useState<Record<string, AddressInfo>>({});
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
@@ -53,12 +66,14 @@ export default function ContractPage({ params }: ContractPageProps) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(true);
-        
         // Fetch proceeds data and names in parallel
         const [proceedsResponse, namesResponse] = await Promise.all([
-          fetch(`/api/proceeds?address=${params.contract}`),
-          fetch('/api/proceeds')
+          fetch(`/api/proceeds?address=${contract}`, {
+            next: { revalidate: 60 } // Cache for 1 minute
+          }),
+          fetch('/api/proceeds', {
+            next: { revalidate: 60 } // Cache for 1 minute
+          })
         ]);
 
         if (!proceedsResponse.ok) {
@@ -88,7 +103,7 @@ export default function ContractPage({ params }: ContractPageProps) {
 
           const splitMetadata = await client.getSplitMetadata({
             chainId: base.id,
-            splitAddress: params.contract
+            splitAddress: contract
           });
           setSplitData(splitMetadata);
         }
@@ -97,7 +112,7 @@ export default function ContractPage({ params }: ContractPageProps) {
         const names = await namesResponse.json();
         // Set contract info
         const info = Object.entries(names).find(
-          ([addr]) => addr.toLowerCase() === params.contract.toLowerCase()
+          ([addr]) => addr.toLowerCase() === contract.toLowerCase()
         )?.[1] as AddressInfo;
         
         if (info) {
@@ -114,32 +129,14 @@ export default function ContractPage({ params }: ContractPageProps) {
       } catch (err) {
         console.error('Error fetching data:', err);
         setError(err instanceof Error ? err.message : 'Failed to load data');
-      } finally {
-        setLoading(false);
       }
     };
 
     fetchData();
-  }, [params.contract]);
-
-  if (loading) {
-    return (
-      <div className="container mx-auto p-8">
-        <div className="animate-pulse">
-          <div className="h-8 w-64 bg-gray-700 rounded mb-4" />
-          <div className="h-4 w-96 bg-gray-700 rounded mb-8" />
-          <div className="h-12 bg-gray-700 rounded-lg" />
-        </div>
-      </div>
-    );
-  }
+  }, [contract]);
 
   if (error) {
-    return (
-      <div className="container mx-auto p-8">
-        <div className="text-red-500">{error}</div>
-      </div>
-    );
+    return <div className="text-red-500">{error}</div>;
   }
 
   // If no data found for any type
@@ -147,7 +144,7 @@ export default function ContractPage({ params }: ContractPageProps) {
     return (
       <div className="container mx-auto p-8">
         <div className="text-gray-300">
-          No proceeds data found for address {params.contract} on chain {base.id}. Please confirm you have entered the correct address.
+          No proceeds data found for address {contract} on chain {base.id}. Please confirm you have entered the correct address.
         </div>
       </div>
     );
@@ -170,15 +167,15 @@ export default function ContractPage({ params }: ContractPageProps) {
         
         <div className="inline-flex items-center gap-2 bg-gray-800/50 px-4 py-2 rounded-lg">
           <p className="text-gray-400 font-mono text-sm flex items-center gap-2">
-            <span>{params.contract}</span>
+            <span>{contract}</span>
             <button
-              onClick={() => handleCopy(params.contract)}
+              onClick={() => handleCopy(contract)}
               className="p-1 hover:bg-gray-700 rounded transition-colors"
               title="Copy address"
             >
               <Copy 
                 size={14} 
-                className={copiedAddress === params.contract ? 'text-green-400' : 'text-gray-400'}
+                className={copiedAddress === contract ? 'text-green-400' : 'text-gray-400'}
               />
             </button>
           </p>
@@ -289,9 +286,17 @@ export default function ContractPage({ params }: ContractPageProps) {
       {/* Team Data */}
       {proceedsData.team && (
         <div className="mt-8">
-          <Portfolio tbaAddress={params.contract} />
+          <Portfolio tbaAddress={contract} />
         </div>
       )}
     </div>
+  );
+}
+
+export default function ContractPage({ params }: ContractPageProps) {
+  return (
+    <Suspense fallback={<LoadingState />}>
+      <ContractData contract={params.contract} />
+    </Suspense>
   );
 }

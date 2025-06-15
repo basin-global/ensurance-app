@@ -16,6 +16,7 @@ export type TokenDisplayInfo = {
     pricePerToken: bigint
     saleEnd: bigint
     saleStart: bigint
+    fundsRecipient: string
   }
 }
 
@@ -189,6 +190,7 @@ export async function getTokenInfo(
         pricePerToken: bigint
         saleEnd: bigint
         saleStart: bigint
+        fundsRecipient: string
       }
     }
 
@@ -237,6 +239,7 @@ export async function getContractTokens(
             pricePerToken: bigint
             saleEnd: bigint
             saleStart: bigint
+            fundsRecipient: string
           }
         }
       }
