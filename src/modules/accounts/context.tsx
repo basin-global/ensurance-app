@@ -11,6 +11,7 @@ interface AccountData {
   is_agent: boolean
   description?: string
   pool_type?: string | null
+  specific_asset_id?: number
 }
 
 interface AccountContextType {

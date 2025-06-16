@@ -51,7 +51,8 @@ export default function AccountPage({ params }: AccountPageProps) {
             </div>
             <GeneralGrid 
               accountContext={{
-                name: accountName
+                name: accountName,
+                specific_asset_id: accountData.specific_asset_id
               }}
               isOverview={true}
               hideMarketData={true}

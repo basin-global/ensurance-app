@@ -34,6 +34,7 @@ export interface GroupAccount {
     description?: string;       // Can be NULL
     created_at?: string;        // Optional timestamp
     owner_of?: string;          // Optional owner address
+    specific_asset_id?: number; // Optional specific asset ID
 }
 
 export interface GroupAccountsProps {

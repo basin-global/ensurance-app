@@ -162,6 +162,7 @@ export const accounts = {
                     account_name,
                     ${isEnsurance ? 'stock_or_flow, display_name,' : ''}
                     description,
+                    specific_asset_id,
                     $2 as group_name
                 FROM members.${tableName}
                 WHERE full_account_name = $1
@@ -184,6 +185,7 @@ export const accounts = {
                 token_id: row.token_id,
                 is_agent: row.is_agent,
                 description: row.description,
+                specific_asset_id: row.specific_asset_id,
                 group_name: groupName,
                 ...(isEnsurance && { 
                     stock_or_flow: row.stock_or_flow,

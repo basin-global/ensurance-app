@@ -8,6 +8,8 @@ import Image from 'next/image'
 import { EnsureButtonsGeneral } from '@/components/layout/EnsureButtonsGeneral'
 import { Grid, List, ArrowUpDown } from 'lucide-react'
 import GeneralList from './GeneralList'
+import { CONTRACTS } from '@/modules/specific/config'
+import { cn } from '@/lib/utils'
 
 interface CreatorEarning {
   amountUsd: string
@@ -24,6 +26,8 @@ export interface GeneralCertificate {
   market_cap?: string
   creator_earnings?: CreatorEarning[]
   description?: string
+  specific_asset_id?: number
+  is_specific?: boolean
 }
 
 interface GeneralGridProps {
@@ -35,6 +39,7 @@ interface GeneralGridProps {
   hideMarketData?: boolean
   accountContext?: {
     name: string
+    specific_asset_id?: number
   }
 }
 
@@ -65,6 +70,7 @@ const DEFAULT_CERTIFICATES = [
 
 // Convert IPFS URL to use a gateway
 const convertIpfsUrl = (url: string) => {
+  if (!url) return undefined
   if (url.startsWith('ipfs://')) {
     return url.replace('ipfs://', 'https://magic.decentralized-content.com/ipfs/')
   }
@@ -97,6 +103,9 @@ const hasCommonElements = (arr1: string[], arr2: string[]): boolean => {
   return arr1.some(item => arr2.includes(item))
 }
 
+// Add this helper function near the top with other helpers
+const isSpecificAsset = (cert: GeneralCertificate) => cert.is_specific
+
 export default function GeneralGrid({ 
   searchQuery = '',
   urlPrefix = '',
@@ -114,6 +123,7 @@ export default function GeneralGrid({
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [sort, setSort] = useState<SortConfig>({ field: 'total_volume', direction: 'desc' })
   const PRICE_UPDATE_INTERVAL = 60000 // 1 minute in milliseconds
+  const [specificMetadata, setSpecificMetadata] = useState<Record<string, any>>({})
 
   // Fetch certificates
   useEffect(() => {
@@ -190,7 +200,14 @@ export default function GeneralGrid({
     try {
       // Convert token_uri to use IPFS gateway if needed
       const fetchUrl = convertIpfsUrl(cert.token_uri)
-      
+      if (!fetchUrl) {
+        return {
+          ...cert,
+          image_url: FALLBACK_IMAGE,
+          video_url: null,
+          description: ''
+        }
+      }
       const response = await fetch(fetchUrl)
       if (!response.ok) throw new Error('Failed to fetch metadata')
       const data = await response.json()
@@ -221,6 +238,25 @@ export default function GeneralGrid({
       }
     }
   }
+
+  // Add this useEffect to fetch metadata when specific_asset_id changes
+  useEffect(() => {
+    const fetchMetadata = async () => {
+      if (!accountContext?.specific_asset_id) return
+
+      const tokenURI: string = `/api/metadata/${CONTRACTS.specific}/${accountContext.specific_asset_id}`
+      try {
+        const response = await fetch(tokenURI)
+        const metadata = await response.json()
+        setSpecificMetadata({ [tokenURI]: metadata })
+      } catch (err) {
+        console.error('Error fetching specific asset metadata:', err)
+        setSpecificMetadata({})
+      }
+    }
+
+    fetchMetadata()
+  }, [accountContext?.specific_asset_id])
 
   const handleSortClick = () => {
     const fields = SORT_CYCLES
@@ -285,6 +321,21 @@ export default function GeneralGrid({
           cert.description?.toLowerCase().includes(searchLower)
       })
 
+    // Add specific asset if it exists
+    if (accountContext?.specific_asset_id) {
+      const tokenURI = `/api/metadata/${CONTRACTS.specific}/${accountContext.specific_asset_id}`
+      const metadata = specificMetadata[tokenURI]
+      const specificAsset = {
+        contract_address: CONTRACTS.specific,
+        name: metadata?.name || `Specific Asset #${accountContext.specific_asset_id}`,
+        token_uri: tokenURI,
+        image_url: metadata?.image ? convertIpfsUrl(metadata.image) + `?t=${Date.now()}` : `https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com/specific-ensurance/${accountContext.specific_asset_id}.png?t=${Date.now()}`,
+        is_specific: true,
+        description: metadata?.description
+      }
+      matchedCertificates.unshift(specificAsset)
+    }
+
     // Then get default certificates that aren't already in matched certificates
     const defaultCertificates = certificates
       .filter(cert => 
@@ -294,6 +345,10 @@ export default function GeneralGrid({
 
     // Sort matched certificates
     const sortedMatched = matchedCertificates.sort((a, b) => {
+      // Always put specific assets first
+      if (isSpecificAsset(a) && !isSpecificAsset(b)) return -1
+      if (!isSpecificAsset(a) && isSpecificAsset(b)) return 1
+
       switch (sort.field) {
         case 'name':
           const aName = (a.name || '').toLowerCase()
@@ -333,13 +388,22 @@ export default function GeneralGrid({
     // Combine sorted lists with matched certificates first
     const allCertificates = [...sortedMatched, ...sortedDefaults]
     
-    // If in overview mode, limit to 4 items
+    // If in overview mode, show 4 cards: 1 specific asset (if present) + 3 general certificates, or 4 general certificates if not
     if (isOverview) {
-      return allCertificates.slice(0, 4)
+      if (accountContext?.specific_asset_id) {
+        // Find the specific asset (should be first, but just in case)
+        const specific = allCertificates.find(cert => cert.is_specific)
+        // Filter out the specific asset from the rest
+        const general = allCertificates.filter(cert => !cert.is_specific)
+        // Overview: specific asset (if exists) + up to 3 general certificates
+        return specific ? [specific, ...general.slice(0, 3)] : general.slice(0, 4)
+      } else {
+        return allCertificates.slice(0, 4)
+      }
     }
     
     return allCertificates
-  }, [certificates, searchQuery, sort, accountContext, isOverview])
+  }, [certificates, searchQuery, sort, accountContext, isOverview, specificMetadata])
 
   if (loading) {
     return (
@@ -419,8 +483,19 @@ export default function GeneralGrid({
       {viewMode === 'grid' ? (
         <div className={`grid grid-cols-1 sm:grid-cols-2 ${isOverview ? 'md:grid-cols-2' : 'md:grid-cols-3 lg:grid-cols-4'} gap-6`}>
           {filteredAndSortedCertificates.map((cert) => (
-            <Card key={cert.contract_address} className="bg-primary-dark border-gray-800 hover:border-gray-700 transition-colors">
-              <Link href={`${urlPrefix}${isMiniApp ? '/mini-app' : ''}/general/${cert.contract_address}`}>
+            <Link 
+              key={cert.contract_address}
+              href={cert.is_specific 
+                ? `/specific/${CONTRACTS.specific}/${cert.token_uri.split('/').pop()}`
+                : `${urlPrefix}${isMiniApp ? '/mini-app' : ''}/general/${cert.contract_address}`
+              }
+            >
+              <Card 
+                className={cn(
+                  "bg-primary-dark border-gray-800 hover:border-gray-700 transition-colors",
+                  cert.is_specific && "relative after:content-[''] after:absolute after:inset-0 after:rounded-lg after:shadow-[0_0_15px_rgba(255,215,0,0.6),0_0_30px_rgba(255,215,0,0.3)] after:border-2 after:border-[rgba(255,215,0,0.8)]"
+                )}
+              >
                 <CardContent className="p-4">
                   <div className="flex flex-col gap-4">
                     <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-black/20">
@@ -450,38 +525,47 @@ export default function GeneralGrid({
                         />
                       )}
                     </div>
-                    <div className="text-lg font-semibold text-white text-center">
-                      {cert.name || 'Unnamed Certificate'}
-                    </div>
-                    <div className={`flex items-center ${hideMarketData ? 'justify-center' : 'justify-between'} text-sm text-gray-400 px-2`}>
-                      {!hideMarketData && (
-                        <div className="flex gap-4">
-                          <div>MC: ${Number(cert.market_cap || '0').toLocaleString(undefined, { 
-                            minimumFractionDigits: Number(cert.market_cap || '0') < 10 ? 2 : 0,
-                            maximumFractionDigits: Number(cert.market_cap || '0') < 10 ? 2 : 0
-                          })}</div>
-                          <div>Vol: ${Number(cert.total_volume || '0').toLocaleString(undefined, { 
-                            minimumFractionDigits: Number(cert.total_volume || '0') < 10 ? 2 : 0,
-                            maximumFractionDigits: Number(cert.total_volume || '0') < 10 ? 2 : 0
-                          })}</div>
+                    <div className="flex flex-col gap-4">
+                      <div className="text-lg font-semibold text-white text-center truncate">
+                        {cert.name?.split('|')[0].trim() || 'Unnamed Certificate'}
+                      </div>
+                      {cert.name?.includes('|') && (
+                        <div className="text-sm text-gray-400 text-center px-2">
+                          {cert.name.split('|')[1].trim()}
                         </div>
                       )}
-                      <div onClick={(e) => e.preventDefault()}>
-                        <EnsureButtonsGeneral 
-                          contractAddress={cert.contract_address as `0x${string}`}
-                          showMinus={false} 
-                          showSend={false}
-                          size="sm"
-                          imageUrl={cert.image_url}
-                          showBalance={false}
-                          tokenName={cert.name}
-                        />
-                      </div>
                     </div>
+                    {!cert.is_specific && (
+                      <div className={`flex items-center ${hideMarketData ? 'justify-center' : 'justify-between'} text-sm text-gray-400 px-2`}>
+                        {!hideMarketData && (
+                          <div className="flex gap-4">
+                            <div>MC: ${Number(cert.market_cap || '0').toLocaleString(undefined, { 
+                              minimumFractionDigits: Number(cert.market_cap || '0') < 10 ? 2 : 0,
+                              maximumFractionDigits: Number(cert.market_cap || '0') < 10 ? 2 : 0
+                            })}</div>
+                            <div>Vol: ${Number(cert.total_volume || '0').toLocaleString(undefined, { 
+                              minimumFractionDigits: Number(cert.total_volume || '0') < 10 ? 2 : 0,
+                              maximumFractionDigits: Number(cert.total_volume || '0') < 10 ? 2 : 0
+                            })}</div>
+                          </div>
+                        )}
+                        <div onClick={(e) => e.preventDefault()}>
+                          <EnsureButtonsGeneral 
+                            contractAddress={cert.contract_address as `0x${string}`}
+                            showMinus={false} 
+                            showSend={false}
+                            size="sm"
+                            imageUrl={cert.image_url}
+                            showBalance={false}
+                            tokenName={cert.name}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
-              </Link>
-            </Card>
+              </Card>
+            </Link>
           ))}
         </div>
       ) : (

@@ -2,6 +2,10 @@ import { GeneralCertificate } from './GeneralGrid';
 import { EnsureButtonsGeneral } from '@/components/layout/EnsureButtonsGeneral';
 import Image from 'next/image';
 import Link from 'next/link';
+import { CONTRACTS } from '@/modules/specific/config';
+import { cn } from '@/lib/utils';
+import { Card, CardContent } from '@/components/ui/card';
+import { SpecificAsset } from '@/modules/specific/SpecificAsset';
 
 interface GeneralListProps {
   certificates: GeneralCertificate[];
@@ -10,6 +14,8 @@ interface GeneralListProps {
 }
 
 const FALLBACK_IMAGE = '/assets/no-image-found.png';
+
+const isSpecificAsset = (cert: GeneralCertificate) => cert.is_specific
 
 export default function GeneralList({ certificates, urlPrefix = '', isMiniApp = false }: GeneralListProps) {
   if (!certificates.length) {
@@ -35,9 +41,15 @@ export default function GeneralList({ certificates, urlPrefix = '', isMiniApp = 
           {certificates.map((cert) => (
             <tr key={cert.contract_address} className="hover:bg-gray-900/30 transition-colors">
               <td className="py-4">
-                <Link href={`${urlPrefix}${isMiniApp ? '/mini-app' : ''}/general/${cert.contract_address}`}>
+                <Link href={cert.is_specific 
+                  ? `/specific/${CONTRACTS.specific}/${cert.token_uri.split('/').pop()}`
+                  : `${urlPrefix}${isMiniApp ? '/mini-app' : ''}/general/${cert.contract_address}`
+                }>
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gray-800 rounded-lg overflow-hidden flex items-center justify-center">
+                    <div className={cn(
+                      "w-12 h-12 bg-gray-800 rounded-lg overflow-hidden flex items-center justify-center",
+                      cert.is_specific && "relative after:content-[''] after:absolute after:inset-0 after:rounded-lg after:shadow-[0_0_15px_rgba(255,215,0,0.6),0_0_30px_rgba(255,215,0,0.3)] after:border-2 after:border-[rgba(255,215,0,0.8)]"
+                    )}>
                       {cert.video_url ? (
                         <video
                           src={cert.video_url}
@@ -68,34 +80,50 @@ export default function GeneralList({ certificates, urlPrefix = '', isMiniApp = 
                   </div>
                 </Link>
               </td>
-              <td className="py-4">
-                <div className="font-medium text-white">
-                  ${Number(cert.market_cap || '0').toLocaleString(undefined, { 
-                    minimumFractionDigits: Number(cert.market_cap || '0') < 10 ? 2 : 0,
-                    maximumFractionDigits: Number(cert.market_cap || '0') < 10 ? 2 : 0
-                  })}
-                </div>
-              </td>
-              <td className="py-4 text-right">
-                <div className="font-medium text-white">
-                  ${Number(cert.total_volume || '0').toLocaleString(undefined, { 
-                    minimumFractionDigits: Number(cert.total_volume || '0') < 10 ? 2 : 0,
-                    maximumFractionDigits: Number(cert.total_volume || '0') < 10 ? 2 : 0
-                  })}
-                </div>
-              </td>
-              <td className="py-4 text-right">
-                <div className="flex justify-end">
-                  <EnsureButtonsGeneral 
-                    contractAddress={cert.contract_address as `0x${string}`}
-                    showMinus={false} 
-                    size="sm"
-                    imageUrl={cert.image_url}
-                    showBalance={false}
-                    tokenName={cert.name}
-                  />
-                </div>
-              </td>
+              {!cert.is_specific ? (
+                <>
+                  <td className="py-4">
+                    <div className="font-medium text-white">
+                      ${Number(cert.market_cap || '0').toLocaleString(undefined, { 
+                        minimumFractionDigits: Number(cert.market_cap || '0') < 10 ? 2 : 0,
+                        maximumFractionDigits: Number(cert.market_cap || '0') < 10 ? 2 : 0
+                      })}
+                    </div>
+                  </td>
+                  <td className="py-4 text-right">
+                    <div className="font-medium text-white">
+                      ${Number(cert.total_volume || '0').toLocaleString(undefined, { 
+                        minimumFractionDigits: Number(cert.total_volume || '0') < 10 ? 2 : 0,
+                        maximumFractionDigits: Number(cert.total_volume || '0') < 10 ? 2 : 0
+                      })}
+                    </div>
+                  </td>
+                  <td className="py-4 text-right">
+                    <div className="flex justify-end">
+                      <EnsureButtonsGeneral 
+                        contractAddress={cert.contract_address as `0x${string}`}
+                        showMinus={false} 
+                        showSend={false}
+                        size="sm"
+                        imageUrl={cert.image_url}
+                        showBalance={false}
+                        tokenName={cert.name}
+                      />
+                    </div>
+                  </td>
+                </>
+              ) : (
+                <>
+                  <td className="py-4 text-gray-400 font-medium" colSpan={2}>
+                    specific ensurance provides direct funding
+                  </td>
+                  <td className="py-4 text-right">
+                    <div className="flex justify-end">
+                      <SpecificAsset tokenId={Number(cert.token_uri.split('/').pop())} />
+                    </div>
+                  </td>
+                </>
+              )}
             </tr>
           ))}
         </tbody>

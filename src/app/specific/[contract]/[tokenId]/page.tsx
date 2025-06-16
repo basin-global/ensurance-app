@@ -13,6 +13,7 @@ import VerificationSection from '@/components/layout/verifications/VerificationS
 import ReactMarkdown from 'react-markdown'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { Proceeds } from '@/modules/proceeds/components/Proceeds'
+import { TokenBalanceDisplay } from '@/components/layout/TokenBalanceDisplay'
 
 const FALLBACK_IMAGE = '/assets/no-image-found.png'
 
@@ -267,27 +268,28 @@ export default function SpecificTokenPage({
             {/* Token Info */}
             <Card className="bg-primary-dark/50 border-0">
               <CardContent className="p-6">
-                <div className="space-y-4">
-                  {/* Supply */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">issued</span>
-                    <span className="font-medium text-white">
-                      {tokenInfo.totalMinted.toString()} / {tokenInfo.maxSupply >= MAX_SUPPLY_OPEN_EDITION - BigInt(1) ? '∞' : tokenInfo.maxSupply.toString()}
-                    </span>
+                <div className="flex flex-row gap-8 items-center">
+                  {/* Left column: issued and $ data */}
+                  <div className="flex flex-col gap-4 min-w-[120px] flex-1">
+                    {/* Supply */}
+                    <div className="flex flex-row items-center gap-x-2">
+                      <span className="text-gray-400">issued</span>
+                      <span className="font-medium text-white">
+                        {tokenInfo.totalMinted.toString()} / {tokenInfo.maxSupply >= MAX_SUPPLY_OPEN_EDITION - BigInt(1) ? '∞' : tokenInfo.maxSupply.toString()}
+                      </span>
+                    </div>
+                    {/* Price */}
+                    <div className="flex flex-row items-center gap-x-2">
+                      <span className="text-gray-400">$</span>
+                      <span className="font-medium text-white">
+                        {tokenInfo.salesConfig?.pricePerToken 
+                          ? `${formatUnits(tokenInfo.salesConfig.pricePerToken, 6)} ea`
+                          : 'N/A'}
+                      </span>
+                    </div>
                   </div>
-
-                  {/* Price */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">$</span>
-                    <span className="font-medium text-white">
-                      {tokenInfo.salesConfig?.pricePerToken 
-                        ? `${formatUnits(tokenInfo.salesConfig.pricePerToken, 6)} ea`
-                        : 'N/A'}
-                    </span>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="pt-4 border-t border-gray-800">
+                  {/* Right column: action buttons (row) */}
+                  <div className="flex flex-row items-center justify-end flex-1">
                     <EnsureButtonsSpecific
                       contractAddress={params.contract as `0x${string}`}
                       tokenId={BigInt(params.tokenId)}
@@ -298,11 +300,19 @@ export default function SpecificTokenPage({
                       totalMinted={tokenInfo.totalMinted}
                       pricePerToken={tokenInfo.salesConfig?.pricePerToken}
                       primaryMintActive={true}
-                      showBalance={true}
+                      showBalance={false}
                       showMinus={true}
                       showBurn={true}
                     />
                   </div>
+                </div>
+                {/* Balance display below the two columns */}
+                <div className="mt-4">
+                  <TokenBalanceDisplay
+                    contractAddress={params.contract as `0x${string}`}
+                    tokenId={BigInt(params.tokenId)}
+                    tokenName={metadata?.name}
+                  />
                 </div>
               </CardContent>
             </Card>

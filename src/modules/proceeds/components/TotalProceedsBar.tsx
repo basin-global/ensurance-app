@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import Link from 'next/link';
+import { toast } from 'react-toastify';
 
 interface Recipient {
   address: string;
@@ -82,6 +83,15 @@ const getAllRecipients = async (
       });
       return allRecipients;
     }
+
+    // Always add the split address itself (not just leaves)
+    allRecipients.push({
+      address: normalizedAddress,
+      type: 'split' as const,
+      percentage: parentPercentage,
+      isDirect: depth === 0,  // Only direct if at root level
+      directPercentage: depth === 0 ? 100 : undefined
+    });
 
     // Process each recipient sequentially
     for (const recipient of splitMetadata.recipients) {
@@ -246,8 +256,8 @@ export function TotalProceedsBar({ address, onRecipientsUpdate }: TotalProceedsB
 
   // Remove the separate direct recipients query since we now handle it in the main query
   const directRecipients = useMemo(() => 
-    recipients.filter(r => r.isDirect),
-    [recipients]
+    recipients.filter(r => r.isDirect && r.address.toLowerCase() !== address.toLowerCase()),
+    [recipients, address]
   );
 
   const indirectRecipients = useMemo(() => 
@@ -333,9 +343,27 @@ export function TotalProceedsBar({ address, onRecipientsUpdate }: TotalProceedsB
       <div className="space-y-4">
         {/* Direct Recipients with Percentages */}
         {directRecipients.length > 0 && (
-          <div className="space-y-2">
+          <div className="space-y-2 group/main">
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium text-gray-300">direct recipients ({directRecipients.length})</h4>
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-medium text-gray-300">direct recipients ({directRecipients.length})</h4>
+                <div 
+                  className="cursor-pointer text-sm font-mono text-gray-500 opacity-0 group-hover/main:opacity-70 transition-opacity duration-300 delay-300 hover:text-gray-300"
+                  onClick={() => {
+                    navigator.clipboard.writeText(address)
+                      .then(() => toast.success('Split address copied to clipboard!', {
+                        autoClose: 2000,
+                        hideProgressBar: false,
+                        closeOnClick: true,
+                        pauseOnHover: true,
+                        draggable: true,
+                      }))
+                      .catch(() => toast.error('Failed to copy address'))
+                  }}
+                >
+                  {address}
+                </div>
+              </div>
             </div>
             
             {/* Direct Bar Chart */}

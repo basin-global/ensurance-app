@@ -35,7 +35,8 @@ export default function TendPage({ params }: TendPageProps) {
       </div>
       <GeneralGrid 
         accountContext={{
-          name: accountName
+          name: accountName,
+          specific_asset_id: accountData.specific_asset_id
         }}
       />
       <VerificationSection 
