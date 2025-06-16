@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { PortfolioToken } from '../types';
 import { formatUnits } from 'viem';
 import { getTokenImage } from '../utils/getTokenImage';
+import { getPriceFloor } from '../utils/getPriceFloor';
 
 export function usePortfolioData(tbaAddress: string) {
   const [tokens, setTokens] = useState<PortfolioToken[]>([]);
@@ -89,16 +90,38 @@ export function usePortfolioData(tbaAddress: string) {
           })
         );
 
-        // Transform non-fungible tokens (ERC721 + ERC1155)
-        const nftTokens = nonfungibleData.data.ownedNfts
-          .filter((nft: any) => {
-            const isSpam = spamAddresses.includes(nft.contract.address.toLowerCase());
-            if (isSpam) {
-              console.log('Filtered out spam NFT:', nft.contract.address, nft.name);
+        // Group NFTs by contract to avoid duplicate price floor fetches
+        const nftGroups = nonfungibleData.data.ownedNfts.reduce((acc: { [key: string]: any[] }, nft: any) => {
+          if (!spamAddresses.includes(nft.contract.address.toLowerCase())) {
+            if (!acc[nft.contract.address]) {
+              acc[nft.contract.address] = [];
             }
-            return !isSpam;
+            acc[nft.contract.address].push(nft);
+          }
+          return acc;
+        }, {});
+
+        // Fetch price floors for each unique contract
+        const priceFloors = await Promise.all(
+          Object.keys(nftGroups).map(async (contractAddress) => {
+            const { floorPrice, floorPriceUsd } = await getPriceFloor(contractAddress);
+            return { contractAddress, floorPrice, floorPriceUsd };
           })
-          .map((nft: any) => ({
+        );
+
+        // Create a map of contract addresses to floor prices
+        const floorPriceMap = priceFloors.reduce((acc: { [key: string]: { floorPrice: number | null; floorPriceUsd: number | null } }, { contractAddress, floorPrice, floorPriceUsd }) => {
+          acc[contractAddress.toLowerCase()] = { floorPrice, floorPriceUsd };
+          return acc;
+        }, {});
+
+        // Transform non-fungible tokens (ERC721 + ERC1155)
+        const nftTokens = Object.values(nftGroups).flat().map((nft: any) => {
+          const { floorPrice, floorPriceUsd } = floorPriceMap[nft.contract.address.toLowerCase()] || { floorPrice: null, floorPriceUsd: null };
+          const balance = parseInt(nft.balance || '1'); // ERC721 always has balance 1
+          const totalValue = floorPriceUsd ? floorPriceUsd * balance : null;
+
+          return {
             type: nft.tokenType.toLowerCase() as 'erc721' | 'erc1155',
             address: nft.contract.address,
             contractAddress: nft.contract.address,
@@ -116,6 +139,11 @@ export function usePortfolioData(tbaAddress: string) {
             },
             description: nft.description,
             tokenUri: nft.tokenUri,
+            value: {
+              usd: totalValue,
+              floorPrice,
+              floorPriceUsd
+            },
             nftMetadata: {
               name: nft.name,
               description: nft.description,
@@ -142,7 +170,8 @@ export function usePortfolioData(tbaAddress: string) {
               name: nft.name,
               image: nft.image.cachedUrl || nft.image.originalUrl
             }
-          }));
+          };
+        });
 
         // Combine and filter out null values
         const allTokens = [...fungibleTokens, ...nftTokens].filter(Boolean);

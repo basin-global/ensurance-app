@@ -9,6 +9,8 @@ export interface BaseToken {
   decimals: number;
   value?: {
     usd: number | null;
+    floorPrice?: number | null;
+    floorPriceUsd?: number | null;
   };
   ensurance?: EnsuranceFlags;
 }

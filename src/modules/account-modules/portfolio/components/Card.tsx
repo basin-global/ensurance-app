@@ -49,6 +49,15 @@ export default function Card({ token, variant }: CardProps) {
     });
   };
 
+  const formatEthValue = (value: number | null) => {
+    if (!value) return '-';
+    
+    return value.toLocaleString('en-US', {
+      minimumFractionDigits: 4,
+      maximumFractionDigits: 4
+    }) + ' ETH';
+  };
+
   const getTokenImage = (token: PortfolioToken): string | undefined => {
     if (token.type === 'native') {
       return token.metadata?.image || 'https://raw.githubusercontent.com/0xsquid/assets/main/images/tokens/eth.svg';
@@ -111,6 +120,19 @@ export default function Card({ token, variant }: CardProps) {
   const showEnsuranceDot = variant !== 'overview' && 
     (token.ensurance?.isEnsuranceGeneral || token.ensurance?.isEnsuranceSpecific || token.ensurance?.isEnsuranceGroup);
 
+  const getValueTooltip = (token: PortfolioToken) => {
+    if (token.type === 'erc721' || token.type === 'erc1155') {
+      const nftToken = token as NFTToken;
+      const floorPrice = nftToken.value?.floorPrice;
+      const floorPriceUsd = nftToken.value?.floorPriceUsd;
+      
+      if (floorPrice && floorPriceUsd) {
+        return `Floor: ${formatEthValue(floorPrice)} (${formatUsdValue(floorPriceUsd)})`;
+      }
+    }
+    return undefined;
+  };
+
   if (variant === 'grid') {
     return (
       <div className="flex flex-col gap-4">
@@ -150,7 +172,11 @@ export default function Card({ token, variant }: CardProps) {
         <div className="flex items-center justify-between text-sm text-gray-400 px-2">
           <div className="flex gap-4">
             <div>bal: {formatBalance(token)}</div>
-            {token.value && <div>{formatUsdValue(token.value?.usd)}</div>}
+            {token.value && (
+              <div title={getValueTooltip(token)}>
+                {formatUsdValue(token.value?.usd)}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -198,7 +224,7 @@ export default function Card({ token, variant }: CardProps) {
         </div>
       </td>
       <td className="py-4 text-right">
-        <div className="font-medium text-white">
+        <div className="font-medium text-white" title={getValueTooltip(token)}>
           {token.value && formatUsdValue(token.value?.usd)}
         </div>
       </td>
