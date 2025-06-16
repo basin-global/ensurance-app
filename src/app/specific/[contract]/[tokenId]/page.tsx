@@ -14,6 +14,7 @@ import ReactMarkdown from 'react-markdown'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { Proceeds } from '@/modules/proceeds/components/Proceeds'
 import { TokenBalanceDisplay } from '@/components/layout/TokenBalanceDisplay'
+import { TokenPriceDisplay } from '@/components/layout/TokenPriceDisplay'
 
 const FALLBACK_IMAGE = '/assets/no-image-found.png'
 
@@ -54,6 +55,17 @@ export default function SpecificTokenPage({
   } | null>(null)
   const [imageUrl, setImageUrl] = useState<string>(FALLBACK_IMAGE)
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
+  const [priceData, setPriceData] = useState<{
+    averagePrice: number | null;
+    averagePriceUsd: number | null;
+    floorPrice: number | null;
+    floorPriceUsd: number | null;
+  }>({
+    averagePrice: null,
+    averagePriceUsd: null,
+    floorPrice: null,
+    floorPriceUsd: null
+  })
 
   useEffect(() => {
     const fetchTokenInfo = async () => {
@@ -112,6 +124,44 @@ export default function SpecificTokenPage({
 
     fetchTokenInfo()
   }, [params.contract, params.tokenId])
+
+  useEffect(() => {
+    const fetchPriceData = async () => {
+      try {
+        // Get floor price
+        const floorResponse = await fetch(`/api/moralis/price-floor?address=${params.contract}`);
+        const floorData = floorResponse.ok ? await floorResponse.json() : null;
+        
+        // Get sales data
+        const salesResponse = await fetch(`/api/moralis/contract-sales?address=${params.contract}`);
+        const salesData = salesResponse.ok ? await salesResponse.json() : null;
+        
+        // Get ETH price
+        const ethPriceResponse = await fetch('/api/eth-price');
+        const ethPriceData = ethPriceResponse.ok ? await ethPriceResponse.json() : null;
+        const ethPrice = ethPriceData?.price || 0;
+
+        // Process floor price
+        const floorPrice = floorData?.floor_price ? parseFloat(floorData.floor_price) : null;
+        const floorPriceUsd = floorPrice ? floorPrice * ethPrice : null;
+
+        // Process sales data
+        const averagePrice = salesData?.average_sale?.price_formatted ? parseFloat(salesData.average_sale.price_formatted) : null;
+        const averagePriceUsd = averagePrice ? averagePrice * ethPrice : null;
+
+        setPriceData({
+          averagePrice,
+          averagePriceUsd,
+          floorPrice,
+          floorPriceUsd
+        });
+      } catch (err) {
+        console.error('Error fetching price data:', err);
+      }
+    };
+
+    fetchPriceData();
+  }, [params.contract]);
 
   const renderDescription = (description: string) => {
     if (!description) return null;
@@ -268,27 +318,45 @@ export default function SpecificTokenPage({
             {/* Token Info */}
             <Card className="bg-primary-dark/50 border-0">
               <CardContent className="p-6">
-                <div className="flex flex-row gap-8 items-center">
-                  {/* Left column: issued and $ data */}
-                  <div className="flex flex-col gap-4 min-w-[120px] flex-1">
-                    {/* Supply */}
+                {/* Top row: Price and Market Info */}
+                <div className="flex flex-row gap-8 items-start mb-6">
+                  {/* Left: Price Info */}
+                  <div className="flex flex-col gap-2 flex-1">
                     <div className="flex flex-row items-center gap-x-2">
-                      <span className="text-gray-400">issued</span>
-                      <span className="font-medium text-white">
-                        {tokenInfo.totalMinted.toString()} / {tokenInfo.maxSupply >= MAX_SUPPLY_OPEN_EDITION - BigInt(1) ? '∞' : tokenInfo.maxSupply.toString()}
+                      <span className="text-gray-400 w-12">price</span>
+                      <span className="flex items-baseline font-medium text-white tabular-nums gap-x-1">
+                        <span className="inline-block text-right" style={{ width: '1.2em' }}>$</span>
+                        <span className="inline-block text-right" style={{ width: '4em' }}>
+                          {tokenInfo.salesConfig?.pricePerToken 
+                            ? `${Number(formatUnits(tokenInfo.salesConfig.pricePerToken, 6)).toLocaleString('en-US', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                                useGrouping: false
+                              })}`
+                            : 'N/A'}
+                        </span>
+                        <span className="ml-1 text-xs text-gray-400 font-normal">ea</span>
                       </span>
                     </div>
-                    {/* Price */}
                     <div className="flex flex-row items-center gap-x-2">
-                      <span className="text-gray-400">$</span>
-                      <span className="font-medium text-white">
-                        {tokenInfo.salesConfig?.pricePerToken 
-                          ? `${formatUnits(tokenInfo.salesConfig.pricePerToken, 6)} ea`
-                          : 'N/A'}
-                      </span>
+                      <span className="text-gray-400 w-12">market</span>
+                      <TokenPriceDisplay
+                        averagePrice={priceData.averagePrice}
+                        averagePriceUsd={priceData.averagePriceUsd}
+                        floorPrice={priceData.floorPrice}
+                        floorPriceUsd={priceData.floorPriceUsd}
+                        configuredPrice={tokenInfo.salesConfig?.pricePerToken 
+                          ? parseFloat(formatUnits(tokenInfo.salesConfig.pricePerToken, 6))
+                          : null}
+                        className="font-medium text-white tabular-nums gap-x-1"
+                        alignDollarSign
+                        dollarWidth="1.2em"
+                        numberWidth="4em"
+                      />
                     </div>
                   </div>
-                  {/* Right column: action buttons (row) */}
+
+                  {/* Right: Action Buttons */}
                   <div className="flex flex-row items-center justify-end flex-1">
                     <EnsureButtonsSpecific
                       contractAddress={params.contract as `0x${string}`}
@@ -306,13 +374,25 @@ export default function SpecificTokenPage({
                     />
                   </div>
                 </div>
-                {/* Balance display below the two columns */}
-                <div className="mt-4">
-                  <TokenBalanceDisplay
-                    contractAddress={params.contract as `0x${string}`}
-                    tokenId={BigInt(params.tokenId)}
-                    tokenName={metadata?.name}
-                  />
+
+                {/* Bottom row: Supply and Balance Info */}
+                <div className="grid grid-cols-2 gap-6">
+                  {/* Left: Supply Info */}
+                  <div className="flex flex-row items-center gap-x-2">
+                    <span className="text-gray-400 w-12">supply</span>
+                    <span className="font-medium text-white tabular-nums text-right" style={{ minWidth: '6em', display: 'inline-block' }}>
+                      {tokenInfo.totalMinted.toString()} / {tokenInfo.maxSupply >= MAX_SUPPLY_OPEN_EDITION - BigInt(1) ? '∞' : tokenInfo.maxSupply.toString()}
+                    </span>
+                  </div>
+
+                  {/* Right: Balance Info */}
+                  <div className="space-y-2">
+                    <TokenBalanceDisplay
+                      contractAddress={params.contract as `0x${string}`}
+                      tokenId={BigInt(params.tokenId)}
+                      tokenName={metadata?.name}
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>

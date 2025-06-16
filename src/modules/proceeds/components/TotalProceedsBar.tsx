@@ -256,7 +256,7 @@ export function TotalProceedsBar({ address, onRecipientsUpdate }: TotalProceedsB
 
   // Remove the separate direct recipients query since we now handle it in the main query
   const directRecipients = useMemo(() => 
-    recipients.filter(r => r.isDirect && r.address.toLowerCase() !== address.toLowerCase()),
+    recipients.filter(r => (r.isDirect && r.address.toLowerCase() !== address.toLowerCase()) || (r.address.toLowerCase() === address.toLowerCase() && r.type === 'account')),
     [recipients, address]
   );
 
