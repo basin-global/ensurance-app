@@ -3,6 +3,7 @@ import { PortfolioToken } from '../types';
 import { formatUnits } from 'viem';
 import { getTokenImage } from '../utils/getTokenImage';
 import { getPriceFloor } from '../utils/getPriceFloor';
+import { getSalesData } from '../utils/getSalesData';
 
 export function usePortfolioData(tbaAddress: string) {
   const [tokens, setTokens] = useState<PortfolioToken[]>([]);
@@ -90,7 +91,7 @@ export function usePortfolioData(tbaAddress: string) {
           })
         );
 
-        // Group NFTs by contract to avoid duplicate price floor fetches
+        // Group NFTs by contract to avoid duplicate price fetches
         const nftGroups = nonfungibleData.data.ownedNfts.reduce((acc: { [key: string]: any[] }, nft: any) => {
           if (!spamAddresses.includes(nft.contract.address.toLowerCase())) {
             if (!acc[nft.contract.address]) {
@@ -101,25 +102,40 @@ export function usePortfolioData(tbaAddress: string) {
           return acc;
         }, {});
 
-        // Fetch price floors for each unique contract
-        const priceFloors = await Promise.all(
+        // Fetch price data for each unique contract
+        const priceData = await Promise.all(
           Object.keys(nftGroups).map(async (contractAddress) => {
-            const { floorPrice, floorPriceUsd } = await getPriceFloor(contractAddress);
-            return { contractAddress, floorPrice, floorPriceUsd };
+            const [floorData, salesData] = await Promise.all([
+              getPriceFloor(contractAddress),
+              getSalesData(contractAddress)
+            ]);
+            return { 
+              contractAddress, 
+              floorPrice: floorData.floorPrice,
+              floorPriceUsd: floorData.floorPriceUsd,
+              averagePrice: salesData.averagePrice,
+              averagePriceUsd: salesData.averagePriceUsd
+            };
           })
         );
 
-        // Create a map of contract addresses to floor prices
-        const floorPriceMap = priceFloors.reduce((acc: { [key: string]: { floorPrice: number | null; floorPriceUsd: number | null } }, { contractAddress, floorPrice, floorPriceUsd }) => {
-          acc[contractAddress.toLowerCase()] = { floorPrice, floorPriceUsd };
+        // Create a map of contract addresses to price data
+        const priceDataMap = priceData.reduce((acc: { [key: string]: any }, { contractAddress, ...data }) => {
+          acc[contractAddress.toLowerCase()] = data;
           return acc;
         }, {});
 
         // Transform non-fungible tokens (ERC721 + ERC1155)
         const nftTokens = Object.values(nftGroups).flat().map((nft: any) => {
-          const { floorPrice, floorPriceUsd } = floorPriceMap[nft.contract.address.toLowerCase()] || { floorPrice: null, floorPriceUsd: null };
+          const priceData = priceDataMap[nft.contract.address.toLowerCase()] || {};
           const balance = parseInt(nft.balance || '1'); // ERC721 always has balance 1
-          const totalValue = floorPriceUsd ? floorPriceUsd * balance : null;
+          
+          // Use average price if available, otherwise fall back to floor price
+          const totalValue = priceData.averagePriceUsd 
+            ? priceData.averagePriceUsd * balance 
+            : priceData.floorPriceUsd 
+              ? priceData.floorPriceUsd * balance 
+              : null;
 
           return {
             type: nft.tokenType.toLowerCase() as 'erc721' | 'erc1155',
@@ -141,8 +157,10 @@ export function usePortfolioData(tbaAddress: string) {
             tokenUri: nft.tokenUri,
             value: {
               usd: totalValue,
-              floorPrice,
-              floorPriceUsd
+              floorPrice: priceData.floorPrice,
+              floorPriceUsd: priceData.floorPriceUsd,
+              averagePrice: priceData.averagePrice,
+              averagePriceUsd: priceData.averagePriceUsd
             },
             nftMetadata: {
               name: nft.name,

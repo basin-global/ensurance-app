@@ -11,6 +11,8 @@ export interface BaseToken {
     usd: number | null;
     floorPrice?: number | null;
     floorPriceUsd?: number | null;
+    averagePrice?: number | null;
+    averagePriceUsd?: number | null;
   };
   ensurance?: EnsuranceFlags;
 }

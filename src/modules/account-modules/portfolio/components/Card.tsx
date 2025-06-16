@@ -3,6 +3,7 @@ import Image from 'next/image';
 import { formatUnits } from 'viem';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface CardProps {
   token: PortfolioToken;
@@ -123,15 +124,58 @@ export default function Card({ token, variant }: CardProps) {
   const getValueTooltip = (token: PortfolioToken) => {
     if (token.type === 'erc721' || token.type === 'erc1155') {
       const nftToken = token as NFTToken;
+      const averagePrice = nftToken.value?.averagePrice;
+      const averagePriceUsd = nftToken.value?.averagePriceUsd;
       const floorPrice = nftToken.value?.floorPrice;
       const floorPriceUsd = nftToken.value?.floorPriceUsd;
       
-      if (floorPrice && floorPriceUsd) {
-        return `Floor: ${formatEthValue(floorPrice)} (${formatUsdValue(floorPriceUsd)})`;
-      }
+      let tooltipContent = [];
+      
+      // Always show average sale price, even if null
+      tooltipContent.push(
+        `Average Sale: ${averagePrice ? formatEthValue(averagePrice) : 'N/A'} (${averagePriceUsd ? formatUsdValue(averagePriceUsd) : 'N/A'})`
+      );
+      
+      // Always show floor price, even if null
+      tooltipContent.push(
+        `Floor Price: ${floorPrice ? formatEthValue(floorPrice) : 'N/A'} (${floorPriceUsd ? formatUsdValue(floorPriceUsd) : 'N/A'})`
+      );
+      
+      return tooltipContent.join('\n');
     }
     return undefined;
   };
+
+  const getDisplayValue = (token: PortfolioToken) => {
+    if (token.type === 'erc721' || token.type === 'erc1155') {
+      const nftToken = token as NFTToken;
+      const quantity = parseInt(token.balance);
+      
+      // Try to use average sale price first
+      if (nftToken.value?.averagePrice && nftToken.value?.averagePriceUsd) {
+        return {
+          eth: nftToken.value.averagePrice * quantity,
+          usd: nftToken.value.averagePriceUsd * quantity
+        };
+      }
+      
+      // Fall back to floor price
+      if (nftToken.value?.floorPrice && nftToken.value?.floorPriceUsd) {
+        return {
+          eth: nftToken.value.floorPrice * quantity,
+          usd: nftToken.value.floorPriceUsd * quantity
+        };
+      }
+    }
+    
+    // For other token types, use existing value
+    return token.value ? {
+      eth: null,
+      usd: token.value.usd
+    } : null;
+  };
+
+  const displayValue = getDisplayValue(token);
 
   if (variant === 'grid') {
     return (
@@ -172,10 +216,19 @@ export default function Card({ token, variant }: CardProps) {
         <div className="flex items-center justify-between text-sm text-gray-400 px-2">
           <div className="flex gap-4">
             <div>bal: {formatBalance(token)}</div>
-            {token.value && (
-              <div title={getValueTooltip(token)}>
-                {formatUsdValue(token.value?.usd)}
-              </div>
+            {displayValue && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      {formatUsdValue(displayValue.usd)}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="whitespace-pre-line">{getValueTooltip(token)}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
           </div>
         </div>
@@ -224,9 +277,20 @@ export default function Card({ token, variant }: CardProps) {
         </div>
       </td>
       <td className="py-4 text-right">
-        <div className="font-medium text-white" title={getValueTooltip(token)}>
-          {token.value && formatUsdValue(token.value?.usd)}
-        </div>
+        {displayValue && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="font-medium text-white">
+                  {formatUsdValue(displayValue.usd)}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="whitespace-pre-line">{getValueTooltip(token)}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
       </td>
     </tr>
   );
