@@ -6,6 +6,7 @@ import type { Asset } from '@/types/index';
 import { type WalletClient } from 'viem';
 
 export interface TokenboundActions {
+  // 6-17-25 note: buttons, aave, portfolio etc. all use this file (or extension of it) as the https://docs.tokenbound.org/sdk/methods#tokenboundclient-sdk-methods are basically shared
   // TODO: Consider ERC721 transfer safety:
   // 1. Add token ID validation to prevent self-transfers
   // 2. Consider disabling ERC721 transfers in favor of external tools

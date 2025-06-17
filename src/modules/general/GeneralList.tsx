@@ -1,5 +1,5 @@
 import { GeneralCertificate } from './GeneralGrid';
-import { EnsureButtonsGeneral } from '@/components/layout/EnsureButtonsGeneral';
+import { EnsureButtons } from '@/modules/ensure/buttons';
 import Image from 'next/image';
 import Link from 'next/link';
 import { CONTRACTS } from '@/modules/specific/config';
@@ -39,7 +39,7 @@ export default function GeneralList({ certificates, urlPrefix = '', isMiniApp = 
         </thead>
         <tbody className="divide-y divide-gray-800">
           {certificates.map((cert) => (
-            <tr key={cert.contract_address} className="hover:bg-gray-900/30 transition-colors">
+            <tr key={cert.contract_address} className="group hover:bg-gray-900/30 transition-colors">
               <td className="py-4">
                 <Link href={cert.is_specific 
                   ? `/specific/${CONTRACTS.specific}/${cert.token_uri.split('/').pop()}`
@@ -100,14 +100,18 @@ export default function GeneralList({ certificates, urlPrefix = '', isMiniApp = 
                   </td>
                   <td className="py-4 text-right">
                     <div className="flex justify-end">
-                      <EnsureButtonsGeneral 
+                      <EnsureButtons
+                        context="general"
                         contractAddress={cert.contract_address as `0x${string}`}
-                        showMinus={false} 
-                        showSend={false}
-                        size="sm"
-                        imageUrl={cert.image_url}
-                        showBalance={false}
+                        tokenSymbol="TOKEN"
                         tokenName={cert.name}
+                        variant="list"
+                        showBurn={false}
+                        showSend={false}
+                        showSwap={false}
+                        showMinus={false}
+                        size="sm"
+                        showBalance={false}
                       />
                     </div>
                   </td>

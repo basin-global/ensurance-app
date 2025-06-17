@@ -8,7 +8,7 @@ import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ChevronDown, ChevronUp } from 'lucide-react'
-import { EnsureButtonsGeneral } from '@/components/layout/EnsureButtonsGeneral'
+import { EnsureButtons } from '@/modules/ensure/buttons'
 import { Proceeds } from '@/modules/proceeds/components/Proceeds'
 import { createPublicClient, http } from 'viem'
 import { base } from 'viem/chains'
@@ -300,15 +300,17 @@ export default function Details({
 
             {/* Ensure Buttons */}
             <div className="flex flex-col items-center gap-6 pt-2">
-              <div className="w-full flex flex-col items-center gap-4">
-                <div className="flex justify-end">
-                  <EnsureButtonsGeneral 
-                    contractAddress={contractAddress as `0x${string}`}
-                    imageUrl={String(convertIpfsUrl(metadata?.image ?? '') || FALLBACK_IMAGE)}
-                    showBurn={true}
-                    showBalance={true}
-                  />
-                </div>
+              <div className="w-full flex justify-center">
+                <EnsureButtons
+                  contractAddress={contractAddress as `0x${string}`}
+                  tokenSymbol={certificateData?.symbol || 'TOKEN'}
+                  tokenName={certificateData?.name}
+                  imageUrl={String(convertIpfsUrl(metadata?.image ?? '') || FALLBACK_IMAGE)}
+                  context="general"
+                  showMinus={true}
+                  showBurn={true}
+                  showBalance={true}
+                />
               </div>
             </div>
 
