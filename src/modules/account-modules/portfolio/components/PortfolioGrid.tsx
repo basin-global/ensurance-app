@@ -5,13 +5,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { identifyEnsurancePortfolioTokens } from '@/lib/ensurance';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { EnsureButtonsTokenbound } from '@/components/layout/EnsureButtonsTokenbound';
 
 interface PortfolioGridProps {
   tokens: PortfolioToken[];
   isLoading?: boolean;
+  tbaAddress: string;
 }
 
-export default function PortfolioGrid({ tokens, isLoading = false }: PortfolioGridProps) {
+export default function PortfolioGrid({ tokens, isLoading = false, tbaAddress }: PortfolioGridProps) {
   const [processedTokens, setProcessedTokens] = useState<PortfolioToken[]>(tokens);
 
   useEffect(() => {
@@ -52,7 +54,7 @@ export default function PortfolioGrid({ tokens, isLoading = false }: PortfolioGr
       {processedTokens.map((token) => (
         <UICard 
           key={`${token.address}-${token.type}${token.type === 'erc721' || token.type === 'erc1155' ? `-${token.tokenId}` : ''}`}
-          className="bg-primary-dark border-gray-800 hover:border-gray-700 transition-colors relative"
+          className="bg-primary-dark border-gray-800 hover:border-gray-700 transition-colors relative group"
         >
           {(token.ensurance?.isEnsuranceGeneral || token.ensurance?.isEnsuranceSpecific || token.ensurance?.isEnsuranceGroup) && (
             <div className="absolute top-2 right-2 z-10">
@@ -67,6 +69,19 @@ export default function PortfolioGrid({ tokens, isLoading = false }: PortfolioGr
               token={token}
               variant="grid"
             />
+            <div className="absolute bottom-4 left-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+              <EnsureButtonsTokenbound
+                contractAddress={token.address as `0x${string}`}
+                tokenId={token.type === 'erc721' || token.type === 'erc1155' ? token.tokenId?.toString() : undefined}
+                tokenType={token.type}
+                balance={token.balance?.toString()}
+                symbol={token.symbol}
+                imageUrl={token.metadata?.image || '/assets/no-image-found.png'}
+                size="sm"
+                variant="grid"
+                tbaAddress={tbaAddress as `0x${string}`}
+              />
+            </div>
           </CardContent>
         </UICard>
       ))}

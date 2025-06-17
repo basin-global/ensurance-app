@@ -184,9 +184,9 @@ export default function Portfolio({ tbaAddress }: PortfolioProps) {
 
       {/* Portfolio Content */}
       {viewMode === 'grid' ? (
-        <PortfolioGrid tokens={sortedTokens} />
+        <PortfolioGrid tokens={sortedTokens} tbaAddress={tbaAddress} />
       ) : (
-        <PortfolioList tokens={sortedTokens} />
+        <PortfolioList tokens={sortedTokens} tbaAddress={tbaAddress} />
       )}
     </div>
   );

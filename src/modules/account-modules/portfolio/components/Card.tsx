@@ -4,13 +4,15 @@ import { formatUnits } from 'viem';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { EnsureButtonsTokenbound } from '@/components/layout/EnsureButtonsTokenbound';
 
 interface CardProps {
   token: PortfolioToken;
   variant: 'list' | 'grid' | 'overview';
+  tbaAddress: string;
 }
 
-export default function Card({ token, variant }: CardProps) {
+export default function Card({ token, variant, tbaAddress }: CardProps) {
   const imageSize = variant === 'grid' ? 40 : 32;
   const fallbackSize = variant === 'grid' ? 'text-2xl' : 'text-xl';
 
@@ -237,7 +239,7 @@ export default function Card({ token, variant }: CardProps) {
   }
 
   return (
-    <tr className="hover:bg-gray-900/30 transition-colors">
+    <tr className="hover:bg-gray-900/30 transition-colors group">
       <td className="py-4 pr-4">
         <div className="flex items-center gap-3">
           <Link 
@@ -268,6 +270,19 @@ export default function Card({ token, variant }: CardProps) {
               {getTokenName(token)}
             </div>
             {showEnsuranceDot && <EnsuranceDot />}
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+              <EnsureButtonsTokenbound
+                contractAddress={token.address as `0x${string}`}
+                tokenId={token.type === 'erc721' || token.type === 'erc1155' ? token.tokenId?.toString() : undefined}
+                tokenType={token.type}
+                balance={token.balance?.toString()}
+                symbol={token.symbol}
+                imageUrl={token.metadata?.image || '/assets/no-image-found.png'}
+                size="sm"
+                variant="list"
+                tbaAddress={tbaAddress as `0x${string}`}
+              />
+            </div>
           </div>
         </div>
       </td>

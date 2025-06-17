@@ -3,13 +3,15 @@ import Card from './Card';
 import { identifyEnsurancePortfolioTokens } from '@/lib/ensurance';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { EnsureButtonsTokenbound } from '@/components/layout/EnsureButtonsTokenbound';
 
 interface PortfolioListProps {
   tokens: PortfolioToken[];
   isOverview?: boolean;
+  tbaAddress: string;
 }
 
-export default function PortfolioList({ tokens, isOverview = false }: PortfolioListProps) {
+export default function PortfolioList({ tokens, isOverview = false, tbaAddress }: PortfolioListProps) {
   const [processedTokens, setProcessedTokens] = useState<PortfolioToken[]>(tokens);
 
   useEffect(() => {
@@ -48,6 +50,7 @@ export default function PortfolioList({ tokens, isOverview = false }: PortfolioL
               <th className="pb-4 font-medium">name</th>
               <th className="pb-4 font-medium">balance</th>
               <th className="pb-4 font-medium text-right">value</th>
+              <th className="pb-4 font-medium w-24"></th>
             </tr>
           </thead>
         )}
@@ -57,6 +60,7 @@ export default function PortfolioList({ tokens, isOverview = false }: PortfolioL
               key={`${token.address}-${token.type}${token.type === 'erc721' || token.type === 'erc1155' ? `-${token.tokenId}` : ''}`}
               token={token}
               variant={isOverview ? 'overview' : 'list'}
+              tbaAddress={tbaAddress}
             />
           ))}
         </tbody>
