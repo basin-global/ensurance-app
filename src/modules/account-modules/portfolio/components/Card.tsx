@@ -10,9 +10,19 @@ interface CardProps {
   token: PortfolioToken;
   variant: 'list' | 'grid' | 'overview';
   tbaAddress: string;
+  isOverview?: boolean;
+  isOwner?: boolean;
+  isDeployed?: boolean;
 }
 
-export default function Card({ token, variant, tbaAddress }: CardProps) {
+export default function Card({ 
+  token, 
+  variant, 
+  tbaAddress, 
+  isOverview = false,
+  isOwner = false,
+  isDeployed = false 
+}: CardProps) {
   const imageSize = variant === 'grid' ? 40 : 32;
   const fallbackSize = variant === 'grid' ? 'text-2xl' : 'text-xl';
 
@@ -157,7 +167,8 @@ export default function Card({ token, variant, tbaAddress }: CardProps) {
       if (nftToken.value?.averagePrice && nftToken.value?.averagePriceUsd) {
         return {
           eth: nftToken.value.averagePrice * quantity,
-          usd: nftToken.value.averagePriceUsd * quantity
+          usd: nftToken.value.averagePriceUsd * quantity,
+          isFloorPrice: false
         };
       }
       
@@ -165,7 +176,8 @@ export default function Card({ token, variant, tbaAddress }: CardProps) {
       if (nftToken.value?.floorPrice && nftToken.value?.floorPriceUsd) {
         return {
           eth: nftToken.value.floorPrice * quantity,
-          usd: nftToken.value.floorPriceUsd * quantity
+          usd: nftToken.value.floorPriceUsd * quantity,
+          isFloorPrice: true
         };
       }
     }
@@ -173,7 +185,8 @@ export default function Card({ token, variant, tbaAddress }: CardProps) {
     // For other token types, use existing value
     return token.value ? {
       eth: null,
-      usd: token.value.usd
+      usd: token.value.usd,
+      isFloorPrice: false
     } : null;
   };
 
@@ -222,12 +235,21 @@ export default function Card({ token, variant, tbaAddress }: CardProps) {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div>
+                    <div className={cn(
+                      "flex items-center gap-1",
+                      displayValue.isFloorPrice && "text-gray-500"
+                    )}>
                       {formatUsdValue(displayValue.usd)}
+                      {displayValue.isFloorPrice && (
+                        <span className="text-xs text-gray-500">*</span>
+                      )}
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p className="whitespace-pre-line">{getValueTooltip(token)}</p>
+                    <p className="whitespace-pre-line">
+                      {getValueTooltip(token)}
+                      {displayValue.isFloorPrice && "\n\n* Low market activity - using floor price"}
+                    </p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -254,8 +276,8 @@ export default function Card({ token, variant, tbaAddress }: CardProps) {
                 <Image
                   src={getTokenImage(token)!}
                   alt={getTokenName(token)}
-                  width={32}
-                  height={32}
+                  width={imageSize}
+                  height={imageSize}
                   className="object-cover"
                 />
               ) : (
@@ -265,30 +287,17 @@ export default function Card({ token, variant, tbaAddress }: CardProps) {
               )}
             </div>
           </Link>
-          <div className="flex items-center gap-2">
-            <div className="font-medium text-white">
-              {getTokenName(token)}
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <div className="font-medium text-white">
+                {getTokenName(token)}
+              </div>
+              {showEnsuranceDot && <EnsuranceDot />}
             </div>
-            {showEnsuranceDot && <EnsuranceDot />}
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-              <EnsureButtonsTokenbound
-                contractAddress={token.address as `0x${string}`}
-                tokenId={token.type === 'erc721' || token.type === 'erc1155' ? token.tokenId?.toString() : undefined}
-                tokenType={token.type}
-                balance={token.balance?.toString()}
-                symbol={token.symbol}
-                imageUrl={token.metadata?.image || '/assets/no-image-found.png'}
-                size="sm"
-                variant="list"
-                tbaAddress={tbaAddress as `0x${string}`}
-              />
+            <div className="text-sm text-gray-400">
+              bal: {formatBalance(token)}
             </div>
           </div>
-        </div>
-      </td>
-      <td className="py-4 pr-4">
-        <div className="font-medium text-white">
-          {formatBalance(token)}
         </div>
       </td>
       <td className="py-4 text-right">
@@ -296,16 +305,43 @@ export default function Card({ token, variant, tbaAddress }: CardProps) {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="font-medium text-white">
+                <div className={cn(
+                  "flex items-center justify-end gap-1",
+                  displayValue.isFloorPrice && "text-gray-500"
+                )}>
                   {formatUsdValue(displayValue.usd)}
+                  {displayValue.isFloorPrice && (
+                    <span className="text-xs text-gray-500">*</span>
+                  )}
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                <p className="whitespace-pre-line">{getValueTooltip(token)}</p>
+                <p className="whitespace-pre-line">
+                  {getValueTooltip(token)}
+                  {displayValue.isFloorPrice && "\n\n* Low market activity - using floor price"}
+                </p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         )}
+      </td>
+      <td className="py-4 pl-4">
+        <div className="flex justify-end">
+          <EnsureButtonsTokenbound
+            contractAddress={token.address as `0x${string}`}
+            tokenId={token.type === 'erc721' || token.type === 'erc1155' ? (token as NFTToken).tokenId : ''}
+            tokenType={token.type}
+            balance={token.balance?.toString()}
+            symbol={token.symbol}
+            imageUrl={getTokenImage(token) || '/assets/no-image-found.png'}
+            size="sm"
+            variant={variant === 'overview' ? 'list' : variant}
+            tbaAddress={tbaAddress as `0x${string}`}
+            isOwner={isOwner}
+            isDeployed={isDeployed}
+            tokenName={token.name}
+          />
+        </div>
       </td>
     </tr>
   );

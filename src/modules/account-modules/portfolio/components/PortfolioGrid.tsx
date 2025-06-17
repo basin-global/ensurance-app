@@ -1,4 +1,4 @@
-import { PortfolioToken } from '../types';
+import { PortfolioToken, NFTToken } from '../types';
 import Card from './Card';
 import { Card as UICard, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,9 +11,19 @@ interface PortfolioGridProps {
   tokens: PortfolioToken[];
   isLoading?: boolean;
   tbaAddress: string;
+  showEnsureButtons?: boolean;
+  isOwner?: boolean;
+  isDeployed?: boolean;
 }
 
-export default function PortfolioGrid({ tokens, isLoading = false, tbaAddress }: PortfolioGridProps) {
+export default function PortfolioGrid({ 
+  tokens, 
+  isLoading = false, 
+  tbaAddress, 
+  showEnsureButtons = true, 
+  isOwner = false,
+  isDeployed = false 
+}: PortfolioGridProps) {
   const [processedTokens, setProcessedTokens] = useState<PortfolioToken[]>(tokens);
 
   useEffect(() => {
@@ -69,20 +79,27 @@ export default function PortfolioGrid({ tokens, isLoading = false, tbaAddress }:
               token={token}
               variant="grid"
               tbaAddress={tbaAddress}
+              isOwner={isOwner}
+              isDeployed={isDeployed}
             />
-            <div className="absolute bottom-4 left-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-              <EnsureButtonsTokenbound
-                contractAddress={token.address as `0x${string}`}
-                tokenId={token.type === 'erc721' || token.type === 'erc1155' ? token.tokenId?.toString() : undefined}
-                tokenType={token.type}
-                balance={token.balance?.toString()}
-                symbol={token.symbol}
-                imageUrl={token.metadata?.image || '/assets/no-image-found.png'}
-                size="sm"
-                variant="grid"
-                tbaAddress={tbaAddress as `0x${string}`}
-              />
-            </div>
+            {showEnsureButtons && (
+              <div className="absolute bottom-4 left-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                <EnsureButtonsTokenbound
+                  contractAddress={token.address as `0x${string}`}
+                  tokenId={token.type === 'erc721' || token.type === 'erc1155' ? (token as NFTToken).tokenId : ''}
+                  tokenType={token.type}
+                  balance={token.balance?.toString()}
+                  symbol={token.symbol}
+                  imageUrl={token.metadata?.image || '/assets/no-image-found.png'}
+                  size="sm"
+                  variant="grid"
+                  tbaAddress={tbaAddress as `0x${string}`}
+                  isOwner={isOwner}
+                  isDeployed={isDeployed}
+                  tokenName={token.name}
+                />
+              </div>
+            )}
           </CardContent>
         </UICard>
       ))}

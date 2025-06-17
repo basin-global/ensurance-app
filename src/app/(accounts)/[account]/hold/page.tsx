@@ -11,7 +11,7 @@ interface HoldPageProps {
 }
 
 export default function HoldPage({ params }: HoldPageProps) {
-  const { accountData, isOwner } = useAccount()
+  const { accountData, isOwner, isDeployed } = useAccount()
 
   // Handle loading state
   if (!accountData?.tba_address) {
@@ -24,7 +24,11 @@ export default function HoldPage({ params }: HoldPageProps) {
 
   return (
     <div className="space-y-6">
-      <Portfolio tbaAddress={accountData.tba_address} />
+      <Portfolio 
+        tbaAddress={accountData.tba_address} 
+        isOwner={isOwner}
+        isDeployed={isDeployed}
+      />
       <VerificationSection 
         type="account" 
         name={params.account} 

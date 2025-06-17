@@ -53,16 +53,19 @@ interface AccountSearchResult {
   token_id: number
 }
 
-interface EnsureButtonsTokenboundProps {
+export interface EnsureButtonsTokenboundProps {
   contractAddress: Address
-  tokenId?: string // Optional for ERC20
+  tokenId: string
   tokenType: 'erc20' | 'erc721' | 'erc1155' | 'native'
-  size?: 'sm' | 'lg'
-  variant?: 'grid' | 'list' | 'overview'
+  size?: 'sm' | 'md' | 'lg'
+  variant?: 'grid' | 'list'
   balance?: string
   symbol?: string
   imageUrl?: string
   tbaAddress: Address
+  isOwner: boolean
+  isDeployed: boolean
+  tokenName?: string
 }
 
 // Add helper function for truncating addresses
@@ -80,7 +83,10 @@ export function EnsureButtonsTokenbound({
   balance: initialBalance,
   symbol = 'Token',
   imageUrl = '/assets/no-image-found.png',
-  tbaAddress
+  tbaAddress,
+  isOwner,
+  isDeployed,
+  tokenName
 }: EnsureButtonsTokenboundProps) {
   const { login, authenticated, user } = usePrivy()
   const [isLoading, setIsLoading] = useState(false)
@@ -250,17 +256,40 @@ export function EnsureButtonsTokenbound({
     // Remove existing commas first
     const withoutCommas = value.replace(/,/g, '')
     
-    // Only allow numbers and one decimal point for ERC20
-    const cleanValue = tokenType === 'erc20' 
+    // Allow numbers and one decimal point for both ERC20 and native ETH
+    const cleanValue = (tokenType === 'erc20' || tokenType === 'native')
       ? withoutCommas.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1')
       : withoutCommas.replace(/[^\d]/g, '') // Only whole numbers for ERC721/1155
+    
+    // Check if amount exceeds balance
+    if (cleanValue && balance) {
+      const inputAmount = parseFloat(cleanValue)
+      let currentBalance: number
+      
+      if (tokenType === 'erc20' || tokenType === 'native') {
+        // For ERC20 and native, use the raw balance and decimals
+        currentBalance = parseFloat(formatUnits(BigInt(balance), tokenDecimals))
+      } else {
+        // For ERC1155, use the formatted balance
+        currentBalance = parseFloat(formatBalance(balance, tokenType, tokenDecimals))
+      }
+      
+      if (inputAmount > currentBalance) {
+        setAmountError('Amount exceeds available balance')
+        return
+      } else {
+        setAmountError('')
+      }
+    }
     
     // Store the clean value for calculations
     setAmount(cleanValue)
 
-    // Format with commas for display
+    // Format with commas for display, but only for the whole number portion
     if (cleanValue) {
-      const formattedValue = cleanValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+      const parts = cleanValue.split('.')
+      const wholeNumber = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+      const formattedValue = parts.length > 1 ? `${wholeNumber}.${parts[1]}` : wholeNumber
       setFormattedAmount(formattedValue)
     } else {
       setFormattedAmount('')
@@ -297,6 +326,25 @@ export function EnsureButtonsTokenbound({
     if (tokenType !== 'erc721' && !amount) {
       toast.error('Please enter an amount')
       return
+    }
+
+    // Add balance check before sending
+    if (tokenType !== 'erc721' && balance) {
+      const inputAmount = parseFloat(amount)
+      let currentBalance: number
+      
+      if (tokenType === 'erc20' || tokenType === 'native') {
+        // For ERC20 and native, use the raw balance and decimals
+        currentBalance = parseFloat(formatUnits(BigInt(balance), tokenDecimals))
+      } else {
+        // For ERC1155, use the formatted balance
+        currentBalance = parseFloat(formatBalance(balance, tokenType, tokenDecimals))
+      }
+      
+      if (inputAmount > currentBalance) {
+        toast.error('Amount exceeds available balance')
+        return
+      }
     }
 
     setIsLoading(true)
@@ -370,11 +418,8 @@ export function EnsureButtonsTokenbound({
     }
   }
 
-  // Add validation at component level
-  if (!tbaAddress) {
-    console.error('EnsureButtonsTokenbound: tbaAddress is required')
-    return null
-  }
+  // Only show buttons if owner AND deployed
+  if (!isOwner || !isDeployed) return null
 
   return (
     <>
@@ -409,13 +454,13 @@ export function EnsureButtonsTokenbound({
                   send
                 </DialogTitle>
                 <div className="text-3xl font-bold text-white">
-                  {symbol}
+                  {tokenType === 'erc1155' ? tokenName || symbol : symbol}
                 </div>
               </div>
               <div className="relative w-20 h-20 rounded-lg overflow-hidden">
                 <Image
                   src={imageUrl}
-                  alt={symbol}
+                  alt={tokenType === 'erc1155' ? tokenName || symbol : symbol}
                   fill
                   className="object-cover"
                 />
@@ -516,7 +561,7 @@ export function EnsureButtonsTokenbound({
                   </div>
                 )}
                 <div className="text-sm text-gray-400">
-                  balance: {formattedBalance || '0'} {symbol}
+                  balance: {formattedBalance || '0'} {tokenType === 'erc1155' ? tokenName || symbol : symbol}
                 </div>
               </div>
             )}

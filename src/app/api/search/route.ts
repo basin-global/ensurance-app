@@ -2,13 +2,20 @@ import { accounts } from '@/lib/database/accounts';
 import { groups } from '@/lib/database/groups';
 import { searchDocs } from '@/lib/docs-search';
 import { NextRequest, NextResponse } from 'next/server';
+import { getContractTokens } from '@/modules/specific/collect';
+import { CONTRACTS } from '@/modules/specific/config';
 
 export const revalidate = 60;
 
 // Simple in-memory cache with stale-while-revalidate
 let cache = {
     groups: { data: null, timestamp: 0, isRevalidating: false },
-    accounts: { data: null, timestamp: 0, isRevalidating: false }
+    accounts: { data: null, timestamp: 0, isRevalidating: false },
+    general: { data: null, timestamp: 0, isRevalidating: false },
+    specific: { data: null, timestamp: 0, isRevalidating: false },
+    syndicates: { data: null, timestamp: 0, isRevalidating: false },
+    proceeds: { data: null, timestamp: 0, isRevalidating: false },
+    exposure: { data: null, timestamp: 0, isRevalidating: false }
 };
 
 const CACHE_TTL = 60000; // 1 minute
@@ -61,6 +68,11 @@ export async function GET(request: NextRequest) {
     try {
         const query = request.nextUrl.searchParams.get('q')?.toLowerCase();
         
+        // Build absolute base URL for internal fetches
+        const protocol = request.headers.get('x-forwarded-proto') || 'http';
+        const host = request.headers.get('host');
+        const baseUrl = `${protocol}://${host}`;
+        
         // Define navigation items once at the top
         const navItems = [
             {
@@ -89,11 +101,6 @@ export async function GET(request: NextRequest) {
                 type: 'nav'
             },
             {
-                name: 'proceeds',
-                path: '/proceeds',
-                type: 'nav'
-            },
-            {
                 name: 'binder',
                 path: 'https://binder.ensurance.app',
                 type: 'nav'
@@ -117,45 +124,104 @@ export async function GET(request: NextRequest) {
             item.name.toLowerCase().includes(searchLower)
         );
 
-        // Only fetch and search other data if we have a search query
-        let groupsData: { group_name: string; name_front: string | null }[] = [];
-        let accountsData: { full_account_name: string; is_agent: boolean; group_name: string; token_id: number }[] = [];
-
-        // Initialize from cache if valid
-        groupsData = await getDataWithCache('groups', () => groups.getSearchResults());
-        accountsData = await getDataWithCache('accounts', () => accounts.getSearchResults());
-
-        // Process results in parallel with null checks
-        const [matchingGroups, matchingAccounts] = await Promise.all([
-            groupsData
-                .filter(group => 
-                    (group?.group_name?.toLowerCase().includes(searchLower) ||
-                    group?.name_front?.toLowerCase().includes(searchLower))
-                )
-                .map(group => ({
-                    name: group.name_front || group.group_name,
-                    path: `/groups/${group.group_name.replace(/^\./, '')}/all`,
-                    type: 'group'
-                })),
-            accountsData
-                .filter(account => 
-                    account?.full_account_name?.toLowerCase().includes(searchLower)
-                )
-                .map(account => ({
-                    name: account.full_account_name,
-                    path: `/${account.full_account_name}`,
-                    type: 'account',
-                    is_agent: account.is_agent,
-                    is_ensurance: account.group_name === '.ensurance' && account.full_account_name !== 'situs.ensurance',
-                    token_id: account.token_id
-                }))
+        // Fetch all data types in parallel using absolute URLs
+        const [
+            groupsData,
+            accountsData,
+            generalData,
+            specificData,
+            syndicatesData
+        ] = await Promise.all([
+            getDataWithCache('groups', () => groups.getSearchResults()),
+            getDataWithCache('accounts', () => accounts.getSearchResults()),
+            getDataWithCache('general', () => fetch(`${baseUrl}/api/general`).then(r => r.json())),
+            getDataWithCache('specific', () => getContractTokens(CONTRACTS.specific)),
+            getDataWithCache('syndicates', () => fetch(`${baseUrl}/api/syndicates`).then(r => r.json()))
         ]);
+
+        // Process results in parallel with null checks (except specific, which is handled below)
+        const matchingGroups = groupsData
+            .filter((group: any) => 
+                (group?.group_name?.toLowerCase().includes(searchLower) ||
+                group?.name_front?.toLowerCase().includes(searchLower))
+            )
+            .map((group: any) => ({
+                name: group.name_front || group.group_name,
+                path: `/groups/${group.group_name.replace(/^\\\\./, '')}/all`,
+                type: 'group'
+            }));
+        const matchingAccounts = accountsData
+            .filter((account: any) => 
+                account?.full_account_name?.toLowerCase().includes(searchLower)
+            )
+            .map((account: any) => ({
+                name: account.full_account_name,
+                path: `/${account.full_account_name}`,
+                type: 'account',
+                is_agent: account.is_agent,
+                is_ensurance: account.group_name === '.ensurance' && account.full_account_name !== 'situs.ensurance',
+                token_id: account.token_id
+            }));
+        const matchingGeneral = generalData
+            .filter((cert: any) => 
+                cert?.name?.toLowerCase().includes(searchLower) ||
+                cert?.description?.toLowerCase().includes(searchLower)
+            )
+            .map((cert: any) => ({
+                name: cert.name,
+                path: `/general/${cert.contract_address}`,
+                type: 'general',
+                description: cert.description
+            }));
+        // Specific certificates: fetch and parse metadata for each token, then filter on metadata.name/description
+        const matchingSpecific = [];
+        for (const token of specificData) {
+            let metadata = { name: '', description: '' };
+            try {
+                if (token.tokenURI.startsWith('http')) {
+                    const response = await fetch(token.tokenURI);
+                    if (response.ok) {
+                        metadata = await response.json();
+                    }
+                } else {
+                    metadata = JSON.parse(token.tokenURI);
+                }
+            } catch (err) {
+                // fallback: skip this token if metadata can't be loaded
+                continue;
+            }
+            if (
+                metadata.name?.toLowerCase().includes(searchLower) ||
+                metadata.description?.toLowerCase().includes(searchLower)
+            ) {
+                matchingSpecific.push({
+                    name: metadata.name || 'Unnamed Token',
+                    path: `/specific/${CONTRACTS.specific}/${token.tokenURI.split('/').pop()}`,
+                    type: 'specific',
+                    description: metadata.description || ''
+                });
+            }
+        }
+        const matchingSyndicates = syndicatesData
+            .filter((syndicate: any) => 
+                syndicate?.name?.toLowerCase().includes(searchLower) ||
+                syndicate?.description?.toLowerCase().includes(searchLower)
+            )
+            .map((syndicate: any) => ({
+                name: syndicate.name,
+                path: `/syndicates/${syndicate.name.toLowerCase().replace(/\s+/g, '-')}`,
+                type: 'syndicate',
+                description: syndicate.description
+            }));
 
         // Combine all results, putting nav items first
         const results = [
             ...matchingNavItems,
             ...matchingGroups,
-            ...matchingAccounts
+            ...matchingAccounts,
+            ...matchingGeneral,
+            ...matchingSpecific,
+            ...matchingSyndicates
         ];
 
         // Add docs results to the combined results

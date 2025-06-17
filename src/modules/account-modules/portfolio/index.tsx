@@ -9,11 +9,13 @@ import { formatUnits } from 'viem';
 
 interface PortfolioProps {
   tbaAddress: string;
+  isOwner?: boolean;
+  isDeployed?: boolean;
 }
 
 const SORT_CYCLES: SortField[] = ['name', 'balance', 'value'];
 
-export default function Portfolio({ tbaAddress }: PortfolioProps) {
+export default function Portfolio({ tbaAddress, isOwner = false, isDeployed = false }: PortfolioProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [filter, setFilter] = useState<TokenFilter>('all');
   const [sort, setSort] = useState<SortConfig>({ field: 'value', direction: 'desc' });
@@ -184,9 +186,19 @@ export default function Portfolio({ tbaAddress }: PortfolioProps) {
 
       {/* Portfolio Content */}
       {viewMode === 'grid' ? (
-        <PortfolioGrid tokens={sortedTokens} tbaAddress={tbaAddress} />
+        <PortfolioGrid 
+          tokens={sortedTokens} 
+          tbaAddress={tbaAddress} 
+          isOwner={isOwner}
+          isDeployed={isDeployed}
+        />
       ) : (
-        <PortfolioList tokens={sortedTokens} tbaAddress={tbaAddress} />
+        <PortfolioList 
+          tokens={sortedTokens} 
+          tbaAddress={tbaAddress} 
+          isOwner={isOwner}
+          isDeployed={isDeployed}
+        />
       )}
     </div>
   );

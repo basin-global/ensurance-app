@@ -4,14 +4,25 @@ import { identifyEnsurancePortfolioTokens } from '@/lib/ensurance';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { EnsureButtonsTokenbound } from '@/components/layout/EnsureButtonsTokenbound';
+import Link from 'next/link';
 
 interface PortfolioListProps {
   tokens: PortfolioToken[];
   isOverview?: boolean;
   tbaAddress: string;
+  account?: string;
+  isOwner?: boolean;
+  isDeployed?: boolean;
 }
 
-export default function PortfolioList({ tokens, isOverview = false, tbaAddress }: PortfolioListProps) {
+export default function PortfolioList({ 
+  tokens, 
+  isOverview = false, 
+  tbaAddress, 
+  account, 
+  isOwner = false,
+  isDeployed = false 
+}: PortfolioListProps) {
   const [processedTokens, setProcessedTokens] = useState<PortfolioToken[]>(tokens);
 
   useEffect(() => {
@@ -42,7 +53,7 @@ export default function PortfolioList({ tokens, isOverview = false, tbaAddress }
     : processedTokens;
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto relative">
       <table className="w-full">
         {!isOverview && (
           <thead>
@@ -61,10 +72,18 @@ export default function PortfolioList({ tokens, isOverview = false, tbaAddress }
               token={token}
               variant={isOverview ? 'overview' : 'list'}
               tbaAddress={tbaAddress}
+              isOverview={isOverview}
+              isOwner={isOwner}
+              isDeployed={isDeployed}
             />
           ))}
         </tbody>
       </table>
+      {isOverview && account && (
+        <Link href={`/${account}/hold`} className="absolute inset-0 z-10" tabIndex={-1} aria-label="View all assets">
+          <span className="sr-only">View all assets</span>
+        </Link>
+      )}
     </div>
   );
 } 

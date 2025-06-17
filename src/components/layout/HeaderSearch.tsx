@@ -324,10 +324,25 @@ export function HeaderSearch() {
                         GROUP
                       </span>
                     )}
+                    {result.type === 'general' && (
+                      <span className="text-xs px-2 py-1 rounded bg-green-500/20 text-green-400">
+                        GENERAL
+                      </span>
+                    )}
+                    {result.type === 'specific' && (
+                      <span className="text-xs px-2 py-1 rounded bg-emerald-500/20 text-emerald-400">
+                        SPECIFIC
+                      </span>
+                    )}
+                    {result.type === 'syndicate' && (
+                      <span className="text-xs px-2 py-1 rounded bg-yellow-500/20 text-yellow-500">
+                        SYNDICATE
+                      </span>
+                    )}
                     {result.type === 'account' && (
                       <>
                         {result.is_ensurance ? (
-                          <span className="text-xs px-2 py-1 rounded bg-emerald-500/20 text-emerald-400">
+                          <span className="text-xs px-2 py-1 rounded" style={{ background: 'rgba(255, 215, 0, 0.20)', color: 'rgba(255, 215, 0, 0.95)', border: '1px solid rgba(255, 215, 0, 0.8)' }}>
                             ENSURANCE
                           </span>
                         ) : result.is_agent ? (

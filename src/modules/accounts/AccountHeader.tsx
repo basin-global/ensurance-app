@@ -174,17 +174,20 @@ export default function AccountHeader({
                   AGENT
                 </span>
               )}
-              {isOwner && isDeployed ? (
-                <span 
-                  className={cn(
-                    largeDotClasses,
-                    "bg-green-500 after:bg-green-500/50 ml-1"
-                  )}
-                  title="Your account is fully operational"
-                />
-              ) : (
-                <>
-                  {isOwner && (
+              {/* Only show status dots if user is the owner */}
+              {isOwner && (
+                isDeployed ? (
+                  // Large green dot: fully operational
+                  <span 
+                    className={cn(
+                      largeDotClasses,
+                      "bg-green-500 after:bg-green-500/50 ml-1"
+                    )}
+                    title="Your account is fully operational"
+                  />
+                ) : (
+                  <>
+                    {/* Small green dot: you are the owner */}
                     <span 
                       className={cn(
                         statusDotClasses,
@@ -192,19 +195,20 @@ export default function AccountHeader({
                       )}
                       title="You operate this account"
                     />
-                  )}
-                  <span 
-                    className={cn(
-                      statusDotClasses,
-                      isDeployed 
-                        ? "bg-green-500 after:bg-green-500/50" 
-                        : "bg-red-500 after:bg-red-500/50",
-                      !isDeployed && isOwner && !isDeploying && "cursor-pointer hover:scale-110 transition-transform"
-                    )}
-                    title={isDeployed ? "Account is deployed" : isDeploying ? "Deploying..." : isOwner ? "Click to deploy account" : "Account is not deployed"}
-                    onClick={!isDeployed && isOwner && !isDeploying ? handleDeployAccount : undefined}
-                  />
-                </>
+                    {/* Deployment status dot: green if deployed, red if not, clickable if not deployed */}
+                    <span 
+                      className={cn(
+                        statusDotClasses,
+                        isDeployed 
+                          ? "bg-green-500 after:bg-green-500/50" 
+                          : "bg-red-500 after:bg-red-500/50",
+                        !isDeployed && !isDeploying && "cursor-pointer hover:scale-110 transition-transform"
+                      )}
+                      title={isDeployed ? "Account is deployed" : isDeploying ? "Deploying..." : "Click to deploy account"}
+                      onClick={!isDeployed && !isDeploying ? handleDeployAccount : undefined}
+                    />
+                  </>
+                )
               )}
             </div>
           </div>
