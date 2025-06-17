@@ -68,6 +68,7 @@ export default function PortfolioGrid({ tokens, isLoading = false, tbaAddress }:
             <Card 
               token={token}
               variant="grid"
+              tbaAddress={tbaAddress}
             />
             <div className="absolute bottom-4 left-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
               <EnsureButtonsTokenbound
