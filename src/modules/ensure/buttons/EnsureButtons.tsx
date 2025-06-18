@@ -9,7 +9,7 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip"
 import { cn } from '@/lib/utils'
-import type { EnsureButtonsProps, OperationType } from './types'
+import type { EnsureButtonsProps, OperationType, ERC1155BalanceInfo } from './types'
 import { useTokenOperations } from './hooks/useTokenOperations'
 import { formatBalance } from './utils/formatting'
 import { BuyModal } from './modals/buy'
@@ -46,6 +46,7 @@ export function EnsureButtons({
 }: EnsureButtonsProps) {
   const [modalOpen, setModalOpen] = useState(false)
   const [currentOperation, setCurrentOperation] = useState<OperationType | null>(null)
+  const [fetchedPrice, setFetchedPrice] = useState<bigint | null>(null)
 
   const {
     tokenBalance,
@@ -85,6 +86,7 @@ export function EnsureButtons({
     // ERC1155 specific state
     erc1155Balance,
     usdcBalance,
+    setErc1155Balance,
     getUsdcOperationData,
     checkUsdcApproval,
     
@@ -117,11 +119,59 @@ export function EnsureButtons({
     // ERC1155 specific props
     maxSupply,
     totalMinted,
-    pricePerToken,
+    pricePerToken: pricePerToken || fetchedPrice || undefined,
     primaryMintActive
   })
 
   const iconSize = size === 'sm' ? 'w-6 h-6' : 'w-10 h-10'
+
+  // Fetch USDC balance for tokenbound ERC1155 buy modal
+  const fetchUsdcBalance = async () => {
+    if (context !== 'tokenbound' || tokenType !== 'erc1155' || !tbaAddress) {
+      return
+    }
+
+    try {
+      // Fetch USDC balance
+      const response = await fetch(`/api/alchemy/fungible?address=${tbaAddress}`)
+      if (response.ok) {
+        const data = await response.json()
+        const usdcToken = data.data?.tokens?.find((t: any) => 
+          t.tokenAddress?.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913'
+        )
+        if (usdcToken) {
+          const usdcBalance = BigInt(usdcToken.tokenBalance || '0')
+          const formattedBalance = (Number(usdcBalance) / 1_000_000).toFixed(6)
+          
+          // Update the erc1155Balance state with USDC balance
+          setErc1155Balance((prev: ERC1155BalanceInfo) => ({
+            ...prev,
+            usdcBalance,
+            formattedUsdcBalance: formattedBalance
+          }))
+          
+          console.log('🔍 Fetched USDC balance for tokenbound:', formattedBalance)
+        }
+      }
+
+      // Also fetch price if not provided via props
+      if (!pricePerToken && contractAddress && tokenId) {
+        try {
+          const { getTokenInfo } = await import('../../specific/collect')
+          const tokenInfo = await getTokenInfo(contractAddress, tokenId)
+          
+          if (tokenInfo?.salesConfig?.pricePerToken) {
+            setFetchedPrice(tokenInfo.salesConfig.pricePerToken)
+            console.log('🔍 Fetched price for tokenbound ERC1155:', tokenInfo.salesConfig.pricePerToken.toString())
+          }
+        } catch (priceError) {
+          console.error('Error fetching token price:', priceError)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching USDC balance:', error)
+    }
+  }
 
   const handleOpenModal = async (type: OperationType) => {
     if (!authenticated) {
@@ -143,11 +193,19 @@ export function EnsureButtons({
     // Reset modal state and fetch fresh data
     resetModalState()
     
-    // Fetch balances and tokens in parallel
-    await Promise.all([
-      fetchTokenBalance(), // This will call fetchERC1155Balances for specific context
-      fetchAvailableTokens(type)
-    ])
+    // For tokenbound ERC1155 buy, fetch USDC balance directly
+    if (context === 'tokenbound' && tokenType === 'erc1155' && type === 'buy') {
+      await Promise.all([
+        fetchUsdcBalance(),
+        fetchAvailableTokens(type)
+      ])
+    } else {
+      // Standard flow
+      await Promise.all([
+        fetchTokenBalance(),
+        fetchAvailableTokens(type)
+      ])
+    }
     
     setCurrentOperation(type)
     setModalOpen(true)
@@ -172,22 +230,28 @@ export function EnsureButtons({
           variant === 'list' ? "opacity-0 group-hover:opacity-100 transition-opacity" : ""
         )}>
           {/* Ensure (buy) button - green */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => handleOpenModal('buy')}
-                  className="flex items-center gap-2 text-gray-300 hover:text-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={context === 'specific' && !primaryMintActive}
-                >
-                  <PlusCircle className={`${iconSize} stroke-[1.5] stroke-green-500 hover:stroke-green-400 transition-colors`} />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>ensure (buy)</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          {/* Only show buy button based on context and token type */}
+          {(context === 'general' || 
+            context === 'specific' || 
+            (context === 'tokenbound' && (tokenType === 'erc20' || tokenType === 'native' || 
+             (tokenType === 'erc1155' && primaryMintActive)))) && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => handleOpenModal('buy')}
+                    className="flex items-center gap-2 text-gray-300 hover:text-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={context === 'specific' && !primaryMintActive}
+                  >
+                    <PlusCircle className={`${iconSize} stroke-[1.5] stroke-green-500 hover:stroke-green-400 transition-colors`} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>ensure (buy)</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
 
           {/* Transform (swap) button - blue */}
           {showMinus && (
@@ -266,6 +330,7 @@ export function EnsureButtons({
         tokenName={tokenName}
         imageUrl={imageUrl}
         context={context}
+        tokenType={tokenType}
         availableTokens={availableTokens}
         isLoadingTokens={isLoadingTokens}
         tokenImages={tokenImages}
@@ -273,15 +338,23 @@ export function EnsureButtons({
         isSimulating={isSimulating}
         onAmountChange={handleAmountChange}
         onTokenSelect={handleTokenSelect}
-        onExecute={context === 'specific' ? executeERC1155Buy : executeBuy}
+        onExecute={
+          (context === 'specific' || (context === 'tokenbound' && tokenType === 'erc1155')) 
+            ? executeERC1155Buy 
+            : executeBuy
+        }
         selectedToken={selectedToken || undefined}
         amount={amount}
         formattedAmount={formattedAmount}
         amountError={amountError}
         isLoading={isLoading}
         // ERC1155 specific props
-        pricePerToken={pricePerToken}
-        usdcBalance={context === 'specific' ? erc1155Balance.usdcBalance : undefined}
+        pricePerToken={pricePerToken || fetchedPrice || undefined}
+        usdcBalance={
+          (context === 'specific' || (context === 'tokenbound' && tokenType === 'erc1155'))
+            ? erc1155Balance.usdcBalance 
+            : undefined
+        }
         totalPrice={undefined} // Will be calculated in the modal based on local amount
       />
 

@@ -10,7 +10,9 @@ import {
   maxUint256,
   formatEther,
   formatUnits,
-  encodeFunctionData
+  encodeFunctionData,
+  numberToHex,
+  concat
 } from 'viem'
 import { base } from 'viem/chains'
 import { type Id } from 'react-toastify'
@@ -168,102 +170,79 @@ export const useTokenOperations = ({
   }, [user?.wallet?.address])
 
   /**
-   * Fetch ERC1155 token balance and USDC balance for specific context
+   * Fetch ERC1155 balances and USDC balance for specific context
    */
   const fetchERC1155Balances = useCallback(async () => {
-    console.log('fetchERC1155Balances called with:', {
-      context,
-      contractAddress,
-      tokenId,
-      userAddress: user?.wallet?.address,
-      usdcAddress: SPECIFIC_CONTRACTS.usdc,
-      network: 'base (chain ID: 8453)'
-    })
-
-    if (context !== 'specific' || !contractAddress || !tokenId || !user?.wallet?.address) {
-      console.log('Skipping ERC1155 balance fetch - missing requirements')
-      return
-    }
+    // Determine which address to use based on context
+    const addressToQuery = context === 'tokenbound' && tbaAddress ? tbaAddress : user?.wallet?.address
+    
+    if (!addressToQuery || !tokenId) return
 
     try {
-      console.log('Fetching ERC1155 token balance...')
-      // Fetch ERC1155 token balance
+      console.log('🔍 Fetching ERC1155 balances for:', {
+        context,
+        address: addressToQuery,
+        contractAddress,
+        tokenId
+      })
+
+      // Fetch token balance from ERC1155 contract
       const tokenBalance = await publicClient.readContract({
         address: contractAddress,
         abi: ZORA_1155_ABI,
         functionName: 'balanceOf',
-        args: [user.wallet.address, BigInt(tokenId)]
+        args: [addressToQuery as `0x${string}`, BigInt(tokenId)]
       }) as bigint
 
-      console.log('Fetching USDC balance...', {
-        usdcContract: SPECIFIC_CONTRACTS.usdc,
-        userAddress: user.wallet.address,
-        chainId: publicClient.chain?.id,
-        expectedChainId: 8453 // Base
-      })
-
       // Fetch USDC balance
-      let usdcBalance: bigint
-      try {
-        usdcBalance = await publicClient.readContract({
-          address: SPECIFIC_CONTRACTS.usdc,
-          abi: [
-            {
-              inputs: [{ name: 'account', type: 'address' }],
-              name: 'balanceOf',
-              outputs: [{ type: 'uint256' }],
-              stateMutability: 'view',
-              type: 'function'
-            }
-          ],
-          functionName: 'balanceOf',
-          args: [user.wallet.address as `0x${string}`]
-        }) as bigint
+      const usdcBalance = await publicClient.readContract({
+        address: SPECIFIC_CONTRACTS.usdc,
+        abi: [
+          {
+            inputs: [{ name: 'account', type: 'address' }],
+            name: 'balanceOf',
+            outputs: [{ type: 'uint256' }],
+            stateMutability: 'view',
+            type: 'function'
+          }
+        ],
+        functionName: 'balanceOf',
+        args: [addressToQuery as `0x${string}`]
+      }) as bigint
 
-        console.log('✅ USDC contract call successful:', {
-          rawBalance: usdcBalance.toString(),
-          rawBalanceHex: '0x' + usdcBalance.toString(16),
-          formattedBalance: (Number(usdcBalance) / 1_000_000).toFixed(6),
-          expectedFor030USDC: '300000'
-        })
-      } catch (contractError) {
-        console.error('❌ USDC contract call failed:', contractError)
-        usdcBalance = BigInt(0)
-      }
-
-      // Format balances
       const formattedTokenBalance = tokenBalance.toString()
-      const formattedUsdcBalance = (Number(usdcBalance) / 1_000_000).toFixed(2)
+      const formattedUsdcBalance = (Number(usdcBalance) / 1_000_000).toFixed(6)
 
-      console.log('✅ ERC1155 Balances successfully fetched:', {
-        tokenBalance: tokenBalance.toString(),
-        usdcBalance: usdcBalance.toString(),
-        formattedUsdcBalance,
-        usdcBalanceInWei: usdcBalance.toString()
+      console.log('🔍 ERC1155 balances fetched:', {
+        context,
+        tokenBalance: formattedTokenBalance,
+        usdcBalance: formattedUsdcBalance,
+        addressQueried: addressToQuery
       })
 
-      // Double-check USDC balance using Alchemy API as verification
-      try {
-        console.log('🔍 Verifying USDC balance via Alchemy API...')
-        const alchemyResponse = await fetch(`/api/alchemy/fungible?address=${user.wallet.address}`)
-        if (alchemyResponse.ok) {
-          const alchemyData = await alchemyResponse.json()
-          const usdcToken = alchemyData.data?.tokens?.find((t: any) => 
-            t.tokenAddress?.toLowerCase() === SPECIFIC_CONTRACTS.usdc.toLowerCase()
-          )
-          if (usdcToken) {
-            console.log('🔍 Alchemy USDC data:', {
-              alchemyBalance: usdcToken.tokenBalance,
-              alchemyFormatted: usdcToken.tokenBalance ? (Number(usdcToken.tokenBalance) / 1_000_000).toFixed(6) : '0',
-              contractBalance: usdcBalance.toString(),
-              contractFormatted: formattedUsdcBalance
-            })
-          } else {
-            console.log('🔍 USDC not found in Alchemy response - user may have 0 balance or token not indexed')
+      // Debug: For specific context, verify with Alchemy API
+      if (context === 'specific') {
+        try {
+          const alchemyResponse = await fetch(`/api/alchemy/fungible?address=${addressToQuery}`)
+          if (alchemyResponse.ok) {
+            const alchemyData = await alchemyResponse.json()
+            const usdcToken = alchemyData.data?.tokens?.find((t: any) => 
+              t.tokenAddress?.toLowerCase() === SPECIFIC_CONTRACTS.usdc.toLowerCase()
+            )
+            if (usdcToken) {
+              console.log('🔍 Alchemy USDC data:', {
+                alchemyBalance: usdcToken.tokenBalance,
+                alchemyFormatted: usdcToken.tokenBalance ? (Number(usdcToken.tokenBalance) / 1_000_000).toFixed(6) : '0',
+                contractBalance: usdcBalance.toString(),
+                contractFormatted: formattedUsdcBalance
+              })
+            } else {
+              console.log('🔍 USDC not found in Alchemy response - user may have 0 balance or token not indexed')
+            }
           }
+        } catch (alchemyError) {
+          console.log('🔍 Alchemy verification failed (non-critical):', alchemyError)
         }
-      } catch (alchemyError) {
-        console.log('🔍 Alchemy verification failed (non-critical):', alchemyError)
       }
 
       setErc1155Balance({
@@ -283,7 +262,7 @@ export const useTokenOperations = ({
         stack: error instanceof Error ? error.stack : undefined
       })
     }
-  }, [context, contractAddress, tokenId, user?.wallet?.address, publicClient])
+  }, [context, contractAddress, tokenId, user?.wallet?.address, tbaAddress, publicClient])
 
   /**
    * Fetch token balance based on context and token type
@@ -298,8 +277,8 @@ export const useTokenOperations = ({
     // Skip balance check for grid/list variants without initial balance
     if (variant === 'grid' || variant === 'list') return
     
-    // Use ERC1155 balance fetching for specific context
-    if (context === 'specific') {
+    // Use ERC1155 balance fetching for specific context OR tokenbound ERC1155
+    if (context === 'specific' || (context === 'tokenbound' && tokenType === 'erc1155')) {
       return fetchERC1155Balances()
     }
     
@@ -312,7 +291,7 @@ export const useTokenOperations = ({
           return
         }
 
-        // Handle different token types for tokenbound accounts
+        // Handle different token types for tokenbound accounts (non-ERC1155)
         if (tokenType === 'native') {
           // For native ETH, use getBalance
           const balance = await publicClient.getBalance({
@@ -326,15 +305,6 @@ export const useTokenOperations = ({
             abi: erc20Abi,
             functionName: 'balanceOf',
             args: [tbaAddress],
-          })
-          setTokenBalance(balance as bigint)
-        } else if (tokenType === 'erc1155' && contractAddress && tokenId) {
-          // For ERC1155 tokens
-          const balance = await publicClient.readContract({
-            address: contractAddress,
-            abi: ZORA_1155_ABI,
-            functionName: 'balanceOf',
-            args: [tbaAddress, BigInt(tokenId)]
           })
           setTokenBalance(balance as bigint)
         } else if (tokenType === 'erc721' && contractAddress) {
@@ -381,21 +351,14 @@ export const useTokenOperations = ({
     variant, 
     initialBalance,
     context, 
+    tokenType,
     fetchERC1155Balances, 
     user?.wallet?.address, 
     tbaAddress, 
-    tokenType, 
     contractAddress, 
     tokenId, 
     publicClient
   ])
-
-  // Set initial balance on mount if provided
-  useEffect(() => {
-    if (initialBalance && (variant === 'grid' || variant === 'list')) {
-      setTokenBalance(BigInt(initialBalance))
-    }
-  }, [initialBalance, variant])
 
   /**
    * Check USDC approval for ERC1155 operations
@@ -478,8 +441,9 @@ export const useTokenOperations = ({
           ...certificates.map((c: any) => c.contract_address.toLowerCase())
         ])
 
-        // Get user's wallet balances
-        const alchemyRes = await fetch(`/api/alchemy/fungible?address=${user.wallet.address}`)
+        // Get balances for the appropriate address (TBA for tokenbound, user wallet for others)
+        const addressToQuery = context === 'tokenbound' && tbaAddress ? tbaAddress : user.wallet.address
+        const alchemyRes = await fetch(`/api/alchemy/fungible?address=${addressToQuery}`)
         if (!alchemyRes.ok) throw new Error('Failed to fetch wallet balances')
         
         const alchemyData = await alchemyRes.json()
@@ -487,8 +451,11 @@ export const useTokenOperations = ({
         // Filter and map tokens
         const tokens: TokenInfo[] = alchemyData.data.tokens
           .filter((t: any) => {
-            // Always include ETH
-            if (!t.tokenAddress) return true
+            // Handle ETH case - exclude if we're buying ETH
+            if (!t.tokenAddress) {
+              const ethPlaceholder = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
+              return contractAddress.toLowerCase() !== ethPlaceholder.toLowerCase()
+            }
             // For other tokens: must be supported and not the destination token
             return supportedTokens.has(t.tokenAddress.toLowerCase()) &&
                    t.tokenAddress.toLowerCase() !== contractAddress.toLowerCase()
@@ -591,7 +558,7 @@ export const useTokenOperations = ({
     } finally {
       setIsLoadingTokens(false)
     }
-  }, [authenticated, user?.wallet?.address, contractAddress])
+  }, [authenticated, user?.wallet?.address, contractAddress, context, tbaAddress])
 
   /**
    * Reset modal state
@@ -736,26 +703,7 @@ export const useTokenOperations = ({
     getQuote()
   }, [debouncedAmount, selectedToken, authenticated, user?.wallet?.address, contractAddress, amountError, availableTokens])
 
-  /**
-   * Execute buy operation (context-aware)
-   */
-  const executeBuy = useCallback(async (amount: string, selectedToken?: TokenInfo): Promise<void> => {
-    if (context === 'specific') {
-      // For specific context, redirect to ERC1155 buy logic
-      // We'll handle this by calling the ERC1155 buy logic directly
-      throw new Error('Use executeERC1155Buy for specific context')
-    } else {
-      // For general context, we would need to implement ERC20 buy via swap
-      // This would require selectedToken to be provided
-      if (!selectedToken) {
-        throw new Error('Token selection required for buy operation')
-      }
-      
-      // This would be implemented similar to executeTokenSwap but as a buy operation
-      // For now, throwing an error as this needs 0x swap integration
-      throw new Error('Buy operation for general context not yet implemented')
-    }
-  }, [context])
+  // We'll define executeBuy after executeTokenSwap to avoid reference issues
 
   /**
    * Handle account selection and fetch TBA address
@@ -1024,7 +972,12 @@ export const useTokenOperations = ({
     try {
       const sellToken = contractAddress // Current token
       const buyToken = selectedToken.address // Target token
-      const sellAmount = parseTokenAmount(amount, 'erc20', 18).toString() // Current token amount
+      
+      // Determine the correct token type for parsing the sell amount
+      // For native ETH, contractAddress will be the ETH placeholder address
+      const isSellingEth = sellToken.toLowerCase() === '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'.toLowerCase()
+      const sellTokenType = isSellingEth ? 'native' : (tokenType || 'erc20')
+      const sellAmount = parseTokenAmount(amount, sellTokenType, 18).toString()
 
       updateTransactionToast(toastId, 'executing swap...')
       
@@ -1053,14 +1006,27 @@ export const useTokenOperations = ({
       setIsSwapping(false)
       setCurrentToast(null)
     }
-  }, [contractAddress, tokenSymbol, user, fetchTokenBalance, resetModalState])
+  }, [contractAddress, tokenType, tokenSymbol, user, fetchTokenBalance, resetModalState])
 
   /**
    * Execute ERC1155 buy operation (primary mint with USDC)
    */
   const executeERC1155Buy = useCallback(async (amount: string): Promise<void> => {
-    if (!amount || context !== 'specific' || !tokenId || !pricePerToken) {
-      throw new Error('Amount and ERC1155 context required')
+    console.log('🔍 executeERC1155Buy called with:', {
+      amount,
+      tokenId,
+      pricePerToken: pricePerToken?.toString(),
+      context,
+      primaryMintActive
+    })
+    
+    if (!amount || !tokenId || !pricePerToken) {
+      console.error('❌ Missing required parameters:', {
+        hasAmount: !!amount,
+        hasTokenId: !!tokenId,
+        hasPricePerToken: !!pricePerToken
+      })
+      throw new Error('Amount, tokenId, and price required for ERC1155 buy')
     }
 
     if (!primaryMintActive) {
@@ -1072,11 +1038,6 @@ export const useTokenOperations = ({
     setCurrentToast(toastId)
 
     try {
-      const walletClient = createWalletClient({
-        chain: base,
-        transport: custom(window.ethereum)
-      })
-
       const quantity = BigInt(Math.floor(Number(amount)))
       
       // Check supply limits
@@ -1091,68 +1052,222 @@ export const useTokenOperations = ({
         throw new Error('Insufficient USDC balance')
       }
 
-      // Check if approval is needed
-      const needsApproval = !(await checkUsdcApproval(totalPrice))
+      if (context === 'tokenbound') {
+        // Execute through tokenbound account
+        if (!tbaAddress) {
+          throw new Error('TBA address required for tokenbound operations')
+        }
 
-      if (needsApproval) {
-        updateTransactionToast(toastId, 'approving USDC...')
+        const walletClient = await getWalletClient()
+        const tokenboundClient = createTokenboundClient(walletClient)
 
-        // Approve USDC
-        const approveHash = await walletClient.writeContract({
+        // Check if TBA has approved the minter
+        const allowance = await publicClient.readContract({
           address: SPECIFIC_CONTRACTS.usdc,
           abi: [
             {
               inputs: [
-                { name: 'spender', type: 'address' },
-                { name: 'amount', type: 'uint256' }
+                { name: 'owner', type: 'address' },
+                { name: 'spender', type: 'address' }
               ],
-              name: 'approve',
-              outputs: [{ type: 'bool' }],
-              stateMutability: 'nonpayable',
+              name: 'allowance',
+              outputs: [{ type: 'uint256' }],
+              stateMutability: 'view',
               type: 'function'
             }
           ],
-          functionName: 'approve',
-          args: [SPECIFIC_CONTRACTS.erc20Minter, maxUint256],
-          account: user!.wallet!.address as `0x${string}`
+          functionName: 'allowance',
+          args: [tbaAddress, SPECIFIC_CONTRACTS.erc20Minter]
+        }) as bigint
+
+        console.log('🔍 TBA USDC approval check:', {
+          tbaAddress,
+          minter: SPECIFIC_CONTRACTS.erc20Minter,
+          currentAllowance: allowance.toString(),
+          requiredAmount: totalPrice.toString(),
+          needsApproval: allowance < totalPrice
         })
 
-        await publicClient.waitForTransactionReceipt({ hash: approveHash })
+        if (allowance < totalPrice) {
+          updateTransactionToast(toastId, 'approving USDC from tokenbound account...')
+          
+          console.log('🔵 Executing TBA USDC approval...')
 
-        updateTransactionToast(toastId, 'USDC approved! Click ENSURE again to mint.', 'success')
-        setIsLoading(false)
-        setCurrentToast(null)
-        return
+          // Approve USDC through tokenbound account
+          const approveHash = await tokenboundClient.execute({
+            account: tbaAddress,
+            to: SPECIFIC_CONTRACTS.usdc,
+            value: BigInt(0),
+            data: encodeFunctionData({
+              abi: [
+                {
+                  inputs: [
+                    { name: 'spender', type: 'address' },
+                    { name: 'amount', type: 'uint256' }
+                  ],
+                  name: 'approve',
+                  outputs: [{ type: 'bool' }],
+                  stateMutability: 'nonpayable',
+                  type: 'function'
+                }
+              ],
+              functionName: 'approve',
+              args: [SPECIFIC_CONTRACTS.erc20Minter, maxUint256]
+            })
+          })
+
+          console.log('🔵 TBA approval transaction sent:', approveHash)
+          await publicClient.waitForTransactionReceipt({ hash: approveHash })
+          console.log('✅ TBA approval confirmed')
+          
+          // Add delay for network propagation and rate limiting
+          console.log('🔵 Waiting for approval to propagate...')
+          updateTransactionToast(toastId, 'approval confirmed, preparing mint transaction...')
+          await new Promise(resolve => setTimeout(resolve, 3000)) // 3 second delay for rate limiting
+          
+          // Verify approval was successful
+          const newAllowance = await publicClient.readContract({
+            address: SPECIFIC_CONTRACTS.usdc,
+            abi: [
+              {
+                inputs: [
+                  { name: 'owner', type: 'address' },
+                  { name: 'spender', type: 'address' }
+                ],
+                name: 'allowance',
+                outputs: [{ type: 'uint256' }],
+                stateMutability: 'view',
+                type: 'function'
+              }
+            ],
+            functionName: 'allowance',
+            args: [tbaAddress, SPECIFIC_CONTRACTS.erc20Minter]
+          }) as bigint
+          
+          console.log('✅ Verified new allowance:', newAllowance.toString())
+        }
+
+        updateTransactionToast(toastId, 'confirming purchase...')
+
+        console.log('🔵 Executing TBA mint transaction:', {
+          account: tbaAddress,
+          to: SPECIFIC_CONTRACTS.erc20Minter,
+          mintTo: tbaAddress,
+          quantity: quantity.toString(),
+          tokenAddress: contractAddress,
+          tokenId: tokenId,
+          totalPrice: totalPrice.toString(),
+          currency: SPECIFIC_CONTRACTS.usdc,
+          mintReferral: SPECIFIC_CONTRACTS.mintReferral
+        })
+
+        // Execute mint through tokenbound account
+        const hash = await tokenboundClient.execute({
+          account: tbaAddress,
+          to: SPECIFIC_CONTRACTS.erc20Minter,
+          value: BigInt(0),
+          data: encodeFunctionData({
+            abi: ZORA_ERC20_MINTER_ABI,
+            functionName: 'mint',
+            args: [
+              tbaAddress,                       // mintTo (TBA receives the tokens)
+              quantity,                         // quantity
+              contractAddress,                  // tokenAddress
+              BigInt(tokenId),                  // tokenId
+              totalPrice,                       // totalValue
+              SPECIFIC_CONTRACTS.usdc,          // currency
+              SPECIFIC_CONTRACTS.mintReferral,  // mintReferral
+              ''                                // comment
+            ]
+          })
+        })
+        
+        console.log('🔵 TBA mint transaction sent:', hash)
+        await publicClient.waitForTransactionReceipt({ hash })
+        console.log('✅ TBA mint confirmed')
+        
+        successToast(toastId, 'buy', hash)
+        await fetchTokenBalance()
+        resetModalState()
+
+      } else {
+        // Execute through user wallet (specific context)
+        const walletClient = createWalletClient({
+          chain: base,
+          transport: custom(window.ethereum)
+        })
+
+        // Check if approval is needed
+        const needsApproval = !(await checkUsdcApproval(totalPrice))
+
+        if (needsApproval) {
+          updateTransactionToast(toastId, 'approving USDC...')
+
+          // Approve USDC
+          const approveHash = await walletClient.writeContract({
+            address: SPECIFIC_CONTRACTS.usdc,
+            abi: [
+              {
+                inputs: [
+                  { name: 'spender', type: 'address' },
+                  { name: 'amount', type: 'uint256' }
+                ],
+                name: 'approve',
+                outputs: [{ type: 'bool' }],
+                stateMutability: 'nonpayable',
+                type: 'function'
+              }
+            ],
+            functionName: 'approve',
+            args: [SPECIFIC_CONTRACTS.erc20Minter, maxUint256],
+            account: user!.wallet!.address as `0x${string}`
+          })
+
+          await publicClient.waitForTransactionReceipt({ hash: approveHash })
+
+          updateTransactionToast(toastId, 'USDC approved! Click ENSURE again to mint.', 'success')
+          setIsLoading(false)
+          setCurrentToast(null)
+          return
+        }
+
+        // Proceed with mint
+        updateTransactionToast(toastId, 'confirming purchase...')
+
+        const hash = await walletClient.writeContract({
+          address: SPECIFIC_CONTRACTS.erc20Minter,
+          abi: ZORA_ERC20_MINTER_ABI,
+          functionName: 'mint',
+          args: [
+            user!.wallet!.address,        // mintTo
+            quantity,                     // quantity
+            contractAddress,              // tokenAddress
+            BigInt(tokenId),              // tokenId
+            totalPrice,                   // totalValue
+            SPECIFIC_CONTRACTS.usdc,      // currency
+            SPECIFIC_CONTRACTS.mintReferral, // mintReferral
+            ''                            // comment
+          ],
+          chain: base,
+          account: user!.wallet!.address as `0x${string}`
+        })
+        
+        await publicClient.waitForTransactionReceipt({ hash })
+        
+        successToast(toastId, 'buy', hash)
+        await fetchTokenBalance()
+        resetModalState()
       }
-
-      // Proceed with mint
-      updateTransactionToast(toastId, 'confirming purchase...')
-
-      const hash = await walletClient.writeContract({
-        address: SPECIFIC_CONTRACTS.erc20Minter,
-        abi: ZORA_ERC20_MINTER_ABI,
-        functionName: 'mint',
-        args: [
-          user!.wallet!.address,        // mintTo
-          quantity,                     // quantity
-          contractAddress,              // tokenAddress
-          BigInt(tokenId),              // tokenId
-          totalPrice,                   // totalValue
-          SPECIFIC_CONTRACTS.usdc,      // currency
-          SPECIFIC_CONTRACTS.mintReferral, // mintReferral
-          ''                            // comment
-        ],
-        chain: base,
-        account: user!.wallet!.address as `0x${string}`
-      })
-      
-      await publicClient.waitForTransactionReceipt({ hash })
-      
-      successToast(toastId, 'buy', hash)
-      await fetchTokenBalance()
-      resetModalState()
     } catch (error: any) {
       console.error('ERC1155 buy failed:', error)
+      console.error('Error details:', {
+        message: error?.message,
+        code: error?.code,
+        data: error?.data,
+        cause: error?.cause,
+        stack: error?.stack?.split('\n').slice(0, 5)
+      })
+      
       if (error?.code === 4001 || error?.message?.includes('rejected')) {
         errorToast(toastId, 'Transaction cancelled', 'Buy cancelled')
       } else {
@@ -1163,7 +1278,20 @@ export const useTokenOperations = ({
       setIsLoading(false)
       setCurrentToast(null)
     }
-  }, [context, tokenId, pricePerToken, primaryMintActive, maxSupply, totalMinted, erc1155Balance.usdcBalance, checkUsdcApproval, contractAddress, user, publicClient, fetchTokenBalance, resetModalState])
+  }, [context, tbaAddress, tokenId, pricePerToken, primaryMintActive, maxSupply, totalMinted, erc1155Balance.usdcBalance, checkUsdcApproval, contractAddress, user, publicClient, fetchTokenBalance, resetModalState, getWalletClient])
+
+  /**
+   * Execute buy operation for non-ERC1155 tokens (general context and tokenbound ERC20/native)
+   */
+  const executeBuy = useCallback(async (amount: string, selectedToken?: TokenInfo): Promise<void> => {
+    if (context === 'tokenbound' && tokenType === 'erc1155') {
+      // This should not happen as tokenbound ERC1155 uses executeERC1155Buy
+      throw new Error('Use executeERC1155Buy for tokenbound ERC1155 operations')
+    }
+    
+    // For general context and tokenbound ERC20/native, implement basic buy logic
+    throw new Error('Buy operation for this context not yet implemented')
+  }, [context, tokenType])
 
   /**
    * Execute ERC1155 burn operation (transfer to proceeds address)
@@ -1318,6 +1446,7 @@ export const useTokenOperations = ({
     // ERC1155 specific state
     erc1155Balance,
     usdcBalance,
+    setErc1155Balance,
     
     // ERC1155 specific functions
     getUsdcOperationData,

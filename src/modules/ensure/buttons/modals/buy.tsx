@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { TokenInfo, ButtonContext } from '../types'
+import type { TokenInfo, ButtonContext, TokenType } from '../types'
 import { handleAmountChange } from '../utils/input'
 import { formatNumber, getTokenDecimals } from '../utils/formatting'
 import { getDefaultTokenImage } from '../utils/images'
@@ -29,6 +29,7 @@ interface BuyModalProps {
   tokenName?: string
   imageUrl?: string
   context: ButtonContext
+  tokenType?: TokenType
   availableTokens: TokenInfo[]
   isLoadingTokens: boolean
   tokenImages: Record<string, string>
@@ -58,6 +59,7 @@ export function BuyModal({
   tokenName,
   imageUrl = '/assets/no-image-found.png',
   context,
+  tokenType,
   availableTokens,
   isLoadingTokens,
   tokenImages,
@@ -86,75 +88,26 @@ export function BuyModal({
   // Helper function to get appropriate display name based on token type
   const getDisplayName = () => {
     // For buy modal, we're always dealing with the target token
-    // context === 'specific' means ERC1155, otherwise use symbol
-    if (context === 'specific') {
+    // context === 'specific' or tokenbound ERC1155 means ERC1155, otherwise use symbol
+    if (context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) {
       return tokenName || tokenSymbol
     }
     return tokenSymbol
   }
 
-  // Show placeholder for tokenbound context
-  if (context === 'tokenbound') {
-    return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[400px] bg-black/95 border border-gray-800 shadow-xl backdrop-blur-xl">
-          <DialogHeader className="border-b border-gray-800 pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col gap-2">
-                <DialogTitle className="text-xl font-bold text-white">
-                  ensure
-                </DialogTitle>
-                <div className="text-3xl font-bold text-white">
-                  {getDisplayName()}
-                </div>
-              </div>
-              <div className="relative w-20 h-20 rounded-lg overflow-hidden">
-                <Image
-                  src={imageUrl}
-                  alt={tokenSymbol}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-            </div>
-          </DialogHeader>
-
-          <div className="py-8 text-center space-y-4">
-            <div className="text-6xl">💰</div>
-            <div className="space-y-2">
-              <h3 className="text-lg font-medium text-white">
-                Coming Soon
-              </h3>
-              <p className="text-gray-400 text-sm">
-                Buy operations for tokenbound accounts will be available soon.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex justify-center pt-6 border-t border-gray-800">
-            <Button 
-              onClick={onClose}
-              className="bg-gray-800 hover:bg-gray-700 text-white"
-            >
-              Close
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    )
-  }
+  // Tokenbound context now works like other contexts
 
   // Helper function for button validation
   const isButtonDisabled = () => {
     if (isLoading || !localAmount || Number(localAmount) <= 0) return true
-    if (context !== 'specific' && !selectedToken) return true
+    if (context !== 'specific' && !(context === 'tokenbound' && (tokenType as string) === 'erc1155') && !selectedToken) return true
     
-    // For ERC1155, check if there's a validation error
-    if (context === 'specific') {
+    // For ERC1155 (specific or tokenbound), check if there's a validation error
+    if (context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) {
       return !!localAmountError
     }
     
-    // For general context, check amount error
+    // For general/tokenbound ERC20 context, check amount error
     return !!amountError
   }
 
@@ -169,8 +122,8 @@ export function BuyModal({
     setLocalFormattedAmount(result.formattedValue)
     onAmountChange(result.cleanValue)
 
-    // For ERC1155 context, validate against USDC balance instead of selectedToken
-    if (context === 'specific' && result.cleanValue && pricePerToken && usdcBalance) {
+    // For ERC1155 context (specific or tokenbound), validate against USDC balance instead of selectedToken
+    if ((context === 'specific' || (context === 'tokenbound' && tokenType && (tokenType as string) === 'erc1155')) && result.cleanValue && pricePerToken && usdcBalance) {
       const quantity = BigInt(Math.floor(Number(result.cleanValue)))
       const totalCost = quantity * pricePerToken
       
@@ -209,21 +162,39 @@ export function BuyModal({
   }, [isOpen, context, usdcBalance, pricePerToken, totalPrice])
 
   const handleExecute = async () => {
-    // For specific context (ERC1155), selectedToken is optional
-    if (context === 'specific') {
-      if (!localAmount) return
+    console.log('🚀 Buy modal handleExecute called:', {
+      context,
+      tokenType,
+      localAmount,
+      selectedToken: selectedToken?.symbol,
+      isButtonDisabled: isButtonDisabled()
+    })
+    
+    // For specific context or tokenbound ERC1155, selectedToken is optional
+    if (context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) {
+      if (!localAmount) {
+        console.log('❌ No local amount provided')
+        return
+      }
       try {
+        console.log('🔵 Calling onExecute for ERC1155 context with amount:', localAmount)
         await onExecute(localAmount)
         onClose()
       } catch (error) {
+        console.error('❌ Buy modal execution error (ERC1155):', error)
         // Error handling is done in the hook
       }
     } else {
-      if (!selectedToken || !localAmount) return
+      if (!selectedToken || !localAmount) {
+        console.log('❌ Missing selectedToken or localAmount:', { selectedToken: selectedToken?.symbol, localAmount })
+        return
+      }
       try {
+        console.log('🔵 Calling onExecute for ERC20/general context:', { amount: localAmount, token: selectedToken.symbol })
         await onExecute(localAmount, selectedToken)
         onClose()
       } catch (error) {
+        console.error('❌ Buy modal execution error (ERC20/general):', error)
         // Error handling is done in the hook
       }
     }
@@ -256,8 +227,8 @@ export function BuyModal({
         <div className="py-6 space-y-6">
           {/* Main content grid */}
           <div className="space-y-4">
-            {/* ERC1155 Specific: Show USDC payment info */}
-            {context === 'specific' ? (
+            {/* ERC1155 Specific or Tokenbound ERC1155: Show USDC payment info */}
+            {(context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) ? (
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-300">
                   PAY WITH USDC
@@ -349,10 +320,10 @@ export function BuyModal({
             )}
 
             {/* Amount Input */}
-            {(context === 'specific' || selectedToken) && (
+            {((context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) || selectedToken) && (
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-300">
-                  {context === 'specific' ? 
+                  {(context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) ? 
                     `certificates to purchase` : 
                     `spend ${selectedToken?.symbol}`
                   }
@@ -361,33 +332,33 @@ export function BuyModal({
                   type="text"
                   value={localFormattedAmount}
                   onChange={(e) => handleInputChange(e.target.value)}
-                  placeholder={context === 'specific' ? 
+                  placeholder={(context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) ? 
                     'enter certificate quantity' : 
                     `enter ${selectedToken?.symbol} amount`
                   }
                   className={`bg-gray-900/50 border-gray-800 text-white placeholder:text-gray-500 h-12 text-lg font-medium ${
-                    (context === 'specific' ? localAmountError : amountError) ? 'border-red-500' : ''
+                    ((context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) ? localAmountError : amountError) ? 'border-red-500' : ''
                   }`}
                 />
-                {(context === 'specific' ? localAmountError : amountError) && (
+                {((context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) ? localAmountError : amountError) && (
                   <div className="text-sm text-red-500">
-                    {context === 'specific' ? localAmountError : amountError}
+                    {(context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) ? localAmountError : amountError}
                   </div>
                 )}
               </div>
             )}
 
             {/* Output Display */}
-            {(context === 'specific' ? localAmount : (selectedToken && localAmount)) && (
+            {((context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) ? localAmount : (selectedToken && localAmount)) && (
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-300">
-                  {context === 'specific' ? 'TOTAL COST' : 'ESTIMATED OUTPUT'}
+                  {(context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) ? 'TOTAL COST' : 'ESTIMATED OUTPUT'}
                 </label>
                 <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
-                        {context === 'specific' ? (
+                        {(context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) ? (
                           <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
                             <span className="text-xs font-bold text-white">$</span>
                           </div>
@@ -402,7 +373,7 @@ export function BuyModal({
                         )}
                       </div>
                       <span className="text-lg font-medium">
-                        {context === 'specific' ? (
+                        {(context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) ? (
                           pricePerToken && localAmount ? 
                             formatNumber(Number(BigInt(Math.floor(Number(localAmount))) * pricePerToken) / 1_000_000, 2) : 
                             '0.00'
@@ -416,7 +387,7 @@ export function BuyModal({
                       </span>
                     </div>
                     <span className="text-gray-400">
-                      {context === 'specific' ? 'USDC' : getDisplayName()}
+                      {(context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) ? 'USDC' : getDisplayName()}
                     </span>
                   </div>
                 </div>

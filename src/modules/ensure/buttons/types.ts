@@ -103,6 +103,7 @@ export interface ERC1155BalanceInfo {
 
 // Constants for specific contract operations
 export const SPECIFIC_CONTRACTS = {
+  specific: '0x7DFaa8f8E2aA32b6C2112213B395b4C9889580dd' as Address,
   usdc: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913' as Address,
   erc20Minter: '0x777777e8850d8d6d98de2b5f64fae401f96eff31' as Address,
   mintReferral: '0x3CeDe7eae1feA81b4AEFf1f348f7497e6794ff96' as Address,

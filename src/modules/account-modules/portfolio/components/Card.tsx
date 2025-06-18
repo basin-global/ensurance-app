@@ -343,6 +343,10 @@ export default function Card({
             showBalance={false}
             showBurn={token.ensurance?.isEnsuranceGeneral || token.ensurance?.isEnsuranceSpecific || false}
             initialBalance={token.balance}
+            primaryMintActive={
+              token.type === 'erc1155' && 
+              token.address.toLowerCase() === '0x7dfaa8f8e2aa32b6c2112213b395b4c9889580dd'
+            }
           />
         </div>
       </td>
