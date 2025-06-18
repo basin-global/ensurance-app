@@ -98,6 +98,7 @@ export default function PortfolioGrid({
                   isOwner={isOwner}
                   isDeployed={isDeployed}
                   showBalance={false}
+                  showBurn={token.ensurance?.isEnsuranceGeneral || token.ensurance?.isEnsuranceSpecific || false}
                   initialBalance={token.balance}
                 />
               </div>

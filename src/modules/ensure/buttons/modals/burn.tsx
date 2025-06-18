@@ -200,7 +200,7 @@ export function BurnModal({
                       <div className="text-orange-300/80 text-xs mt-1">
                         Burning permanently removes assets from circulation. 
                         This reduces total supply, making remaining assets more scarce and protecting their value.
-                        {context === 'specific' && (
+                        {(context === 'specific' || (context === 'tokenbound' && tokenType === 'erc1155')) && (
                           <>
                             {' '}Burning in this context creates{' '}
                             <a 

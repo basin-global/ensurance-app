@@ -9,7 +9,8 @@ import {
   type Address,
   maxUint256,
   formatEther,
-  formatUnits
+  formatUnits,
+  encodeFunctionData
 } from 'viem'
 import { base } from 'viem/chains'
 import { type Id } from 'react-toastify'
@@ -810,8 +811,8 @@ export const useTokenOperations = ({
       let txHash: string
 
       if (context === 'tokenbound') {
-        if (!tbaAddress) {
-          throw new Error('TBA address required for tokenbound operations')
+        if (!tbaAddress || !user?.wallet?.address) {
+          throw new Error('TBA address and user wallet required for tokenbound operations')
         }
 
         const walletClient = await getWalletClient()
@@ -937,29 +938,52 @@ export const useTokenOperations = ({
     setCurrentToast(toastId)
 
     try {
-      const client = await getWalletClient()
-      const burnAmount = parseTokenAmount(amount, 'erc20', 18)
-
       updateTransactionToast(toastId, 'confirming burn...')
 
       let txHash: string
 
       if (context === 'tokenbound') {
-        // For TBA operations, use the burn function through TokenboundClient
-        // This would need implementation in the tokenbound client, for now use write contract
-        const hash = await (client as any).writeContract({
-          address: contractAddress,
-          abi: ZORA_COIN_ABI,
-          functionName: 'burn',
-          args: [burnAmount],
-          chain: base,
-          account: tbaAddress as `0x${string}`
-        })
-        
-        await publicClient.waitForTransactionReceipt({ hash })
-        txHash = hash
+        if (!tbaAddress || !user?.wallet?.address) {
+          throw new Error('TBA address and user wallet required for tokenbound operations')
+        }
+
+        const walletClient = await getWalletClient()
+        const tokenboundActions = createTokenboundActions(walletClient, tbaAddress)
+
+        if (tokenType === 'erc20') {
+          // For general contracts (ERC20), call burn function like general context
+          // Uses V3 TokenboundClient methods: prepareExecution + execute
+          const client = createTokenboundClient(walletClient)
+          const burnAmount = parseTokenAmount(amount, 'erc20', 18)
+          
+          const hash = await client.execute({
+            account: tbaAddress as `0x${string}`,
+            to: contractAddress,
+            value: BigInt(0),
+            data: encodeFunctionData({
+              abi: ZORA_COIN_ABI,
+              functionName: 'burn',
+              args: [burnAmount]
+            })
+          })
+          txHash = hash
+        } else if (tokenType === 'erc1155' && tokenId) {
+          // For specific contracts (ERC1155), transfer to proceeds address like specific context
+          const result = await tokenboundActions.transferNFT({
+            contract_address: contractAddress,
+            token_id: tokenId,
+            contract: { type: 'ERC1155' },
+            chain: 'base'
+          } as any, SPECIFIC_CONTRACTS.proceeds, parseInt(amount))
+          txHash = result.hash
+        } else {
+          throw new Error(`Burn operation not supported for ${tokenType} tokens in tokenbound accounts`)
+        }
       } else {
-        // Standard wallet operation
+        // Standard wallet operation for general context
+        const client = await getWalletClient()
+        const burnAmount = parseTokenAmount(amount, 'erc20', 18)
+
         const hash = await (client as any).writeContract({
           address: contractAddress,
           abi: ZORA_COIN_ABI,
@@ -983,7 +1007,7 @@ export const useTokenOperations = ({
       setIsBurning(false)
       setCurrentToast(null)
     }
-  }, [getWalletClient, context, contractAddress, tbaAddress, user, publicClient, fetchTokenBalance, resetModalState])
+  }, [getWalletClient, context, contractAddress, tbaAddress, tokenType, tokenId, user, publicClient, fetchTokenBalance, resetModalState])
 
   /**
    * Execute swap operation
