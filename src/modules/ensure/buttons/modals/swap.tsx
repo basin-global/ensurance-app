@@ -79,6 +79,116 @@ export function SwapModal({
   
   const debouncedAmount = useDebounce(localAmount, 500)
 
+  // Helper function to get appropriate display name based on token type
+  const getDisplayName = () => {
+    if (tokenType === 'erc721' || tokenType === 'erc1155') {
+      return tokenName || tokenSymbol
+    }
+    return tokenSymbol
+  }
+
+  // Show placeholder for specific context (ERC1155 certificates)
+  if (context === 'specific') {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-[400px] bg-black/95 border border-gray-800 shadow-xl backdrop-blur-xl">
+          <DialogHeader className="border-b border-gray-800 pb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-2">
+                <DialogTitle className="text-xl font-bold text-white">
+                  transform
+                </DialogTitle>
+                <div className="text-3xl font-bold text-white">
+                  {getDisplayName()}
+                </div>
+              </div>
+              <div className="relative w-20 h-20 rounded-lg overflow-hidden">
+                <Image
+                  src={imageUrl}
+                  alt={tokenSymbol}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="py-8 text-center space-y-4">
+            <div className="text-6xl">🔄</div>
+            <div className="space-y-2">
+              <h3 className="text-lg font-medium text-white">
+                Coming Soon
+              </h3>
+              <p className="text-gray-400 text-sm">
+                Asset to Currency exchange will be available in a future soon.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-center pt-6 border-t border-gray-800">
+            <Button 
+              onClick={onClose}
+              className="bg-gray-800 hover:bg-gray-700 text-white"
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    )
+  }
+
+  // Show placeholder for tokenbound context
+  if (context === 'tokenbound') {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-[400px] bg-black/95 border border-gray-800 shadow-xl backdrop-blur-xl">
+          <DialogHeader className="border-b border-gray-800 pb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-2">
+                <DialogTitle className="text-xl font-bold text-white">
+                  transform
+                </DialogTitle>
+                <div className="text-3xl font-bold text-white">
+                  {getDisplayName()}
+                </div>
+              </div>
+              <div className="relative w-20 h-20 rounded-lg overflow-hidden">
+                <Image
+                  src={imageUrl}
+                  alt={tokenSymbol}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="py-8 text-center space-y-4">
+            <div className="text-6xl">🔄</div>
+            <div className="space-y-2">
+              <h3 className="text-lg font-medium text-white">
+                Coming Soon
+              </h3>
+              <p className="text-gray-400 text-sm">
+                Swap operations for tokenbound accounts will be available soon.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-center pt-6 border-t border-gray-800">
+            <Button 
+              onClick={onClose}
+              className="bg-gray-800 hover:bg-gray-700 text-white"
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    )
+  }
+
   // Handle amount input changes
   const handleInputChange = (value: string) => {
     const maxDecimals = tokenType === 'erc721' ? 0 : tokenType === 'erc1155' ? 0 : 18
@@ -212,7 +322,7 @@ export function SwapModal({
                 transform
               </DialogTitle>
               <div className="text-3xl font-bold text-white">
-                {tokenName || tokenSymbol}
+                {getDisplayName()}
               </div>
             </div>
             <div className="relative w-20 h-20 rounded-lg overflow-hidden">
@@ -234,7 +344,7 @@ export function SwapModal({
                 buy to transform
               </div>
               <p className="text-sm text-gray-400">
-                You need tokens to transform them
+                You need {getDisplayName()} to transform them
               </p>
             </div>
           ) : (
@@ -370,7 +480,7 @@ export function SwapModal({
                     <div>
                       <div className="text-blue-200 font-medium">currency exchange</div>
                       <div className="text-blue-300/80 text-xs mt-1">
-                        Exchange {tokenSymbol} for {selectedToken.symbol} at current market rates with 2% slippage protection.
+                        Exchange {getDisplayName()} for {selectedToken.symbol} at current market rates with 2% slippage protection.
                       </div>
                     </div>
                   </div>

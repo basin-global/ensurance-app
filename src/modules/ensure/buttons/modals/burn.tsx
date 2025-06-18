@@ -48,6 +48,14 @@ export function BurnModal({
   const [localFormattedAmount, setLocalFormattedAmount] = useState('')
   const [amountError, setAmountError] = useState('')
 
+  // Helper function to get appropriate display name based on token type
+  const getDisplayName = () => {
+    if (tokenType === 'erc721' || tokenType === 'erc1155') {
+      return tokenName || tokenSymbol
+    }
+    return tokenSymbol
+  }
+
   // Handle amount input changes
   const handleInputChange = (value: string) => {
     const maxDecimals = tokenType === 'erc721' ? 0 : tokenType === 'erc1155' ? 0 : 18
@@ -122,7 +130,7 @@ export function BurnModal({
                 burn
               </DialogTitle>
               <div className="text-3xl font-bold text-white">
-                {tokenName || tokenSymbol}
+                {getDisplayName()}
               </div>
             </div>
             <div className="relative w-20 h-20 rounded-lg overflow-hidden">
@@ -144,7 +152,7 @@ export function BurnModal({
                 buy to burn
               </div>
               <p className="text-sm text-gray-400">
-                You need {tokenSymbol} tokens to burn them
+                You need {getDisplayName()} tokens to burn them
               </p>
             </div>
           ) : (
@@ -170,7 +178,7 @@ export function BurnModal({
                     </div>
                   )}
                   <div className="text-sm text-gray-400">
-                    balance: {formatBalance(tokenBalance.toString(), tokenType)} {tokenSymbol}
+                    balance: {formatBalance(tokenBalance.toString(), tokenType)} {getDisplayName()}
                   </div>
                 </div>
               )}
@@ -181,20 +189,20 @@ export function BurnModal({
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-gray-400">You will burn:</span>
                     <span className="text-white">
-                      {getDisplayAmount()} {tokenSymbol}
+                      {getDisplayAmount()} {getDisplayName()}
                     </span>
                   </div>
                   
                   <div className="text-sm text-gray-400 flex items-start gap-2 mt-3 p-3 bg-orange-500/10 rounded border border-orange-500/20">
                     <Flame className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
                     <div>
-                      <div className="text-orange-200 font-medium">Permanent Action</div>
+                      <div className="text-orange-200 font-medium">Perpetual Funding</div>
                       <div className="text-orange-300/80 text-xs mt-1">
-                        Burned tokens are permanently removed from circulation and cannot be recovered. 
-                        This reduces total supply, making remaining tokens more scarce and protecting their value.
+                        Burning permanently removes assets from circulation. 
+                        This reduces total supply, making remaining assets more scarce and protecting their value.
                         {context === 'specific' && (
                           <>
-                            {' '}Burning also creates{' '}
+                            {' '}Burning in this context creates{' '}
                             <a 
                               href="https://ensurance.app/proceeds/0xa187F8CBdd36D63967c33f5BD4dD4B9ECA51270e" 
                               target="_blank" 

@@ -18,6 +18,9 @@ import { BurnModal } from './modals/burn'
 import { SwapModal } from './modals/swap'
 import { simpleErrorToast } from './utils/notifications'
 
+// ✅ Now supports tokenbound context with proper integration
+// Supports all token types: native, erc20, erc721, erc1155
+// Uses createTokenboundActions from @/lib/tokenbound.ts
 export function EnsureButtons({ 
   contractAddress,
   tokenId,
@@ -35,6 +38,7 @@ export function EnsureButtons({
   tbaAddress,
   isOwner,
   isDeployed,
+  initialBalance,
   maxSupply,
   totalMinted,
   pricePerToken,
@@ -78,8 +82,15 @@ export function EnsureButtons({
     isBurning,
     isSwapping,
     
+    // ERC1155 specific state
+    erc1155Balance,
+    usdcBalance,
+    getUsdcOperationData,
+    checkUsdcApproval,
+    
     // Actions
     fetchAvailableTokens,
+    fetchTokenBalance,
     resetModalState,
     handleAmountChange,
     handleTokenSelect,
@@ -88,15 +99,26 @@ export function EnsureButtons({
     executeBuy,
     executeSend,
     executeBurn,
-    executeSwap
+    executeSwap,
+    
+    // ERC1155 specific actions
+    executeERC1155Buy,
+    executeERC1155Burn
   } = useTokenOperations({
     context,
     contractAddress,
     tokenId,
     tokenSymbol,
     tokenName,
+    tokenType,
     tbaAddress,
-    variant
+    variant,
+    initialBalance,
+    // ERC1155 specific props
+    maxSupply,
+    totalMinted,
+    pricePerToken,
+    primaryMintActive
   })
 
   const iconSize = size === 'sm' ? 'w-6 h-6' : 'w-10 h-10'
@@ -118,9 +140,14 @@ export function EnsureButtons({
       return // Don't show buttons if not owner or not deployed
     }
 
-    // Reset modal state and fetch tokens for the operation
+    // Reset modal state and fetch fresh data
     resetModalState()
-    await fetchAvailableTokens(type)
+    
+    // Fetch balances and tokens in parallel
+    await Promise.all([
+      fetchTokenBalance(), // This will call fetchERC1155Balances for specific context
+      fetchAvailableTokens(type)
+    ])
     
     setCurrentOperation(type)
     setModalOpen(true)
@@ -139,92 +166,97 @@ export function EnsureButtons({
 
   return (
     <>
-      <div className={cn(
-        "flex gap-8",
-        variant === 'list' ? "opacity-0 group-hover:opacity-100 transition-opacity" : ""
-      )}>
-        {/* Ensure (buy) button - green */}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={() => handleOpenModal('buy')}
-                className="flex items-center gap-2 text-gray-300 hover:text-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={context === 'specific' && !primaryMintActive}
-              >
-                <PlusCircle className={`${iconSize} stroke-[1.5] stroke-green-500 hover:stroke-green-400 transition-colors`} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>ensure (buy)</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-
-        {/* Transform (swap) button - blue */}
-        {showMinus && (
+      <div className="flex flex-col items-center gap-2">
+        <div className={cn(
+          "flex gap-8",
+          variant === 'list' ? "opacity-0 group-hover:opacity-100 transition-opacity" : ""
+        )}>
+          {/* Ensure (buy) button - green */}
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  onClick={() => handleOpenModal('swap')}
+                  onClick={() => handleOpenModal('buy')}
                   className="flex items-center gap-2 text-gray-300 hover:text-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={context === 'specific' && !primaryMintActive}
                 >
-                  <RefreshCw className={`${iconSize} stroke-[1.5] stroke-blue-500 hover:stroke-blue-400 transition-colors`} />
+                  <PlusCircle className={`${iconSize} stroke-[1.5] stroke-green-500 hover:stroke-green-400 transition-colors`} />
                 </button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>transform (swap)</p>
+                <p>ensure (buy)</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-        )}
 
-        {/* Send button - amber */}
-        {showSend && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => handleOpenModal('send')}
-                  className="flex items-center gap-2 text-gray-300 hover:text-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Send className={`${iconSize} stroke-[1.5] stroke-amber-500 hover:stroke-amber-400 transition-colors`} />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>send</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
+          {/* Transform (swap) button - blue */}
+          {showMinus && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => handleOpenModal('swap')}
+                    className="flex items-center gap-2 text-gray-300 hover:text-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <RefreshCw className={`${iconSize} stroke-[1.5] stroke-blue-500 hover:stroke-blue-400 transition-colors`} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>transform (swap)</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
 
-        {/* Burn button - orange */}
-        {showBurn && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => handleOpenModal('burn')}
-                  className="flex items-center gap-2 text-gray-300 hover:text-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Flame className={`${iconSize} stroke-[1.5] stroke-orange-500 hover:stroke-orange-400 transition-colors`} />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>burn</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          {/* Send button - amber */}
+          {showSend && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => handleOpenModal('send')}
+                    className="flex items-center gap-2 text-gray-300 hover:text-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Send className={`${iconSize} stroke-[1.5] stroke-amber-500 hover:stroke-amber-400 transition-colors`} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>send</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+
+          {/* Burn button - orange */}
+          {showBurn && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => handleOpenModal('burn')}
+                    className="flex items-center gap-2 text-gray-300 hover:text-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Flame className={`${iconSize} stroke-[1.5] stroke-orange-500 hover:stroke-orange-400 transition-colors`} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>burn</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
+
+        {/* Balance display - now below the buttons */}
+        {showBalance && (
+          <div className="text-sm text-gray-400 text-center">
+            balance: {context === 'specific' ? 
+              erc1155Balance.formattedTokenBalance : 
+              formatBalance(tokenBalance.toString(), tokenType || 'erc20')
+            }
+          </div>
         )}
       </div>
-
-      {/* Balance display */}
-      {showBalance && (
-        <div className="mt-2 text-sm text-gray-400 text-center">
-          balance: {formatBalance(tokenBalance.toString(), tokenType || 'erc20')}
-        </div>
-      )}
 
       {/* Buy Modal */}
       <BuyModal
@@ -241,12 +273,16 @@ export function EnsureButtons({
         isSimulating={isSimulating}
         onAmountChange={handleAmountChange}
         onTokenSelect={handleTokenSelect}
-        onExecute={executeBuy}
+        onExecute={context === 'specific' ? executeERC1155Buy : executeBuy}
         selectedToken={selectedToken || undefined}
         amount={amount}
         formattedAmount={formattedAmount}
         amountError={amountError}
         isLoading={isLoading}
+        // ERC1155 specific props
+        pricePerToken={pricePerToken}
+        usdcBalance={context === 'specific' ? erc1155Balance.usdcBalance : undefined}
+        totalPrice={undefined} // Will be calculated in the modal based on local amount
       />
 
       {/* Send Modal */}
@@ -258,7 +294,7 @@ export function EnsureButtons({
         imageUrl={imageUrl}
         tokenType={tokenType}
         context={context}
-        tokenBalance={tokenBalance}
+        tokenBalance={context === 'specific' ? erc1155Balance.tokenBalance : tokenBalance}
         accountSearchQuery={accountSearchQuery}
         accountSearchResults={accountSearchResults}
         isSearching={isSearching}
@@ -279,8 +315,8 @@ export function EnsureButtons({
         imageUrl={imageUrl}
         tokenType={tokenType}
         context={context}
-        tokenBalance={tokenBalance}
-        onExecute={executeBurn}
+        tokenBalance={context === 'specific' ? erc1155Balance.tokenBalance : tokenBalance}
+        onExecute={context === 'specific' ? executeERC1155Burn : executeBurn}
         isLoading={isBurning}
       />
 

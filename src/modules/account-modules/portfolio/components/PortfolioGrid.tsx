@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { identifyEnsurancePortfolioTokens } from '@/lib/ensurance';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { EnsureButtonsTokenbound } from '@/components/layout/EnsureButtonsTokenbound';
+import { EnsureButtons } from '@/modules/ensure/buttons';
 
 interface PortfolioGridProps {
   tokens: PortfolioToken[];
@@ -84,19 +84,21 @@ export default function PortfolioGrid({
             />
             {showEnsureButtons && (
               <div className="absolute bottom-4 left-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                <EnsureButtonsTokenbound
+                <EnsureButtons
                   contractAddress={token.address as `0x${string}`}
                   tokenId={token.type === 'erc721' || token.type === 'erc1155' ? (token as NFTToken).tokenId : ''}
                   tokenType={token.type}
-                  balance={token.balance?.toString()}
-                  symbol={token.symbol}
+                  tokenSymbol={token.symbol}
+                  tokenName={token.name}
                   imageUrl={token.metadata?.image || '/assets/no-image-found.png'}
                   size="sm"
                   variant="grid"
+                  context="tokenbound"
                   tbaAddress={tbaAddress as `0x${string}`}
                   isOwner={isOwner}
                   isDeployed={isDeployed}
-                  tokenName={token.name}
+                  showBalance={false}
+                  initialBalance={token.balance}
                 />
               </div>
             )}

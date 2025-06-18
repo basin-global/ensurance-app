@@ -8,12 +8,11 @@ import { getTokenInfo, type TokenDisplayInfo } from '@/modules/specific/collect'
 import { cn } from '@/lib/utils'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { MAX_SUPPLY_OPEN_EDITION } from '@/modules/specific/config'
-import { EnsureButtonsSpecific } from '@/components/layout/EnsureButtonsSpecific'
+import { EnsureButtons } from '@/modules/ensure/buttons/EnsureButtons'
 import VerificationSection from '@/components/layout/verifications/VerificationSection'
 import ReactMarkdown from 'react-markdown'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { Proceeds } from '@/modules/proceeds/components/Proceeds'
-import { TokenBalanceDisplay } from '@/components/layout/TokenBalanceDisplay'
 import { TokenPriceDisplay } from '@/components/layout/TokenPriceDisplay'
 
 const FALLBACK_IMAGE = '/assets/no-image-found.png'
@@ -358,9 +357,12 @@ export default function SpecificTokenPage({
 
                   {/* Right: Action Buttons */}
                   <div className="flex flex-row items-center justify-end flex-1">
-                    <EnsureButtonsSpecific
+                    <EnsureButtons
                       contractAddress={params.contract as `0x${string}`}
-                      tokenId={BigInt(params.tokenId)}
+                      tokenId={params.tokenId}
+                      tokenType="erc1155"
+                      context="specific"
+                      variant="page"
                       imageUrl={imageUrl}
                       tokenName={metadata?.name}
                       tokenSymbol={metadata?.name || 'Certificate'}
@@ -368,31 +370,19 @@ export default function SpecificTokenPage({
                       totalMinted={tokenInfo.totalMinted}
                       pricePerToken={tokenInfo.salesConfig?.pricePerToken}
                       primaryMintActive={true}
-                      showBalance={false}
-                      showMinus={true}
+                      showBalance={true}
+                      showSwap={true}
                       showBurn={true}
                     />
                   </div>
                 </div>
 
-                {/* Bottom row: Supply and Balance Info */}
-                <div className="grid grid-cols-2 gap-6">
-                  {/* Left: Supply Info */}
-                  <div className="flex flex-row items-center gap-x-2">
-                    <span className="text-gray-400 w-12">supply</span>
-                    <span className="font-medium text-white tabular-nums text-right" style={{ minWidth: '6em', display: 'inline-block' }}>
-                      {tokenInfo.totalMinted.toString()} / {tokenInfo.maxSupply >= MAX_SUPPLY_OPEN_EDITION - BigInt(1) ? '∞' : tokenInfo.maxSupply.toString()}
-                    </span>
-                  </div>
-
-                  {/* Right: Balance Info */}
-                  <div className="space-y-2">
-                    <TokenBalanceDisplay
-                      contractAddress={params.contract as `0x${string}`}
-                      tokenId={BigInt(params.tokenId)}
-                      tokenName={metadata?.name}
-                    />
-                  </div>
+                {/* Bottom row: Supply Info */}
+                <div className="flex flex-row items-center gap-x-2">
+                  <span className="text-gray-400 w-12">supply</span>
+                  <span className="font-medium text-white tabular-nums text-right" style={{ minWidth: '6em', display: 'inline-block' }}>
+                    {tokenInfo.totalMinted.toString()} / {tokenInfo.maxSupply >= MAX_SUPPLY_OPEN_EDITION - BigInt(1) ? '∞' : tokenInfo.maxSupply.toString()}
+                  </span>
                 </div>
               </CardContent>
             </Card>

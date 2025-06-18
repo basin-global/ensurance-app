@@ -34,7 +34,7 @@ export interface EnsureButtonsProps {
   showSend?: boolean
   showSwap?: boolean
   size?: 'sm' | 'md' | 'lg'
-  variant?: 'grid' | 'list'
+  variant?: 'grid' | 'list' | 'page'
   
   // Display options
   imageUrl?: string
@@ -47,6 +47,9 @@ export interface EnsureButtonsProps {
   tbaAddress?: Address
   isOwner?: boolean
   isDeployed?: boolean
+  
+  // Balance data (for portfolio integration)
+  initialBalance?: string
   
   // Specific token props (ERC1155)
   maxSupply?: bigint
@@ -81,3 +84,27 @@ export interface QuoteResult {
   liquidityAvailable: boolean
   error?: string
 }
+
+// New types for ERC1155/USDC operations
+export interface UsdcOperationData {
+  totalPrice: bigint
+  quantity: bigint
+  needsApproval: boolean
+  userBalance: bigint
+  pricePerToken: bigint
+}
+
+export interface ERC1155BalanceInfo {
+  tokenBalance: bigint
+  usdcBalance: bigint
+  formattedTokenBalance: string
+  formattedUsdcBalance: string 
+}
+
+// Constants for specific contract operations
+export const SPECIFIC_CONTRACTS = {
+  usdc: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913' as Address,
+  erc20Minter: '0x777777e8850d8d6d98de2b5f64fae401f96eff31' as Address,
+  mintReferral: '0x3CeDe7eae1feA81b4AEFf1f348f7497e6794ff96' as Address,
+  proceeds: '0xa187F8CBdd36D63967c33f5BD4dD4B9ECA51270e' as Address
+} as const

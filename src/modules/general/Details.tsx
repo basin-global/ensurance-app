@@ -307,6 +307,7 @@ export default function Details({
                   tokenName={certificateData?.name}
                   imageUrl={String(convertIpfsUrl(metadata?.image ?? '') || FALLBACK_IMAGE)}
                   context="general"
+                  variant="page"
                   showMinus={true}
                   showBurn={true}
                   showBalance={true}

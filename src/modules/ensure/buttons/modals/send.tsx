@@ -67,6 +67,14 @@ export function SendModal({
   const [localFormattedAmount, setLocalFormattedAmount] = useState('')
   const [amountError, setAmountError] = useState('')
 
+  // Helper function to get appropriate display name based on token type
+  const getDisplayName = () => {
+    if (tokenType === 'erc721' || tokenType === 'erc1155') {
+      return tokenName || tokenSymbol
+    }
+    return tokenSymbol
+  }
+
   // Handle amount input changes
   const handleInputChange = (value: string) => {
     const maxDecimals = tokenType === 'erc721' ? 0 : tokenType === 'erc1155' ? 0 : 18
@@ -147,8 +155,13 @@ export function SendModal({
                 send
               </DialogTitle>
               <div className="text-3xl font-bold text-white">
-                {tokenName || tokenSymbol}
+                {getDisplayName()}
               </div>
+              {tokenName && tokenName !== tokenSymbol && (
+                <div className="text-sm text-gray-400">
+                  {tokenName}
+                </div>
+              )}
             </div>
             <div className="relative w-20 h-20 rounded-lg overflow-hidden">
               <Image
@@ -255,10 +268,7 @@ export function SendModal({
                 </div>
               )}
               <div className="text-sm text-gray-400">
-                balance: {formatBalance(tokenBalance.toString(), tokenType)} {tokenSymbol}
-                {tokenName && (
-                  <div className="text-xs text-gray-500 font-mono mt-0.5">{tokenName}</div>
-                )}
+                balance: {formatBalance(tokenBalance.toString(), tokenType)} {getDisplayName()}
               </div>
             </div>
           )}
@@ -269,7 +279,7 @@ export function SendModal({
               <div className="flex justify-between items-center">
                 <span className="text-gray-400">You will send:</span>
                 <span className="text-white">
-                  {getDisplayAmount()} {tokenSymbol}
+                  {getDisplayAmount()} {getDisplayName()}
                 </span>
               </div>
             </div>

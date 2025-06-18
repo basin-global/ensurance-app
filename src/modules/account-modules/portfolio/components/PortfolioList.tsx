@@ -3,7 +3,6 @@ import Card from './Card';
 import { identifyEnsurancePortfolioTokens } from '@/lib/ensurance';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { EnsureButtonsTokenbound } from '@/components/layout/EnsureButtonsTokenbound';
 import Link from 'next/link';
 
 interface PortfolioListProps {

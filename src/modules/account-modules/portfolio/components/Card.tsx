@@ -4,7 +4,7 @@ import { formatUnits } from 'viem';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { EnsureButtonsTokenbound } from '@/components/layout/EnsureButtonsTokenbound';
+import { EnsureButtons } from '@/modules/ensure/buttons';
 
 interface CardProps {
   token: PortfolioToken;
@@ -327,22 +327,24 @@ export default function Card({
       </td>
       <td className="py-4 pl-4">
         <div className="flex justify-end">
-          <EnsureButtonsTokenbound
+          <EnsureButtons
             contractAddress={token.address as `0x${string}`}
             tokenId={token.type === 'erc721' || token.type === 'erc1155' ? (token as NFTToken).tokenId : ''}
             tokenType={token.type}
-            balance={token.balance?.toString()}
-            symbol={token.symbol}
+            tokenSymbol={token.symbol}
+            tokenName={token.name}
             imageUrl={getTokenImage(token) || '/assets/no-image-found.png'}
             size="sm"
             variant={variant === 'overview' ? 'list' : variant}
+            context="tokenbound"
             tbaAddress={tbaAddress as `0x${string}`}
             isOwner={isOwner}
             isDeployed={isDeployed}
-            tokenName={token.name}
+            showBalance={false}
+            initialBalance={token.balance}
           />
         </div>
       </td>
     </tr>
   );
-} 
+}
