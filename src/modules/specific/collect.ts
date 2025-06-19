@@ -225,36 +225,62 @@ export async function getContractTokens(
       tokenContract: contractAddress
     })
 
-    return response.tokens.map(token => {
-      // Type assertion for the raw token data
-      const rawToken = token as unknown as {
-        token: {
-          contract: { address: string }
-          creator: `0x${string}`
-          maxSupply: bigint
-          mintType: '1155' | '721' | 'premint'
-          tokenURI: string
-          totalMinted: bigint
-          salesConfig?: {
-            pricePerToken: bigint
-            saleEnd: bigint
-            saleStart: bigint
-            fundsRecipient: string
+    // Fetch complete token data for each token to get salesConfig
+    const tokensWithFullData = await Promise.all(
+      response.tokens.map(async (token) => {
+        try {
+          // Extract tokenId from the token data
+          const tokenId = (token as any).tokenId?.toString() || 
+                         (token as any).token?.tokenId?.toString()
+          
+          if (!tokenId) {
+            console.warn('Could not extract tokenId from token:', token)
+            return null
           }
-        }
-      }
 
-      return {
-        contract: rawToken.token.contract.address,
-        creator: rawToken.token.creator,
-        maxSupply: rawToken.token.maxSupply,
-        mintType: rawToken.token.mintType,
-        tokenURI: rawToken.token.tokenURI,
-        totalMinted: rawToken.token.totalMinted,
-        primaryMintActive: true,
-        salesConfig: rawToken.token.salesConfig
-      }
-    })
+          // Fetch complete token data using getToken
+          const fullTokenData = await getToken({
+            publicClient,
+            tokenContract: contractAddress,
+            mintType: '1155',
+            tokenId: BigInt(tokenId)
+          })
+
+          // Type assertion for the raw token data
+          const rawToken = fullTokenData.token as unknown as {
+            contract: { address: string }
+            creator: `0x${string}`
+            maxSupply: bigint
+            mintType: '1155' | '721' | 'premint'
+            tokenURI: string
+            totalMinted: bigint
+            salesConfig?: {
+              pricePerToken: bigint
+              saleEnd: bigint
+              saleStart: bigint
+              fundsRecipient: string
+            }
+          }
+
+          return {
+            contract: rawToken.contract.address,
+            creator: rawToken.creator,
+            maxSupply: rawToken.maxSupply,
+            mintType: rawToken.mintType,
+            tokenURI: rawToken.tokenURI,
+            totalMinted: rawToken.totalMinted,
+            primaryMintActive: true,
+            salesConfig: rawToken.salesConfig
+          }
+        } catch (error) {
+          console.error('Error fetching full token data for token:', token, error)
+          return null
+        }
+      })
+    )
+
+    // Filter out any null results
+    return tokensWithFullData.filter(token => token !== null) as TokenDisplayInfo[]
   } catch (error) {
     console.error('Error fetching contract tokens:', error)
     return []

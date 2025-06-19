@@ -5,7 +5,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { identifyEnsurancePortfolioTokens } from '@/lib/ensurance';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { EnsureButtons } from '@/modules/ensure/buttons';
+import { EnsureButtonsLite } from '@/modules/ensure/buttons';
+
 import { CONTRACTS } from '@/modules/specific/config';
 
 interface PortfolioGridProps {
@@ -13,7 +14,7 @@ interface PortfolioGridProps {
   isLoading?: boolean;
   address: string;
   context: 'tokenbound' | 'operator';
-  showEnsureButtons?: boolean;
+
   isOwner?: boolean;
   isDeployed?: boolean;
 }
@@ -23,7 +24,7 @@ export default function PortfolioGrid({
   isLoading = false, 
   address, 
   context,
-  showEnsureButtons = true, 
+ 
   isOwner = false,
   isDeployed = false 
 }: PortfolioGridProps) {
@@ -86,32 +87,28 @@ export default function PortfolioGrid({
               isOwner={isOwner}
               isDeployed={isDeployed}
             />
-                        {showEnsureButtons && !(token.type === 'erc1155' && token.address.toLowerCase() !== CONTRACTS.specific.toLowerCase()) && (
-              <div className="absolute bottom-4 left-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="bg-black/80 backdrop-blur-sm rounded-lg p-2 flex justify-center">
-                  <EnsureButtons
-                    contractAddress={token.address}
-                    tokenId={token.type === 'erc721' || token.type === 'erc1155' ? (token as NFTToken).tokenId : ''}
-                    tokenType={token.type}
-                    tokenSymbol={token.symbol}
-                    tokenName={token.name}
-                    imageUrl={token.metadata?.image || '/assets/no-image-found.png'}
-                    context={
-                      token.type === 'erc1155' && token.address.toLowerCase() === CONTRACTS.specific.toLowerCase()
-                        ? 'specific'
-                        : context
-                    }
-                    tbaAddress={context === 'tokenbound' ? address : undefined}
-                    variant="portfolio"
-                    className="text-sm"
-                    primaryMintActive={
-                      token.type === 'erc1155' && 
-                      token.address.toLowerCase() === CONTRACTS.specific.toLowerCase()
-                    }
-                  />
-                </div>
-              </div>
-            )}
+            
+            {/* Ensure Buttons - only show on hover */}
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex justify-center mt-2">
+              <EnsureButtonsLite
+                tokenSymbol={token.symbol}
+                tokenName={token.name}
+                imageUrl={token.type === 'erc721' || token.type === 'erc1155' ? 
+                  (token as any).nftMetadata?.image?.cachedUrl || (token as any).metadata?.image : 
+                  token.metadata?.image
+                }
+                contractAddress={token.type === 'native' ? '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE' : token.address}
+                tokenId={(token.type === 'erc721' || token.type === 'erc1155') ? (token as any).tokenId : undefined}
+                tokenType={token.type as any}
+                context={context}
+                tbaAddress={context === 'tokenbound' ? address : undefined}
+                variant="grid"
+                showBuy={true}
+                showSwap={true}
+                showSend={true}
+                showBurn={true}
+              />
+            </div>
           </CardContent>
         </UICard>
       ))}

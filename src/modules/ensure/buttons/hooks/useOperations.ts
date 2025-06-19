@@ -91,10 +91,13 @@ export const useOperations = ({
       const toastContext = context === 'tokenbound' ? 'tokenbound' : 'regular'
       stepTransactionToast(toastId, 'setting up transaction', toastContext)
 
+      // Debug log for tokenId
+      console.log('🔍 Buy operation - tokenId:', tokenId, 'tokenType:', tokenType)
+
       // Build operation parameters
       const params = {
         contractAddress,
-        tokenId: tokenId || '',
+        tokenId: tokenId || '0', // Use '0' as fallback for non-ERC1155 tokens
         amount,
         selectedToken,
         userAddress: user!.wallet!.address!,
@@ -104,11 +107,13 @@ export const useOperations = ({
       }
 
       // Build the transaction using operations layer
-      // For buy operations, use the operation type based on what we're spending (selectedToken)
-      // not what we're buying (tokenType)
-      const operationType = selectedToken 
-        ? (selectedToken.type === 'native' ? 'native' : 'erc20')
-        : tokenType! // For ERC1155 direct purchases, use target tokenType
+      // For ERC1155 tokens, always use erc1155 operations regardless of spending token
+      // For other tokens, use operation type based on what we're spending
+      const operationType = tokenType === 'erc1155' 
+        ? 'erc1155'
+        : selectedToken 
+          ? (selectedToken.type === 'native' ? 'native' : 'erc20')
+          : tokenType!
       
       const tokenOps = getTokenOperations(operationType)
       const operation = await tokenOps.buildBuyTransaction(params)

@@ -23,7 +23,7 @@ export function usePortfolioData(tbaAddress: string) {
         setError(null);
 
         // First get the spam list
-        const spamResponse = await fetch('/api/config/spam');
+        const spamResponse = await fetch('/api/utilities/spam');
         if (!spamResponse.ok) {
           throw new Error('Failed to fetch spam list');
         }

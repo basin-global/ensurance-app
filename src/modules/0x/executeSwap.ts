@@ -311,6 +311,10 @@ export async function executeSwap({
 
         console.log('Permit signature obtained:', signature.slice(0, 20) + '...');
 
+        // Brief delay after permit signing to ensure signature is processed
+        onStatus('Processing permit signature...', 'info');
+        await new Promise(resolve => setTimeout(resolve, 1500)); // 1.5 second delay
+
         // Add ERC-4337 smart wallet detection helper
         const isERC4337Wallet = async (address: string, provider: any): Promise<boolean> => {
           try {

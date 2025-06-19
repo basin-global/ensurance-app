@@ -12,7 +12,8 @@ import { Grid, List } from 'lucide-react'
 import SpecificList from './SpecificList'
 import { cn } from '@/lib/utils'
 import { toast } from 'react-toastify'
-import { EnsureButtons } from '@/modules/ensure/buttons'
+import { EnsureButtonsLite } from '@/modules/ensure/buttons'
+
 
 interface SpecificGridProps {
   searchQuery?: string
@@ -220,7 +221,7 @@ export default function SpecificGrid({
             }
 
             return (
-              <Card key={token.tokenURI} className="bg-primary-dark border-gray-800 hover:border-gray-700 transition-colors">
+              <Card key={token.tokenURI} className="bg-primary-dark border-gray-800 hover:border-gray-700 transition-colors group">
                 {token.primaryMintActive ? (
                   <Link href={`/specific/${CONTRACTS.specific}/${token.tokenURI.split('/').pop()}`}>
                     <CardContent className="p-4">
@@ -254,25 +255,31 @@ export default function SpecificGrid({
                           </div>
                         )}
                         <div className="flex items-center justify-between text-sm text-gray-400 px-2">
-                          <div className="flex gap-4">
+                          <div className="flex gap-4 items-center">
                             <div>issued: {token.totalMinted.toString()} / {String(token.maxSupply >= MAX_SUPPLY_OPEN_EDITION - BigInt(1) ? '∞' : token.maxSupply.toString())}</div>
                             {token.salesConfig?.pricePerToken && (
-                              <div>${formatUnits(token.salesConfig.pricePerToken, 6)} ea</div>
+                              <div className="flex items-center gap-2">
+                                <span>${formatUnits(token.salesConfig.pricePerToken, 6)} ea</span>
+                              </div>
                             )}
                           </div>
-                          <div onClick={(e) => e.preventDefault()}>
-                            <EnsureButtons
-                              context="specific"
-                              contractAddress={CONTRACTS.specific}
-                              tokenId={token.tokenURI.split('/').pop() || ''}
-                              tokenType="erc1155"
-                              tokenSymbol="Certificate"
-                              tokenName={metadata?.name || 'Certificate'}
+                          {/* Buy button - only show on hover */}
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <EnsureButtonsLite
+                              tokenSymbol={metadata && !metadataError ? metadata.name?.split('|')[0].trim() || 'Certificate' : 'Certificate'}
+                              tokenName={metadata && !metadataError ? metadata.name : undefined}
                               imageUrl={imageUrl}
-                              variant="buy-only"
-                              className="text-sm"
-                              primaryMintActive={token.primaryMintActive}
+                              contractAddress={CONTRACTS.specific}
+                              tokenId={token.tokenURI.split('/').pop()}
+                              tokenType="erc1155"
+                              context="specific"
+                              variant="grid"
                               pricePerToken={token.salesConfig?.pricePerToken}
+                              primaryMintActive={token.primaryMintActive}
+                              showBuy={true}
+                              showSwap={false}
+                              showSend={false}
+                              showBurn={false}
                             />
                           </div>
                         </div>
@@ -323,25 +330,31 @@ export default function SpecificGrid({
                         </div>
                       )}
                       <div className="flex items-center justify-between text-sm text-gray-400 px-2">
-                        <div className="flex gap-4">
+                        <div className="flex gap-4 items-center">
                           <div>issued: {token.totalMinted.toString()} / {String(token.maxSupply >= MAX_SUPPLY_OPEN_EDITION - BigInt(1) ? '∞' : token.maxSupply.toString())}</div>
                           {token.salesConfig?.pricePerToken && (
                             <div>${formatUnits(token.salesConfig.pricePerToken, 6)} ea</div>
                           )}
                         </div>
-                        <EnsureButtons
-                          context="specific"
-                          contractAddress={CONTRACTS.specific}
-                          tokenId={token.tokenURI.split('/').pop() || ''}
-                          tokenType="erc1155"
-                          tokenSymbol="Certificate"
-                          tokenName={metadata?.name || 'Certificate'}
-                          imageUrl={imageUrl}
-                          variant="buy-only"
-                          className="text-sm"
-                          primaryMintActive={token.primaryMintActive}
-                          pricePerToken={token.salesConfig?.pricePerToken}
-                        />
+                        {/* Buy button - only show on hover */}
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                          <EnsureButtonsLite
+                            tokenSymbol={metadata && !metadataError ? metadata.name?.split('|')[0].trim() || 'Certificate' : 'Certificate'}
+                            tokenName={metadata && !metadataError ? metadata.name : undefined}
+                            imageUrl={imageUrl}
+                            contractAddress={CONTRACTS.specific}
+                            tokenId={token.tokenURI.split('/').pop()}
+                            tokenType="erc1155"
+                            context="specific"
+                            variant="grid"
+                            pricePerToken={token.salesConfig?.pricePerToken}
+                            primaryMintActive={token.primaryMintActive}
+                            showBuy={true}
+                            showSwap={false}
+                            showSend={false}
+                            showBurn={false}
+                          />
+                        </div>
                       </div>
                     </div>
                   </CardContent>

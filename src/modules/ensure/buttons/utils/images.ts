@@ -59,7 +59,7 @@ export const fetchTokenImage = async (address: string): Promise<string | null> =
   if (cached) return cached
 
   try {
-    const response = await fetch(`/api/config/image?address=${address}`)
+    const response = await fetch(`/api/utilities/image?address=${address}`)
     const data = await response.json()
     if (data.url) {
       // Save to cache

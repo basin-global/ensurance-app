@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState } from 'react'
 import { PlusCircle, RefreshCw, Flame, Send } from 'lucide-react'
 import {
   Tooltip,
@@ -18,26 +18,35 @@ import type {
   Operation, 
   TokenType
 } from './types'
-import { useTokenData } from './hooks/useTokenData'
-import { useOperations } from './hooks/useOperations'
-import { formatBalance, getTooltipText } from './utils'
+import { getTooltipText } from './utils'
 
 interface EnsureButtonsProps {
+  // Basic token info
   tokenSymbol: string
   tokenName?: string
   imageUrl?: string
   contractAddress: string
   tokenId?: string
-  context: ButtonContext
   tokenType?: TokenType
+  context: ButtonContext
+  
+  // Optional TBA info
   tbaAddress?: string
-  primaryMintActive?: boolean
   pricePerToken?: bigint
-  className?: string
-  variant?: 'buy-only' | 'portfolio' | 'page'
+  primaryMintActive?: boolean
+  
+  // Button visibility control
+  showBuy?: boolean
   showSwap?: boolean
   showSend?: boolean
   showBurn?: boolean
+  
+  // Styling
+  variant?: 'grid' | 'list' | 'portfolio'
+  size?: 'sm' | 'md'
+  className?: string
+  
+  // Callbacks
   onRefreshBalance?: () => void
 }
 
@@ -47,81 +56,23 @@ export default function EnsureButtons({
   imageUrl,
   contractAddress,
   tokenId,
-  context,
   tokenType = 'erc20',
+  context,
   tbaAddress,
-  primaryMintActive = false,
   pricePerToken,
-  className = '',
-  variant = 'page',
+  primaryMintActive = false,
+  showBuy = true,
   showSwap = true,
   showSend = true,
   showBurn = true,
+  variant = 'grid',
+  size = 'md',
+  className = '',
   onRefreshBalance
 }: EnsureButtonsProps) {
   // Modal state
   const [modalOpen, setModalOpen] = useState(false)
   const [currentOperation, setCurrentOperation] = useState<Operation | null>(null)
-
-  // Use new simplified hooks - only fetch balance for page variant
-  const shouldFetchBalance = variant === 'page'
-  const { 
-    tokenBalance,
-    fetchTokenBalance 
-  } = useTokenData({
-    context,
-    contractAddress: (contractAddress.startsWith('0x') ? contractAddress : `0x${contractAddress}`) as `0x${string}`,
-    tokenId,
-    tokenType,
-    tbaAddress: (tbaAddress as `0x${string}`) || undefined,
-    skipBalance: !shouldFetchBalance
-  })
-
-  const {
-    isLoading,
-    isBurning,
-    isSwapping,
-    authenticated,
-    executeSend,
-    executeBurn
-  } = useOperations({
-    context,
-    contractAddress,
-    tokenId,
-    tokenType,
-    tbaAddress,
-    pricePerToken,
-    primaryMintActive
-  })
-
-  // Determine button availability based on variant
-  const buttonConfig = useMemo(() => {
-    const isERC1155 = (tokenType as string) === 'erc1155'
-    const hasBalance = tokenBalance && tokenBalance > BigInt(0)
-    
-    return {
-      buy: {
-        available: true,
-        disabled: isLoading,
-        text: isERC1155 ? 'ensure' : 'buy'
-      },
-      swap: {
-        available: variant !== 'buy-only' && !isERC1155 && showSwap,
-        disabled: isSwapping || (variant === 'page' && !hasBalance),
-        text: 'swap'
-      },
-      send: {
-        available: variant !== 'buy-only' && showSend,
-        disabled: isLoading || (variant === 'page' && !hasBalance),
-        text: 'send'
-      },
-      burn: {
-        available: variant !== 'buy-only' && showBurn,
-        disabled: isBurning || (variant === 'page' && !hasBalance),
-        text: 'burn'
-      }
-    }
-  }, [tokenType, tokenBalance, isLoading, isSwapping, isBurning, variant, showSwap, showSend, showBurn])
 
   const handleOpenModal = (operation: Operation) => {
     setCurrentOperation(operation)
@@ -133,185 +84,163 @@ export default function EnsureButtons({
     setCurrentOperation(null)
   }
 
-  const handleRefreshBalance = () => {
-    fetchTokenBalance()
-    onRefreshBalance?.()
+  // Icon sizing based on size prop
+  const iconSize = size === 'sm' ? 'w-4 h-4' : 'w-5 h-5'
+  const buttonSize = size === 'sm' ? 'p-1.5' : 'p-2'
+
+  // Determine button availability based on token type and context
+  const buttonConfig = {
+    buy: {
+      available: showBuy,
+      icon: PlusCircle,
+      color: 'stroke-green-500 hover:stroke-green-400',
+      tooltip: getTooltipText('buy')
+    },
+    swap: {
+      available: showSwap && tokenType !== 'erc1155' && context !== 'specific',
+      icon: RefreshCw,
+      color: 'stroke-blue-500 hover:stroke-blue-400',
+      tooltip: getTooltipText('swap')
+    },
+    send: {
+      available: showSend,
+      icon: Send,
+      color: 'stroke-amber-500 hover:stroke-amber-400',
+      tooltip: getTooltipText('send')
+    },
+    burn: {
+      available: showBurn,
+      icon: Flame,
+      color: 'stroke-orange-500 hover:stroke-orange-400',
+      tooltip: getTooltipText('burn')
+    }
   }
 
-  // Don't render if not authenticated for tokenbound context
-  if (context === 'tokenbound' && !authenticated) {
+  // Filter available buttons
+  const availableButtons = Object.entries(buttonConfig).filter(([_, config]) => config.available)
+
+  if (availableButtons.length === 0) {
     return null
   }
 
-  const iconSize = variant === 'page' ? 'w-10 h-10' : 'w-6 h-6'
-
   return (
     <>
-      <div className="flex flex-col items-center gap-2">
-        <div className={cn(
-          "flex gap-8",
-          className
-        )}>
-          {/* Ensure (buy) button - green */}
-          {buttonConfig.buy.available && (
-            <TooltipProvider>
+      <div className={cn(
+        "flex items-center gap-1",
+        variant === 'list' && "justify-end",
+        className
+      )}>
+        {availableButtons.map(([operation, config]) => {
+          const IconComponent = config.icon
+          return (
+            <TooltipProvider key={operation}>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
-                    onClick={() => handleOpenModal('buy')}
-                    className="flex items-center gap-2 text-gray-300 hover:text-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={buttonConfig.buy.disabled}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      e.nativeEvent.stopImmediatePropagation()
+                      handleOpenModal(operation as Operation)
+                    }}
+                    onMouseDown={(e) => {
+                      e.stopPropagation()
+                    }}
+                    className={cn(
+                      "rounded-md transition-colors",
+                      "hover:bg-white/10 text-gray-300 hover:text-gray-100",
+                      buttonSize
+                    )}
                   >
-                    <PlusCircle className={`${iconSize} stroke-[1.5] stroke-green-500 hover:stroke-green-400 transition-colors`} />
+                    <IconComponent className={cn(iconSize, config.color, "transition-colors")} />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{getTooltipText('buy')}</p>
+                  <p>{config.tooltip}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-          )}
-
-          {/* Transform (swap) button - blue */}
-          {buttonConfig.swap.available && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => handleOpenModal('swap')}
-                    className="flex items-center gap-2 text-gray-300 hover:text-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={buttonConfig.swap.disabled}
-                  >
-                    <RefreshCw className={`${iconSize} stroke-[1.5] stroke-blue-500 hover:stroke-blue-400 transition-colors`} />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{getTooltipText('swap')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-
-          {/* Send button - amber */}
-          {buttonConfig.send.available && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => handleOpenModal('send')}
-                    className="flex items-center gap-2 text-gray-300 hover:text-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={buttonConfig.send.disabled}
-                  >
-                    <Send className={`${iconSize} stroke-[1.5] stroke-amber-500 hover:stroke-amber-400 transition-colors`} />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{getTooltipText('send')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-
-          {/* Burn button - orange */}
-          {buttonConfig.burn.available && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => handleOpenModal('burn')}
-                    className="flex items-center gap-2 text-gray-300 hover:text-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={buttonConfig.burn.disabled}
-                  >
-                    <Flame className={`${iconSize} stroke-[1.5] stroke-orange-500 hover:stroke-orange-400 transition-colors`} />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{getTooltipText('burn')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-        </div>
-
-        {/* Balance display - only show on page variant */}
-        {variant === 'page' && (
-          <div className="text-sm text-gray-400 text-center">
-            balance: {tokenBalance ? formatBalance(tokenBalance, tokenType, 18) : '0'}
-          </div>
-        )}
+          )
+        })}
       </div>
 
-      {/* Buy Modal */}
-      <BuyModal
-        isOpen={modalOpen && currentOperation === 'buy'}
-        onClose={handleCloseModal}
-        tokenSymbol={tokenSymbol}
-        tokenName={tokenName}
-        imageUrl={imageUrl}
-        context={context}
-        tokenType={tokenType}
-        contractAddress={contractAddress}
-        tbaAddress={tbaAddress}
-        pricePerToken={pricePerToken}
-        primaryMintActive={primaryMintActive}
-        onRefreshBalance={handleRefreshBalance}
-      />
+      {/* Only render modals when actually open to prevent unnecessary hook calls */}
+      {modalOpen && currentOperation === 'buy' && (
+        <BuyModal
+          isOpen={true}
+          onClose={handleCloseModal}
+          tokenSymbol={tokenSymbol}
+          tokenName={tokenName}
+          imageUrl={imageUrl}
+          context={context}
+          tokenType={tokenType}
+          contractAddress={contractAddress}
+          tokenId={tokenId}
+          tbaAddress={tbaAddress}
+          pricePerToken={pricePerToken}
+          primaryMintActive={primaryMintActive}
+          onRefreshBalance={onRefreshBalance}
+        />
+      )}
 
-      {/* Swap Modal */}
-      <SwapModal
-        isOpen={modalOpen && currentOperation === 'swap'}
-        onClose={handleCloseModal}
-        tokenSymbol={tokenSymbol}
-        tokenName={tokenName}
-        imageUrl={imageUrl}
-        context={context}
-        tokenType={tokenType}
-        contractAddress={(contractAddress.startsWith('0x') ? contractAddress : `0x${contractAddress}`) as `0x${string}`}
-        tokenBalance={tokenBalance}
-        availableTokens={[]}
-        isLoadingTokens={false}
-        tokenImages={{}}
-        estimatedOutput="0"
-        isSimulating={false}
-        onTokenSelect={() => {}}
-        onExecute={async () => {}}
-        isLoading={isSwapping}
-      />
+      {modalOpen && currentOperation === 'swap' && (
+        <SwapModal
+          isOpen={true}
+          onClose={handleCloseModal}
+          tokenSymbol={tokenSymbol}
+          tokenName={tokenName}
+          imageUrl={imageUrl}
+          context={context}
+          tokenType={tokenType}
+          contractAddress={(contractAddress.startsWith('0x') ? contractAddress : `0x${contractAddress}`) as `0x${string}`}
+          tokenBalance={BigInt(0)} // Will be fetched in modal when needed
+          availableTokens={[]}
+          isLoadingTokens={false}
+          tokenImages={{}}
+          estimatedOutput="0"
+          isSimulating={false}
+          onTokenSelect={() => {}}
+          onExecute={async () => {}}
+          isLoading={false}
+        />
+      )}
 
-      {/* Send Modal - Using existing interface */}
-      <SendModal
-        isOpen={modalOpen && currentOperation === 'send'}
-        onClose={handleCloseModal}
-        tokenSymbol={tokenSymbol}
-        tokenName={tokenName}
-        imageUrl={imageUrl}
-        context={context}
-        tokenType={tokenType}
-        tokenBalance={tokenBalance}
-        accountSearchQuery=""
-        accountSearchResults={[]}
-        isSearching={false}
-        onSearchQueryChange={() => {}}
-        selectedAccount={undefined}
-        onAccountSelect={() => {}}
-        recipientAddress=""
-        onExecute={executeSend}
-        isLoading={isLoading}
-      />
+      {modalOpen && currentOperation === 'send' && (
+        <SendModal
+          isOpen={true}
+          onClose={handleCloseModal}
+          tokenSymbol={tokenSymbol}
+          tokenName={tokenName}
+          imageUrl={imageUrl}
+          context={context}
+          tokenType={tokenType}
+          tokenBalance={BigInt(0)} // Will be fetched in modal when needed
+          accountSearchQuery=""
+          accountSearchResults={[]}
+          isSearching={false}
+          onSearchQueryChange={() => {}}
+          selectedAccount={undefined}
+          onAccountSelect={() => {}}
+          recipientAddress=""
+          onExecute={async () => {}}
+          isLoading={false}
+        />
+      )}
 
-      {/* Burn Modal - Using existing interface */}
-      <BurnModal
-        isOpen={modalOpen && currentOperation === 'burn'}
-        onClose={handleCloseModal}
-        tokenSymbol={tokenSymbol}
-        tokenName={tokenName}
-        imageUrl={imageUrl}
-        context={context}
-        tokenType={tokenType}
-        tokenBalance={tokenBalance}
-        onExecute={executeBurn}
-        isLoading={isBurning}
-      />
+      {modalOpen && currentOperation === 'burn' && (
+        <BurnModal
+          isOpen={true}
+          onClose={handleCloseModal}
+          tokenSymbol={tokenSymbol}
+          tokenName={tokenName}
+          imageUrl={imageUrl}
+          context={context}
+          tokenType={tokenType}
+          tokenBalance={BigInt(0)} // Will be fetched in modal when needed
+          onExecute={async () => {}}
+          isLoading={false}
+        />
+      )}
     </>
   )
 }

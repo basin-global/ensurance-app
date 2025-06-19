@@ -1,11 +1,12 @@
 import { GeneralCertificate } from './GeneralGrid';
-import { EnsureButtons } from '@/modules/ensure/buttons';
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { CONTRACTS } from '@/modules/specific/config';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { SpecificAsset } from '@/modules/specific/SpecificAsset';
+import { EnsureButtonsLite } from '@/modules/ensure/buttons';
 
 interface GeneralListProps {
   certificates: GeneralCertificate[];
@@ -99,15 +100,19 @@ export default function GeneralList({ certificates, urlPrefix = '', isMiniApp = 
                     </div>
                   </td>
                   <td className="py-4 text-right">
-                    <div className="flex justify-end">
-                      <EnsureButtons
-                        context="general"
-                        contractAddress={cert.contract_address}
-                        tokenSymbol="TOKEN"
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      <EnsureButtonsLite
+                        tokenSymbol={cert.name?.split('|')[0].trim() || 'Certificate'}
                         tokenName={cert.name}
-                        imageUrl={cert.image_url || FALLBACK_IMAGE}
-                        variant="buy-only"
-                        className="text-sm"
+                        imageUrl={cert.image_url}
+                        contractAddress={cert.contract_address}
+                        tokenType="erc20"
+                        context="general"
+                        variant="list"
+                        showBuy={true}
+                        showSwap={false}
+                        showSend={false}
+                        showBurn={false}
                       />
                     </div>
                   </td>

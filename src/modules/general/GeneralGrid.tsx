@@ -5,11 +5,12 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import Link from 'next/link'
 import Image from 'next/image'
-import { EnsureButtons } from '@/modules/ensure/buttons'
+
 import { Grid, List, ArrowUpDown } from 'lucide-react'
 import GeneralList from './GeneralList'
 import { CONTRACTS } from '@/modules/specific/config'
 import { cn } from '@/lib/utils'
+import { EnsureButtonsLite } from '@/modules/ensure/buttons'
 
 interface CreatorEarning {
   amountUsd: string
@@ -492,7 +493,7 @@ export default function GeneralGrid({
             >
               <Card 
                 className={cn(
-                  "bg-primary-dark border-gray-800 hover:border-gray-700 transition-colors",
+                  "bg-primary-dark border-gray-800 hover:border-gray-700 transition-colors group",
                   cert.is_specific && "relative after:content-[''] after:absolute after:inset-0 after:rounded-lg after:shadow-[0_0_15px_rgba(255,215,0,0.6),0_0_30px_rgba(255,215,0,0.3)] after:border-2 after:border-[rgba(255,215,0,0.8)]"
                 )}
               >
@@ -535,30 +536,36 @@ export default function GeneralGrid({
                         </div>
                       )}
                     </div>
-                    {!cert.is_specific && (
-                      <div className={`flex items-center ${hideMarketData ? 'justify-center' : 'justify-between'} text-sm text-gray-400 px-2`}>
-                        {!hideMarketData && (
-                          <div className="flex gap-4">
-                            <div>MC: ${Number(cert.market_cap || '0').toLocaleString(undefined, { 
-                              minimumFractionDigits: Number(cert.market_cap || '0') < 10 ? 2 : 0,
-                              maximumFractionDigits: Number(cert.market_cap || '0') < 10 ? 2 : 0
-                            })}</div>
-                            <div>Vol: ${Number(cert.total_volume || '0').toLocaleString(undefined, { 
+                    {!cert.is_specific && !hideMarketData && (
+                      <div className="flex items-center justify-center text-sm text-gray-400 px-2">
+                        <div className="flex gap-4 items-center">
+                          <div>MC: ${Number(cert.market_cap || '0').toLocaleString(undefined, { 
+                            minimumFractionDigits: Number(cert.market_cap || '0') < 10 ? 2 : 0,
+                            maximumFractionDigits: Number(cert.market_cap || '0') < 10 ? 2 : 0
+                          })}</div>
+                          <div className="flex items-center gap-2">
+                            <span>Vol: ${Number(cert.total_volume || '0').toLocaleString(undefined, { 
                               minimumFractionDigits: Number(cert.total_volume || '0') < 10 ? 2 : 0,
                               maximumFractionDigits: Number(cert.total_volume || '0') < 10 ? 2 : 0
-                            })}</div>
+                            })}</span>
+                            {/* Buy button - only show on hover */}
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                              <EnsureButtonsLite
+                                tokenSymbol={cert.name?.split('|')[0].trim() || 'Certificate'}
+                                tokenName={cert.name}
+                                imageUrl={cert.image_url}
+                                contractAddress={cert.contract_address}
+                                tokenId={cert.is_specific ? cert.token_uri.split('/').pop() : undefined}
+                                tokenType={cert.is_specific ? 'erc1155' : 'erc20'}
+                                context={cert.is_specific ? 'specific' : 'general'}
+                                variant="grid"
+                                showBuy={true}
+                                showSwap={false}
+                                showSend={false}
+                                showBurn={false}
+                              />
+                            </div>
                           </div>
-                        )}
-                        <div onClick={(e) => e.preventDefault()}>
-                          <EnsureButtons
-                            context="general"
-                            contractAddress={cert.contract_address}
-                            tokenSymbol="TOKEN"
-                            tokenName={cert.name}
-                            imageUrl={cert.image_url || FALLBACK_IMAGE}
-                            variant="buy-only"
-                            className="text-sm"
-                          />
                         </div>
                       </div>
                     )}

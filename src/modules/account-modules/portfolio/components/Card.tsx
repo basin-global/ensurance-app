@@ -4,7 +4,8 @@ import { formatUnits } from 'viem';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { EnsureButtons } from '@/modules/ensure/buttons';
+import { EnsureButtonsLite } from '@/modules/ensure/buttons';
+
 import { CONTRACTS } from '@/modules/specific/config';
 
 interface CardProps {
@@ -80,12 +81,42 @@ export default function Card({
     }
     if (token.type === 'erc721' || token.type === 'erc1155') {
       const nftToken = token as NFTToken;
-      return nftToken.nftMetadata.image.cachedUrl || nftToken.nftMetadata.image.originalUrl;
+      const imageUrl = nftToken.nftMetadata.image.cachedUrl || nftToken.nftMetadata.image.originalUrl;
+      
+      // Validate image URL to filter out suspicious domains
+      if (imageUrl && isValidImageUrl(imageUrl)) {
+        return imageUrl;
+      }
+      return undefined; // Will fall back to placeholder
     }
     if (token.type === 'erc20') {
       return (token as ERC20Token).metadata?.image;
     }
     return undefined;
+  };
+
+  // Helper function to validate image URLs
+  const isValidImageUrl = (url: string): boolean => {
+    try {
+      const parsedUrl = new URL(url);
+      
+      // List of suspicious or untrusted domains to block
+      const blockedDomains = [
+        'nftcreator.pages.dev',
+        // Add other suspicious domains as needed
+      ];
+      
+      // Check if domain is in blocked list
+      if (blockedDomains.some(domain => parsedUrl.hostname.includes(domain))) {
+        console.warn(`Blocked suspicious image domain: ${parsedUrl.hostname}`);
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.warn('Invalid image URL:', url);
+      return false;
+    }
   };
 
   const getTokenName = (token: PortfolioToken) => {
@@ -215,6 +246,11 @@ export default function Card({
                 priority={false}
                 loading="lazy"
                 className="object-cover"
+                unoptimized={true}
+                onError={(e) => {
+                  const img = e.target as HTMLImageElement;
+                  img.src = '/assets/no-image-found.png';
+                }}
               />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center">
@@ -329,29 +365,22 @@ export default function Card({
         )}
       </td>
       <td className="py-4 text-right">
-        <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-          {!(token.type === 'erc1155' && token.address.toLowerCase() !== CONTRACTS.specific.toLowerCase()) && (
-            <EnsureButtons
-              contractAddress={token.address}
-              tokenId={token.type === 'erc721' || token.type === 'erc1155' ? (token as NFTToken).tokenId : ''}
-              tokenType={token.type}
-              tokenSymbol={token.symbol}
-              tokenName={token.name}
-              imageUrl={getTokenImage(token) || '/assets/no-image-found.png'}
-              context={
-                token.type === 'erc1155' && token.address.toLowerCase() === CONTRACTS.specific.toLowerCase()
-                  ? 'specific'
-                  : context
-              }
-              tbaAddress={context === 'tokenbound' ? address : undefined}
-              variant="portfolio"
-              className="text-sm"
-              primaryMintActive={
-                token.type === 'erc1155' && 
-                token.address.toLowerCase() === CONTRACTS.specific.toLowerCase()
-              }
-            />
-          )}
+        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <EnsureButtonsLite
+            tokenSymbol={token.symbol}
+            tokenName={token.name}
+            imageUrl={getTokenImage(token)}
+            contractAddress={token.type === 'native' ? '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE' : token.address}
+            tokenId={(token.type === 'erc721' || token.type === 'erc1155') ? (token as NFTToken).tokenId : undefined}
+            tokenType={token.type as any}
+            context={context}
+            tbaAddress={context === 'tokenbound' ? address : undefined}
+            variant="list"
+            showBuy={true}
+            showSwap={true}
+            showSend={true}
+            showBurn={true}
+          />
         </div>
       </td>
     </tr>

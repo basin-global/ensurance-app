@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { formatUnits } from 'viem'
 import { CONTRACTS, MAX_SUPPLY_OPEN_EDITION } from './config'
 import { cn } from '@/lib/utils'
-import { EnsureButtons } from '@/modules/ensure/buttons'
+import { EnsureButtonsLite } from '@/modules/ensure/buttons'
+
 
 
 
@@ -48,7 +49,7 @@ export default function SpecificList({ tokens, tokenMetadata }: SpecificListProp
             }
 
             return (
-              <tr key={token.tokenURI} className="hover:bg-gray-900/30 transition-colors">
+              <tr key={token.tokenURI} className="hover:bg-gray-900/30 transition-colors group">
                 <td className="py-4">
                   <Link href={`/specific/${CONTRACTS.specific}/${token.tokenURI.split('/').pop()}`}>
                     <div className="flex items-center gap-3">
@@ -94,19 +95,22 @@ export default function SpecificList({ tokens, tokenMetadata }: SpecificListProp
                   </div>
                 </td>
                 <td className="py-4 text-right">
-                  <div className="flex justify-end">
-                    <EnsureButtons
-                      context="specific"
-                      contractAddress={CONTRACTS.specific}
-                      tokenId={token.tokenURI.split('/').pop() || ''}
-                      tokenType="erc1155"
-                      tokenSymbol="Certificate"
-                      tokenName={metadata?.name || 'Certificate'}
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <EnsureButtonsLite
+                      tokenSymbol={metadata && !metadataError ? metadata.name?.split('|')[0].trim() || 'Certificate' : 'Certificate'}
+                      tokenName={metadata && !metadataError ? metadata.name : undefined}
                       imageUrl={imageUrl}
-                      variant="buy-only"
-                      className="text-sm"
-                      primaryMintActive={token.primaryMintActive}
+                      contractAddress={CONTRACTS.specific}
+                      tokenId={token.tokenURI.split('/').pop()}
+                      tokenType="erc1155"
+                      context="specific"
+                      variant="list"
                       pricePerToken={token.salesConfig?.pricePerToken}
+                      primaryMintActive={token.primaryMintActive}
+                      showBuy={true}
+                      showSwap={false}
+                      showSend={false}
+                      showBurn={false}
                     />
                   </div>
                 </td>

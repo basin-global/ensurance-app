@@ -4,6 +4,7 @@ import { identifyEnsurancePortfolioTokens } from '@/lib/ensurance';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { EnsureButtonsLite } from '@/modules/ensure/buttons';
 
 interface PortfolioListProps {
   tokens: PortfolioToken[];
@@ -59,9 +60,9 @@ export default function PortfolioList({
         {!isOverview && (
           <thead>
             <tr className="text-left text-sm text-gray-400">
-              <th className="pb-4 font-medium w-[40%]">name</th>
-              <th className="pb-4 font-medium text-right w-[35%]">value</th>
-              <th className="pb-4 font-medium text-right w-[25%]">actions</th>
+              <th className="pb-4 font-medium w-[50%]">name</th>
+              <th className="pb-4 font-medium text-right w-[30%]">value</th>
+              <th className="pb-4 font-medium text-right w-[20%]">actions</th>
             </tr>
           </thead>
         )}

@@ -124,7 +124,8 @@ export const buildBuyTransaction = async (params: ERC1155Params): Promise<Operat
     approvalData: {
       to: CONTRACTS.usdc,
       data: approvalData,
-      value: '0x0'
+      value: '0x0',
+      spender: CONTRACTS.erc20Minter
     }
   }
 }
