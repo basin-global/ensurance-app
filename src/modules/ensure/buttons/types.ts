@@ -17,12 +17,15 @@ export interface TokenInfo {
 }
 
 export interface AccountSearchResult {
-  name: string
-  path: string
-  type: 'account'
-  is_agent: boolean
-  is_ensurance: boolean
+  full_account_name: string
   token_id: number
+  is_agent: boolean
+  group_name: string
+  tba_address?: string
+  // Special fields for display in search
+  name?: string // Will be set to full_account_name for compatibility
+  type?: 'account' | 'operator'
+  path?: string // For compatibility with existing search
 }
 
 export interface EnsureButtonsProps {

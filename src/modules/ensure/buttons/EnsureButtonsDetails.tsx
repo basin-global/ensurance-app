@@ -139,7 +139,6 @@ export default function EnsureButtons({
     isLoading,
     isBurning,
     isSwapping,
-    executeSend,
     executeBurn
   } = useOperations({
     context,
@@ -336,7 +335,7 @@ export default function EnsureButtons({
         isLoading={isSwapping}
       />
 
-      {/* Send Modal - Using existing interface */}
+      {/* Send Modal */}
       <SendModal
         isOpen={modalOpen && currentOperation === 'send'}
         onClose={handleCloseModal}
@@ -345,16 +344,10 @@ export default function EnsureButtons({
         imageUrl={imageUrl}
         context={context}
         tokenType={tokenType}
-        tokenBalance={tokenBalance}
-        accountSearchQuery=""
-        accountSearchResults={[]}
-        isSearching={false}
-        onSearchQueryChange={() => {}}
-        selectedAccount={undefined}
-        onAccountSelect={() => {}}
-        recipientAddress=""
-        onExecute={executeSend}
-        isLoading={isLoading}
+        contractAddress={contractAddress}
+        tokenId={tokenId}
+        tbaAddress={tbaAddress}
+        onRefreshBalance={handleRefreshBalance}
       />
 
       {/* Burn Modal - Using existing interface */}

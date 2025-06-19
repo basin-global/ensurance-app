@@ -52,7 +52,45 @@ export default function Card({
       return true;
     }
     
+    // For tokenbound context, check ownership and deployment
+    if (context === 'tokenbound') {
+      // If not owner, mute buttons
+      if (!isOwner) {
+        return true;
+      }
+      
+      // If owner but not deployed, mute buttons
+      if (isOwner && !isDeployed) {
+        return true;
+      }
+    }
+    
     return false;
+  };
+  
+  // Get appropriate tooltip message based on state
+  const getMutedTooltip = () => {
+    // Handle token type restrictions first
+    if (token.type === 'erc721') {
+      return "portfolio actions not supported for this contract";
+    }
+    
+    if (token.type === 'erc1155' && !isOurSpecificContract) {
+      return "portfolio actions not supported for this contract";
+    }
+    
+    // Handle tokenbound authentication
+    if (context === 'tokenbound') {
+      if (!isOwner) {
+        return "connect as account operator to enable actions";
+      }
+      
+      if (isOwner && !isDeployed) {
+        return "deploy account to enable portfolio actions";
+      }
+    }
+    
+    return "portfolio actions not supported for this contract";
   };
   
   // Fetch price for our specific ERC1155 tokens
@@ -438,7 +476,7 @@ export default function Card({
             showSend={true}
             showBurn={true}
             muted={shouldMuteButtons()}
-            mutedTooltip="portfolio actions not supported for this contract"
+            mutedTooltip={getMutedTooltip()}
             pricePerToken={pricePerToken}
             primaryMintActive={!!pricePerToken}
           />

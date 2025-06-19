@@ -142,7 +142,45 @@ export default function PortfolioGrid({
       return true;
     }
     
+    // For tokenbound context, check ownership and deployment
+    if (context === 'tokenbound') {
+      // If not owner, mute buttons
+      if (!isOwner) {
+        return true;
+      }
+      
+      // If owner but not deployed, mute buttons
+      if (isOwner && !isDeployed) {
+        return true;
+      }
+    }
+    
     return false;
+  };
+  
+  // Get appropriate tooltip message based on state
+  const getMutedTooltip = (token: PortfolioToken) => {
+    // Handle token type restrictions first
+    if (token.type === 'erc721') {
+      return "portfolio actions not supported for this contract";
+    }
+    
+    if (token.type === 'erc1155' && !token.ensurance?.isEnsuranceSpecific) {
+      return "portfolio actions not supported for this contract";
+    }
+    
+    // Handle tokenbound authentication
+    if (context === 'tokenbound') {
+      if (!isOwner) {
+        return "connect as account operator to enable actions";
+      }
+      
+      if (isOwner && !isDeployed) {
+        return "deploy account to enable portfolio actions";
+      }
+    }
+    
+    return "portfolio actions not supported for this contract";
   };
   
   const getTokenPrice = (token: PortfolioToken) => {
@@ -231,7 +269,7 @@ export default function PortfolioGrid({
                 showSend={true}
                 showBurn={true}
                 muted={shouldMuteButtons(token)}
-                mutedTooltip="Portfolio actions not supported for this contract"
+                mutedTooltip={getMutedTooltip(token)}
                 pricePerToken={getTokenPrice(token)}
                 primaryMintActive={!!getTokenPrice(token)}
               />

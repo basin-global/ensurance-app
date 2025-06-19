@@ -160,7 +160,8 @@ export async function GET(request: NextRequest) {
                 type: 'account',
                 is_agent: account.is_agent,
                 is_ensurance: account.group_name === '.ensurance' && account.full_account_name !== 'situs.ensurance',
-                token_id: account.token_id
+                token_id: account.token_id,
+                tba_address: account.tba_address
             }));
         const matchingGeneral = generalData
             .filter((cert: any) => 

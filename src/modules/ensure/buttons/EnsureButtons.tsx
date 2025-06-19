@@ -257,16 +257,10 @@ export default function EnsureButtons({
           imageUrl={imageUrl}
           context={context}
           tokenType={tokenType}
-          tokenBalance={BigInt(0)} // Will be fetched in modal when needed
-          accountSearchQuery=""
-          accountSearchResults={[]}
-          isSearching={false}
-          onSearchQueryChange={() => {}}
-          selectedAccount={undefined}
-          onAccountSelect={() => {}}
-          recipientAddress=""
-          onExecute={async () => {}}
-          isLoading={false}
+          contractAddress={contractAddress}
+          tokenId={tokenId}
+          tbaAddress={tbaAddress}
+          onRefreshBalance={onRefreshBalance}
         />
       )}
 
