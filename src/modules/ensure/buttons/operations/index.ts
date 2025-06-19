@@ -3,6 +3,7 @@ import * as nativeOps from './native'
 import * as erc20Ops from './erc20'
 import * as erc721Ops from './erc721'
 import * as erc1155Ops from './erc1155'
+import type { OperationResult, OperationParams } from './types'
 
 // Re-export types
 export type { OperationResult, OperationParams } from './types'
@@ -27,6 +28,7 @@ export const getTokenOperations = (tokenType: TokenType) => {
 
 /**
  * Universal operation router
+ * Note: This is a convenience function for future use
  */
 export const executeOperation = async (
   operation: 'buy' | 'sell' | 'send' | 'burn',
@@ -35,15 +37,20 @@ export const executeOperation = async (
 ): Promise<OperationResult> => {
   const ops = getTokenOperations(tokenType)
   
+  // Type assertions for token-specific requirements
+  if ((tokenType === 'erc721' || tokenType === 'erc1155') && !params.tokenId) {
+    throw new Error(`Token ID required for ${tokenType} operations`)
+  }
+  
   switch (operation) {
     case 'buy':
-      return await ops.buildBuyTransaction(params)
+      return await ops.buildBuyTransaction(params as any)
     case 'sell':
-      return await ops.buildSwapTransaction(params)
+      return await ops.buildSwapTransaction(params as any)
     case 'send':
-      return await ops.buildSendTransaction(params)
+      return await ops.buildSendTransaction(params as any)
     case 'burn':
-      return await ops.buildBurnTransaction(params)
+      return await ops.buildBurnTransaction(params as any)
     default:
       throw new Error(`Unsupported operation: ${operation}`)
   }
