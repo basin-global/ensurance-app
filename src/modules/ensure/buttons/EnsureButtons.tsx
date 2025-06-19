@@ -20,6 +20,10 @@ import type {
 } from './types'
 import { getTooltipText } from './utils'
 
+// TODO: Re-enable swap and burn functionality once implemented
+const SWAP_ENABLED = false
+const BURN_ENABLED = false
+
 interface EnsureButtonsProps {
   // Basic token info
   tokenSymbol: string
@@ -100,32 +104,44 @@ export default function EnsureButtons({
       available: showBuy,
       icon: PlusCircle,
       color: 'stroke-green-500 hover:stroke-green-400',
-      tooltip: getTooltipText('buy')
+      tooltip: getTooltipText('buy'),
+      disabled: false
     },
     swap: {
-      available: showSwap && tokenType !== 'erc1155' && context !== 'specific',
+      available: showSwap && tokenType !== 'erc1155' && context !== 'specific' && SWAP_ENABLED,
       icon: RefreshCw,
-      color: 'stroke-blue-500 hover:stroke-blue-400',
-      tooltip: getTooltipText('swap')
+      color: SWAP_ENABLED ? 'stroke-blue-500 hover:stroke-blue-400' : 'stroke-gray-600',
+      tooltip: SWAP_ENABLED ? getTooltipText('swap') : 'coming soon',
+      disabled: !SWAP_ENABLED
     },
     send: {
       available: showSend,
       icon: Send,
       color: 'stroke-amber-500 hover:stroke-amber-400',
-      tooltip: getTooltipText('send')
+      tooltip: getTooltipText('send'),
+      disabled: false
     },
     burn: {
-      available: showBurn,
+      available: showBurn && BURN_ENABLED,
       icon: Flame,
-      color: 'stroke-orange-500 hover:stroke-orange-400',
-      tooltip: getTooltipText('burn')
+      color: BURN_ENABLED ? 'stroke-orange-500 hover:stroke-orange-400' : 'stroke-gray-600',
+      tooltip: BURN_ENABLED ? getTooltipText('burn') : 'coming soon',
+      disabled: !BURN_ENABLED
     }
   }
 
-  // Filter available buttons
-  const availableButtons = Object.entries(buttonConfig).filter(([_, config]) => config.available)
+  // Filter available buttons (including disabled ones for "coming soon" display)
+  const visibleButtons = Object.entries(buttonConfig).filter(([key, config]) => {
+    if (key === 'swap') {
+      return showSwap && tokenType !== 'erc1155' && context !== 'specific'
+    }
+    if (key === 'burn') {
+      return showBurn
+    }
+    return config.available
+  })
 
-  if (availableButtons.length === 0) {
+  if (visibleButtons.length === 0) {
     return null
   }
 
@@ -140,12 +156,15 @@ export default function EnsureButtons({
               variant === 'list' && "justify-end",
               className
             )}>
-              {availableButtons.map(([operation, config]) => {
+              {visibleButtons.map(([operation, config]) => {
                 const IconComponent = config.icon
+                const isDisabled = config.disabled || muted
+                const tooltipText = muted ? mutedTooltip : config.tooltip
+                
                 return (
                   <button
                     key={operation}
-                    disabled
+                    disabled={isDisabled}
                     className={cn(
                       "rounded-md transition-colors cursor-not-allowed",
                       "text-gray-600",
@@ -173,14 +192,18 @@ export default function EnsureButtons({
         variant === 'list' && "justify-end",
         className
       )}>
-        {availableButtons.map(([operation, config]) => {
+        {visibleButtons.map(([operation, config]) => {
           const IconComponent = config.icon
+          const isDisabled = config.disabled || muted
+          const tooltipText = muted ? mutedTooltip : config.tooltip
+          
           return (
             <TooltipProvider key={operation}>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     onClick={(e) => {
+                      if (isDisabled) return
                       e.preventDefault()
                       e.stopPropagation()
                       e.nativeEvent.stopImmediatePropagation()
@@ -189,9 +212,12 @@ export default function EnsureButtons({
                     onMouseDown={(e) => {
                       e.stopPropagation()
                     }}
+                    disabled={isDisabled}
                     className={cn(
                       "rounded-md transition-colors",
-                      "hover:bg-white/10 text-gray-300 hover:text-gray-100",
+                      isDisabled 
+                        ? "cursor-not-allowed text-gray-600" 
+                        : "hover:bg-white/10 text-gray-300 hover:text-gray-100",
                       buttonSize
                     )}
                   >
@@ -199,7 +225,7 @@ export default function EnsureButtons({
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{config.tooltip}</p>
+                  <p>{tooltipText}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

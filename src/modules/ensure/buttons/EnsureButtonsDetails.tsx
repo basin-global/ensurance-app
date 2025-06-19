@@ -24,6 +24,10 @@ import type {
 import { useOperations } from './hooks/useOperations'
 import { formatBalance, getTooltipText } from './utils'
 
+// TODO: Re-enable swap and burn functionality once implemented
+const SWAP_ENABLED = false
+const BURN_ENABLED = false
+
 interface EnsureButtonsProps {
   tokenSymbol: string
   tokenName?: string
@@ -159,22 +163,26 @@ export default function EnsureButtons({
       buy: {
         available: true,
         disabled: isLoading,
-        text: isERC1155 ? 'ensure' : 'buy'
+        text: isERC1155 ? 'ensure' : 'buy',
+        tooltip: getTooltipText('buy')
       },
       swap: {
         available: !isERC1155 && showSwap,
-        disabled: isSwapping || !hasBalance,
-        text: 'swap'
+        disabled: !SWAP_ENABLED || isSwapping || !hasBalance,
+        text: 'swap',
+        tooltip: SWAP_ENABLED ? getTooltipText('swap') : 'coming soon'
       },
       send: {
         available: showSend,
         disabled: isLoading || !hasBalance,
-        text: 'send'
+        text: 'send',
+        tooltip: getTooltipText('send')
       },
       burn: {
         available: showBurn,
-        disabled: isBurning || !hasBalance,
-        text: 'burn'
+        disabled: !BURN_ENABLED || isBurning || !hasBalance,
+        text: 'burn',
+        tooltip: BURN_ENABLED ? getTooltipText('burn') : 'coming soon'
       }
     }
   }, [tokenType, tokenBalance, isLoading, isSwapping, isBurning, showSwap, showSend, showBurn])
@@ -222,7 +230,7 @@ export default function EnsureButtons({
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{getTooltipText('buy')}</p>
+                  <p>{buttonConfig.buy.tooltip}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -234,15 +242,25 @@ export default function EnsureButtons({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
-                    onClick={() => handleOpenModal('swap')}
-                    className="flex items-center gap-2 text-gray-300 hover:text-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => !buttonConfig.swap.disabled && handleOpenModal('swap')}
+                    className={cn(
+                      "flex items-center gap-2 transition-colors",
+                      buttonConfig.swap.disabled 
+                        ? "text-gray-600 cursor-not-allowed opacity-50" 
+                        : "text-gray-300 hover:text-gray-100"
+                    )}
                     disabled={buttonConfig.swap.disabled}
                   >
-                    <RefreshCw className={`${iconSize} stroke-[1.5] stroke-blue-500 hover:stroke-blue-400 transition-colors`} />
+                    <RefreshCw className={cn(
+                      `${iconSize} stroke-[1.5] transition-colors`,
+                      buttonConfig.swap.disabled 
+                        ? "stroke-gray-600" 
+                        : "stroke-blue-500 hover:stroke-blue-400"
+                    )} />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{getTooltipText('swap')}</p>
+                  <p>{buttonConfig.swap.tooltip}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -262,7 +280,7 @@ export default function EnsureButtons({
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{getTooltipText('send')}</p>
+                  <p>{buttonConfig.send.tooltip}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -274,15 +292,25 @@ export default function EnsureButtons({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
-                    onClick={() => handleOpenModal('burn')}
-                    className="flex items-center gap-2 text-gray-300 hover:text-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => !buttonConfig.burn.disabled && handleOpenModal('burn')}
+                    className={cn(
+                      "flex items-center gap-2 transition-colors",
+                      buttonConfig.burn.disabled 
+                        ? "text-gray-600 cursor-not-allowed opacity-50" 
+                        : "text-gray-300 hover:text-gray-100"
+                    )}
                     disabled={buttonConfig.burn.disabled}
                   >
-                    <Flame className={`${iconSize} stroke-[1.5] stroke-orange-500 hover:stroke-orange-400 transition-colors`} />
+                    <Flame className={cn(
+                      `${iconSize} stroke-[1.5] transition-colors`,
+                      buttonConfig.burn.disabled 
+                        ? "stroke-gray-600" 
+                        : "stroke-orange-500 hover:stroke-orange-400"
+                    )} />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{getTooltipText('burn')}</p>
+                  <p>{buttonConfig.burn.tooltip}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
