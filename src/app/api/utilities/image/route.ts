@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generalCertificates } from '@/lib/database/certificates/general';
 import { accounts } from '@/lib/database/accounts';
+import { createPublicClient, http } from 'viem';
+import { base } from 'viem/chains';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +18,8 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const address = searchParams.get('address');
     const accountName = searchParams.get('account');
+    const tokenId = searchParams.get('tokenId');
+    const tokenType = searchParams.get('tokenType');
 
     if (!address && !accountName) {
       return NextResponse.json({ error: 'Address or account name is required' }, { status: 400 });
@@ -26,6 +30,12 @@ export async function GET(request: NextRequest) {
       'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400',
       'CDN-Cache-Control': 'max-age=3600',
     };
+
+    // Create public client for contract calls
+    const publicClient = createPublicClient({
+      chain: base,
+      transport: http()
+    });
 
     // Handle account images
     if (accountName) {
@@ -66,7 +76,64 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // 2. Try Squid chain-specific webp
+      // 2. For ERC721 tokens, try tokenURI
+      if (tokenType === 'erc721' && tokenId && address) {
+        try {
+          const tokenURI = await publicClient.readContract({
+            address: address as `0x${string}`,
+            abi: [
+              {
+                inputs: [{ name: 'tokenId', type: 'uint256' }],
+                name: 'tokenURI',
+                outputs: [{ type: 'string' }],
+                stateMutability: 'view',
+                type: 'function'
+              }
+            ],
+            functionName: 'tokenURI',
+            args: [BigInt(tokenId)]
+          });
+          
+          if (tokenURI) {
+            const metadata = await fetch(convertIpfsUrl(tokenURI as string)).then(res => res.json());
+            if (metadata?.image) {
+              return NextResponse.json({ url: convertIpfsUrl(metadata.image) }, { headers });
+            }
+          }
+        } catch (error) {
+          console.log('Failed to fetch tokenURI for ERC721:', error);
+        }
+      }
+
+      // 3. For ERC20 tokens, try contractURI
+      if (tokenType === 'erc20' && address) {
+        try {
+          const contractURI = await publicClient.readContract({
+            address: address as `0x${string}`,
+            abi: [
+              {
+                inputs: [],
+                name: 'contractURI',
+                outputs: [{ type: 'string' }],
+                stateMutability: 'view',
+                type: 'function'
+              }
+            ],
+            functionName: 'contractURI'
+          });
+          
+          if (contractURI) {
+            const metadata = await fetch(convertIpfsUrl(contractURI as string)).then(res => res.json());
+            if (metadata?.image) {
+              return NextResponse.json({ url: convertIpfsUrl(metadata.image) }, { headers });
+            }
+          }
+        } catch (error) {
+          console.log('Failed to fetch contractURI for ERC20:', error);
+        }
+      }
+
+      // 4. Try Squid chain-specific webp
       const chainId = '8453'; // Base chain ID
       const squidChainUrl = `https://raw.githubusercontent.com/0xsquid/assets/main/images/migration/webp/${chainId}_${address.toLowerCase()}.webp`;
       const squidChainResponse = await fetch(squidChainUrl);
@@ -74,7 +141,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ url: squidChainUrl }, { headers });
       }
 
-      // 3. Try TrustWallet
+      // 5. Try TrustWallet
       const trustWalletUrl = `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/${address}/logo.png`;
       const trustWalletResponse = await fetch(trustWalletUrl);
       if (trustWalletResponse.ok) {
@@ -82,7 +149,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 4. No image found
+    // 6. No image found
     return NextResponse.json({ url: null }, { headers });
 
   } catch (error) {

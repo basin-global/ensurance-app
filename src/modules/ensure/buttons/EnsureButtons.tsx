@@ -41,6 +41,10 @@ interface EnsureButtonsProps {
   showSend?: boolean
   showBurn?: boolean
   
+  // New props for muted state
+  muted?: boolean
+  mutedTooltip?: string
+  
   // Styling
   variant?: 'grid' | 'list' | 'portfolio'
   size?: 'sm' | 'md'
@@ -65,6 +69,8 @@ export default function EnsureButtons({
   showSwap = true,
   showSend = true,
   showBurn = true,
+  muted = false,
+  mutedTooltip = 'Actions not available',
   variant = 'grid',
   size = 'md',
   className = '',
@@ -121,6 +127,43 @@ export default function EnsureButtons({
 
   if (availableButtons.length === 0) {
     return null
+  }
+
+  // If muted, wrap all buttons in a single tooltip
+  if (muted) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className={cn(
+              "flex items-center gap-1",
+              variant === 'list' && "justify-end",
+              className
+            )}>
+              {availableButtons.map(([operation, config]) => {
+                const IconComponent = config.icon
+                return (
+                  <button
+                    key={operation}
+                    disabled
+                    className={cn(
+                      "rounded-md transition-colors cursor-not-allowed",
+                      "text-gray-600",
+                      buttonSize
+                    )}
+                  >
+                    <IconComponent className={cn(iconSize, "stroke-gray-600", "transition-colors")} />
+                  </button>
+                )
+              })}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{mutedTooltip}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    )
   }
 
   return (

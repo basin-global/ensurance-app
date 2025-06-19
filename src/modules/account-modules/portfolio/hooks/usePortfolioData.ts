@@ -4,6 +4,7 @@ import { formatUnits } from 'viem';
 import { getTokenImage } from '../utils/getTokenImage';
 import { getPriceFloor } from '../utils/getPriceFloor';
 import { getSalesData } from '../utils/getSalesData';
+import { CONTRACTS } from '@/modules/specific/config';
 
 export function usePortfolioData(tbaAddress: string) {
   const [tokens, setTokens] = useState<PortfolioToken[]>([]);
@@ -29,6 +30,22 @@ export function usePortfolioData(tbaAddress: string) {
         }
         const { addresses: spamAddresses } = await spamResponse.json();
         console.log('Spam addresses:', spamAddresses);
+
+        // Get list of supported tokens to identify ensurance tokens
+        const [currenciesResponse, certificatesResponse] = await Promise.all([
+          fetch('/api/currencies'),
+          fetch('/api/general')
+        ]);
+
+        const supportedTokens = new Set();
+        if (currenciesResponse.ok) {
+          const currencies = await currenciesResponse.json();
+          currencies.forEach((c: any) => supportedTokens.add(c.address.toLowerCase()));
+        }
+        if (certificatesResponse.ok) {
+          const certificates = await certificatesResponse.json();
+          certificates.forEach((c: any) => supportedTokens.add(c.contract_address.toLowerCase()));
+        }
 
         // Fetch both fungible and non-fungible tokens in parallel
         const [fungibleResponse, nonfungibleResponse] = await Promise.all([
@@ -73,6 +90,9 @@ export function usePortfolioData(tbaAddress: string) {
               ? 'https://raw.githubusercontent.com/0xsquid/assets/main/images/tokens/eth.svg'
               : await getTokenImage(token.tokenAddress);
 
+            // Check if this is an ensurance token
+            const isEnsuranceToken = !isNative && supportedTokens.has(token.tokenAddress.toLowerCase());
+
             return {
               type: isNative ? 'native' : 'erc20',
               address: isNative ? '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' : token.tokenAddress,
@@ -86,7 +106,12 @@ export function usePortfolioData(tbaAddress: string) {
               metadata: {
                 name: isNative ? 'Ethereum' : (token.tokenMetadata?.name || 'Unknown Token'),
                 image: imageUrl
-              }
+              },
+              ...(isEnsuranceToken && {
+                ensurance: {
+                  isEnsuranceGeneral: true
+                }
+              })
             };
           })
         );
@@ -136,6 +161,12 @@ export function usePortfolioData(tbaAddress: string) {
             : priceData.floorPriceUsd 
               ? priceData.floorPriceUsd * balance 
               : null;
+
+          // Check if this is our specific contract
+          const isSpecificContract = nft.contract.address.toLowerCase() === CONTRACTS.specific.toLowerCase();
+          
+          // Check if this is any ensurance token
+          const isEnsuranceToken = supportedTokens.has(nft.contract.address.toLowerCase()) || isSpecificContract;
 
           return {
             type: nft.tokenType.toLowerCase() as 'erc721' | 'erc1155',
@@ -187,7 +218,13 @@ export function usePortfolioData(tbaAddress: string) {
             metadata: {
               name: nft.name,
               image: nft.image.cachedUrl || nft.image.originalUrl
-            }
+            },
+            ...(isEnsuranceToken && {
+              ensurance: {
+                isEnsuranceSpecific: isSpecificContract,
+                isEnsuranceGeneral: !isSpecificContract && supportedTokens.has(nft.contract.address.toLowerCase())
+              }
+            })
           };
         });
 

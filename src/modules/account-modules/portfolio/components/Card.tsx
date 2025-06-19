@@ -5,6 +5,8 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { EnsureButtonsLite } from '@/modules/ensure/buttons';
+import { useState, useEffect } from 'react';
+import { getTokenInfo } from '@/modules/specific/collect';
 
 import { CONTRACTS } from '@/modules/specific/config';
 
@@ -16,6 +18,7 @@ interface CardProps {
   isOverview?: boolean;
   isOwner?: boolean;
   isDeployed?: boolean;
+  enhancedImageUrl?: string;
 }
 
 export default function Card({ 
@@ -25,10 +28,57 @@ export default function Card({
   context,
   isOverview = false,
   isOwner = false,
-  isDeployed = false 
+  isDeployed = false,
+  enhancedImageUrl
 }: CardProps) {
   const imageSize = variant === 'grid' ? 40 : 32;
   const fallbackSize = variant === 'grid' ? 'text-2xl' : 'text-xl';
+  
+  // State for specific ERC1155 pricing
+  const [pricePerToken, setPricePerToken] = useState<bigint | undefined>();
+  
+  // Check if this is our specific contract
+  const isOurSpecificContract = token.ensurance?.isEnsuranceSpecific;
+  
+  // Determine if buttons should be muted
+  const shouldMuteButtons = () => {
+    // All ERC721 tokens should be muted
+    if (token.type === 'erc721') {
+      return true;
+    }
+    
+    // ERC1155 tokens that are NOT our specific contract should be muted
+    if (token.type === 'erc1155' && !isOurSpecificContract) {
+      return true;
+    }
+    
+    return false;
+  };
+  
+  // Fetch price for our specific ERC1155 tokens
+  useEffect(() => {
+    const fetchPrice = async () => {
+      if (token.type === 'erc1155' && isOurSpecificContract && token.address) {
+        try {
+          const nftToken = token as NFTToken;
+          const tokenInfo = await getTokenInfo(
+            token.address as `0x${string}`,
+            nftToken.tokenId
+          );
+          
+          if (tokenInfo?.salesConfig?.pricePerToken) {
+            setPricePerToken(tokenInfo.salesConfig.pricePerToken);
+          }
+        } catch (error) {
+          console.error('Failed to fetch token price:', error);
+        }
+      }
+    };
+    
+    fetchPrice();
+  }, [token.type, token.address, isOurSpecificContract]);
+  
+
 
   const formatBalance = (token: PortfolioToken) => {
     if (token.type === 'erc721') {
@@ -75,7 +125,14 @@ export default function Card({
     }) + ' ETH';
   };
 
+
+  
   const getTokenImage = (token: PortfolioToken): string | undefined => {
+    // Return enhanced image URL if available
+    if (enhancedImageUrl) {
+      return enhancedImageUrl;
+    }
+    
     if (token.type === 'native') {
       return token.metadata?.image || 'https://raw.githubusercontent.com/0xsquid/assets/main/images/tokens/eth.svg';
     }
@@ -87,7 +144,7 @@ export default function Card({
       if (imageUrl && isValidImageUrl(imageUrl)) {
         return imageUrl;
       }
-      return undefined; // Will fall back to placeholder
+      return undefined; // Will fall back to enhanced fetching or placeholder
     }
     if (token.type === 'erc20') {
       return (token as ERC20Token).metadata?.image;
@@ -380,6 +437,10 @@ export default function Card({
             showSwap={true}
             showSend={true}
             showBurn={true}
+            muted={shouldMuteButtons()}
+            mutedTooltip="portfolio actions not supported for this contract"
+            pricePerToken={pricePerToken}
+            primaryMintActive={!!pricePerToken}
           />
         </div>
       </td>
