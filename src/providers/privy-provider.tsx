@@ -9,6 +9,18 @@ export function PrivyProviderWrapper({ children }: { children: React.ReactNode }
   const activeChains = getActiveChains();
   const baseChain = supportedChains.find(chain => chain.id === 8453); // Base
 
+  // Environment-based wallet configuration
+  const getWalletList = (): ('metamask' | 'coinbase_wallet' | 'wallet_connect')[] => {
+    const isDev = process.env.NODE_ENV === 'development';
+    if (isDev) {
+      // In development, show all wallets for testing
+      return ['metamask', 'coinbase_wallet', 'wallet_connect'];
+    } else {
+      // In production, only show MetaMask
+      return ['metamask'];
+    }
+  };
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -28,7 +40,7 @@ export function PrivyProviderWrapper({ children }: { children: React.ReactNode }
           theme: 'dark',
           accentColor: '#22c55e', // Green-500 to match your UI
           showWalletLoginFirst: true,
-          walletList: ['metamask', 'coinbase_wallet', 'wallet_connect'],
+          walletList: getWalletList(),
           logo: '/groups/orbs/ensurance-orb.png',
           landingHeader: 'connect',
           loginMessage: 'ensurance.app'
