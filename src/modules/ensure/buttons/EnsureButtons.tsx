@@ -1,7 +1,7 @@
 'use client'
 
+import React, { useState, useMemo } from 'react'
 import { PlusCircle, RefreshCw, Flame, Send } from 'lucide-react'
-import { useState, useEffect } from 'react'
 import {
   Tooltip,
   TooltipProvider,
@@ -9,315 +9,234 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip"
 import { cn } from '@/lib/utils'
-import type { EnsureButtonsProps, OperationType, ERC1155BalanceInfo } from './types'
-import { useTokenOperations } from './hooks/useTokenOperations'
-import { formatBalance } from './utils/formatting'
 import { BuyModal } from './modals/buy'
+import { SwapModal } from './modals/swap'
 import { SendModal } from './modals/send'
 import { BurnModal } from './modals/burn'
-import { SwapModal } from './modals/swap'
-import { simpleErrorToast } from './utils/notifications'
+import type { 
+  ButtonContext, 
+  Operation, 
+  TokenType
+} from './types'
+import { useTokenData } from './hooks/useTokenData'
+import { useOperations } from './hooks/useOperations'
+import { formatBalance, getTooltipText } from './utils'
 
-// ✅ Now supports tokenbound context with proper integration
-// Supports all token types: native, erc20, erc721, erc1155
-// Uses createTokenboundActions from @/lib/tokenbound.ts
-export function EnsureButtons({ 
+interface EnsureButtonsProps {
+  tokenSymbol: string
+  tokenName?: string
+  imageUrl?: string
+  contractAddress: string
+  tokenId?: string
+  context: ButtonContext
+  tokenType?: TokenType
+  tbaAddress?: string
+  primaryMintActive?: boolean
+  pricePerToken?: bigint
+  className?: string
+  variant?: 'buy-only' | 'portfolio' | 'page'
+  showSwap?: boolean
+  showSend?: boolean
+  showBurn?: boolean
+  onRefreshBalance?: () => void
+}
+
+export default function EnsureButtons({
+  tokenSymbol,
+  tokenName,
+  imageUrl,
   contractAddress,
   tokenId,
-  tokenType = 'erc20',
-  showMinus = true,
-  showBurn = false,
-  showSend = true,
-  size = 'lg',
-  variant = 'grid',
-  imageUrl = '/assets/no-image-found.png',
-  showBalance = true,
-  tokenName,
-  tokenSymbol = 'Token',
   context,
+  tokenType = 'erc20',
   tbaAddress,
-  isOwner,
-  isDeployed,
-  initialBalance,
-  maxSupply,
-  totalMinted,
+  primaryMintActive = false,
   pricePerToken,
-  primaryMintActive = false
+  className = '',
+  variant = 'page',
+  showSwap = true,
+  showSend = true,
+  showBurn = true,
+  onRefreshBalance
 }: EnsureButtonsProps) {
+  // Modal state
   const [modalOpen, setModalOpen] = useState(false)
-  const [currentOperation, setCurrentOperation] = useState<OperationType | null>(null)
-  const [fetchedPrice, setFetchedPrice] = useState<bigint | null>(null)
+  const [currentOperation, setCurrentOperation] = useState<Operation | null>(null)
+
+  // Use new simplified hooks - only fetch balance for page variant
+  const shouldFetchBalance = variant === 'page'
+  const { 
+    tokenBalance,
+    fetchTokenBalance 
+  } = useTokenData({
+    context,
+    contractAddress: (contractAddress.startsWith('0x') ? contractAddress : `0x${contractAddress}`) as `0x${string}`,
+    tokenId,
+    tokenType,
+    tbaAddress: (tbaAddress as `0x${string}`) || undefined,
+    skipBalance: !shouldFetchBalance
+  })
 
   const {
-    tokenBalance,
-    login,
-    authenticated,
-    userAddress,
-    
-    // Token data
-    availableTokens,
-    isLoadingTokens,
-    tokenImages,
-    
-    // Quote data
-    estimatedOutput,
-    isSimulating,
-    
-    // Account search state
-    accountSearchResults,
-    isSearching,
-    accountSearchQuery,
-    
-    // Buy modal state
-    selectedToken,
-    amount,
-    formattedAmount,
-    amountError,
     isLoading,
-    
-    // Send modal state  
-    selectedAccount,
-    recipientAddress,
-    
-    // Loading states
     isBurning,
     isSwapping,
-    
-    // ERC1155 specific state
-    erc1155Balance,
-    usdcBalance,
-    setErc1155Balance,
-    getUsdcOperationData,
-    checkUsdcApproval,
-    
-    // Actions
-    fetchAvailableTokens,
-    fetchTokenBalance,
-    resetModalState,
-    handleAmountChange,
-    handleTokenSelect,
-    handleAccountSelect,
-    handleSearchQueryChange,
-    executeBuy,
+    authenticated,
     executeSend,
-    executeBurn,
-    executeSwap,
-    
-    // ERC1155 specific actions
-    executeERC1155Buy,
-    executeERC1155Burn
-  } = useTokenOperations({
+    executeBurn
+  } = useOperations({
     context,
     contractAddress,
     tokenId,
-    tokenSymbol,
-    tokenName,
     tokenType,
     tbaAddress,
-    variant,
-    initialBalance,
-    // ERC1155 specific props
-    maxSupply,
-    totalMinted,
-    pricePerToken: pricePerToken || fetchedPrice || undefined,
+    pricePerToken,
     primaryMintActive
   })
 
-  const iconSize = size === 'sm' ? 'w-6 h-6' : 'w-10 h-10'
-
-  // Fetch USDC balance for tokenbound ERC1155 buy modal
-  const fetchUsdcBalance = async () => {
-    if (context !== 'tokenbound' || tokenType !== 'erc1155' || !tbaAddress) {
-      return
-    }
-
-    try {
-      // Fetch USDC balance
-      const response = await fetch(`/api/alchemy/fungible?address=${tbaAddress}`)
-      if (response.ok) {
-        const data = await response.json()
-        const usdcToken = data.data?.tokens?.find((t: any) => 
-          t.tokenAddress?.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913'
-        )
-        if (usdcToken) {
-          const usdcBalance = BigInt(usdcToken.tokenBalance || '0')
-          const formattedBalance = (Number(usdcBalance) / 1_000_000).toFixed(6)
-          
-          // Update the erc1155Balance state with USDC balance
-          setErc1155Balance((prev: ERC1155BalanceInfo) => ({
-            ...prev,
-            usdcBalance,
-            formattedUsdcBalance: formattedBalance
-          }))
-          
-          console.log('🔍 Fetched USDC balance for tokenbound:', formattedBalance)
-        }
-      }
-
-      // Also fetch price if not provided via props
-      if (!pricePerToken && contractAddress && tokenId) {
-        try {
-          const { getTokenInfo } = await import('../../specific/collect')
-          const tokenInfo = await getTokenInfo(contractAddress, tokenId)
-          
-          if (tokenInfo?.salesConfig?.pricePerToken) {
-            setFetchedPrice(tokenInfo.salesConfig.pricePerToken)
-            console.log('🔍 Fetched price for tokenbound ERC1155:', tokenInfo.salesConfig.pricePerToken.toString())
-          }
-        } catch (priceError) {
-          console.error('Error fetching token price:', priceError)
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching USDC balance:', error)
-    }
-  }
-
-  const handleOpenModal = async (type: OperationType) => {
-    if (!authenticated) {
-      login()
-      return
-    }
-
-    // For specific context, check if primary mint is active for buy operations
-    if (context === 'specific' && type === 'buy' && !primaryMintActive) {
-      simpleErrorToast('This policy is no longer issuing certificates')
-      return
-    }
-
-    // For tokenbound context, check ownership and deployment
-    if (context === 'tokenbound' && (!isOwner || !isDeployed)) {
-      return // Don't show buttons if not owner or not deployed
-    }
-
-    // Reset modal state and fetch fresh data
-    resetModalState()
+  // Determine button availability based on variant
+  const buttonConfig = useMemo(() => {
+    const isERC1155 = (tokenType as string) === 'erc1155'
+    const hasBalance = tokenBalance && tokenBalance > BigInt(0)
     
-    // For tokenbound ERC1155 buy, fetch USDC balance directly
-    if (context === 'tokenbound' && tokenType === 'erc1155' && type === 'buy') {
-      await Promise.all([
-        fetchUsdcBalance(),
-        fetchAvailableTokens(type)
-      ])
-    } else {
-      // Standard flow
-      await Promise.all([
-        fetchTokenBalance(),
-        fetchAvailableTokens(type)
-      ])
+    return {
+      buy: {
+        available: true,
+        disabled: isLoading,
+        text: isERC1155 ? 'ensure' : 'buy'
+      },
+      swap: {
+        available: variant !== 'buy-only' && !isERC1155 && showSwap,
+        disabled: isSwapping || (variant === 'page' && !hasBalance),
+        text: 'swap'
+      },
+      send: {
+        available: variant !== 'buy-only' && showSend,
+        disabled: isLoading || (variant === 'page' && !hasBalance),
+        text: 'send'
+      },
+      burn: {
+        available: variant !== 'buy-only' && showBurn,
+        disabled: isBurning || (variant === 'page' && !hasBalance),
+        text: 'burn'
+      }
     }
-    
-    setCurrentOperation(type)
+  }, [tokenType, tokenBalance, isLoading, isSwapping, isBurning, variant, showSwap, showSend, showBurn])
+
+  const handleOpenModal = (operation: Operation) => {
+    setCurrentOperation(operation)
     setModalOpen(true)
   }
 
   const handleCloseModal = () => {
     setModalOpen(false)
     setCurrentOperation(null)
-    resetModalState()
   }
 
-  // For tokenbound context, only show buttons if owner AND deployed
-  if (context === 'tokenbound' && (!isOwner || !isDeployed)) {
+  const handleRefreshBalance = () => {
+    fetchTokenBalance()
+    onRefreshBalance?.()
+  }
+
+  // Don't render if not authenticated for tokenbound context
+  if (context === 'tokenbound' && !authenticated) {
     return null
   }
+
+  const iconSize = variant === 'page' ? 'w-10 h-10' : 'w-6 h-6'
 
   return (
     <>
       <div className="flex flex-col items-center gap-2">
         <div className={cn(
           "flex gap-8",
-          variant === 'list' ? "opacity-0 group-hover:opacity-100 transition-opacity" : ""
+          className
         )}>
           {/* Ensure (buy) button - green */}
-          {/* Only show buy button based on context and token type */}
-          {(context === 'general' || 
-            context === 'specific' || 
-            (context === 'tokenbound' && (tokenType === 'erc20' || tokenType === 'native' || 
-             (tokenType === 'erc1155' && primaryMintActive)))) && (
+          {buttonConfig.buy.available && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => handleOpenModal('buy')}
                     className="flex items-center gap-2 text-gray-300 hover:text-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={context === 'specific' && !primaryMintActive}
+                    disabled={buttonConfig.buy.disabled}
                   >
                     <PlusCircle className={`${iconSize} stroke-[1.5] stroke-green-500 hover:stroke-green-400 transition-colors`} />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>ensure (buy)</p>
+                  <p>{getTooltipText('buy')}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           )}
 
           {/* Transform (swap) button - blue */}
-          {showMinus && (
+          {buttonConfig.swap.available && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => handleOpenModal('swap')}
                     className="flex items-center gap-2 text-gray-300 hover:text-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={buttonConfig.swap.disabled}
                   >
                     <RefreshCw className={`${iconSize} stroke-[1.5] stroke-blue-500 hover:stroke-blue-400 transition-colors`} />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>transform (swap)</p>
+                  <p>{getTooltipText('swap')}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           )}
 
           {/* Send button - amber */}
-          {showSend && (
+          {buttonConfig.send.available && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => handleOpenModal('send')}
                     className="flex items-center gap-2 text-gray-300 hover:text-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={buttonConfig.send.disabled}
                   >
                     <Send className={`${iconSize} stroke-[1.5] stroke-amber-500 hover:stroke-amber-400 transition-colors`} />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>send</p>
+                  <p>{getTooltipText('send')}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           )}
 
           {/* Burn button - orange */}
-          {showBurn && (
+          {buttonConfig.burn.available && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => handleOpenModal('burn')}
                     className="flex items-center gap-2 text-gray-300 hover:text-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={buttonConfig.burn.disabled}
                   >
                     <Flame className={`${iconSize} stroke-[1.5] stroke-orange-500 hover:stroke-orange-400 transition-colors`} />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>burn</p>
+                  <p>{getTooltipText('burn')}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           )}
         </div>
 
-        {/* Balance display - now below the buttons */}
-        {showBalance && (
+        {/* Balance display - only show on page variant */}
+        {variant === 'page' && (
           <div className="text-sm text-gray-400 text-center">
-            balance: {context === 'specific' ? 
-              erc1155Balance.formattedTokenBalance : 
-              formatBalance(tokenBalance.toString(), tokenType || 'erc20')
-            }
+            balance: {tokenBalance ? formatBalance(tokenBalance, tokenType, 18) : '0'}
           </div>
         )}
       </div>
@@ -331,66 +250,11 @@ export function EnsureButtons({
         imageUrl={imageUrl}
         context={context}
         tokenType={tokenType}
-        availableTokens={availableTokens}
-        isLoadingTokens={isLoadingTokens}
-        tokenImages={tokenImages}
-        estimatedOutput={estimatedOutput}
-        isSimulating={isSimulating}
-        onAmountChange={handleAmountChange}
-        onTokenSelect={handleTokenSelect}
-        onExecute={
-          (context === 'specific' || (context === 'tokenbound' && tokenType === 'erc1155')) 
-            ? executeERC1155Buy 
-            : executeBuy
-        }
-        selectedToken={selectedToken || undefined}
-        amount={amount}
-        formattedAmount={formattedAmount}
-        amountError={amountError}
-        isLoading={isLoading}
-        // ERC1155 specific props
-        pricePerToken={pricePerToken || fetchedPrice || undefined}
-        usdcBalance={
-          (context === 'specific' || (context === 'tokenbound' && tokenType === 'erc1155'))
-            ? erc1155Balance.usdcBalance 
-            : undefined
-        }
-        totalPrice={undefined} // Will be calculated in the modal based on local amount
-      />
-
-      {/* Send Modal */}
-      <SendModal
-        isOpen={modalOpen && currentOperation === 'send'}
-        onClose={handleCloseModal}
-        tokenSymbol={tokenSymbol}
-        tokenName={tokenName}
-        imageUrl={imageUrl}
-        tokenType={tokenType}
-        context={context}
-        tokenBalance={context === 'specific' ? erc1155Balance.tokenBalance : tokenBalance}
-        accountSearchQuery={accountSearchQuery}
-        accountSearchResults={accountSearchResults}
-        isSearching={isSearching}
-        onSearchQueryChange={handleSearchQueryChange}
-        onExecute={executeSend}
-        isLoading={isLoading}
-        selectedAccount={selectedAccount || undefined}
-        onAccountSelect={handleAccountSelect}
-        recipientAddress={recipientAddress}
-      />
-
-      {/* Burn Modal */}
-      <BurnModal
-        isOpen={modalOpen && currentOperation === 'burn'}
-        onClose={handleCloseModal}
-        tokenSymbol={tokenSymbol}
-        tokenName={tokenName}
-        imageUrl={imageUrl}
-        tokenType={tokenType}
-        context={context}
-        tokenBalance={context === 'specific' ? erc1155Balance.tokenBalance : tokenBalance}
-        onExecute={context === 'specific' ? executeERC1155Burn : executeBurn}
-        isLoading={isBurning}
+        contractAddress={contractAddress}
+        tbaAddress={tbaAddress}
+        pricePerToken={pricePerToken}
+        primaryMintActive={primaryMintActive}
+        onRefreshBalance={handleRefreshBalance}
       />
 
       {/* Swap Modal */}
@@ -400,19 +264,53 @@ export function EnsureButtons({
         tokenSymbol={tokenSymbol}
         tokenName={tokenName}
         imageUrl={imageUrl}
-        tokenType={tokenType}
         context={context}
-        contractAddress={contractAddress}
+        tokenType={tokenType}
+        contractAddress={(contractAddress.startsWith('0x') ? contractAddress : `0x${contractAddress}`) as `0x${string}`}
         tokenBalance={tokenBalance}
-        availableTokens={availableTokens}
-        isLoadingTokens={isLoadingTokens}
-        tokenImages={tokenImages}
-        estimatedOutput={estimatedOutput}
-        isSimulating={isSimulating}
-        onTokenSelect={handleTokenSelect}
-        onExecute={executeSwap}
-        selectedToken={selectedToken || undefined}
+        availableTokens={[]}
+        isLoadingTokens={false}
+        tokenImages={{}}
+        estimatedOutput="0"
+        isSimulating={false}
+        onTokenSelect={() => {}}
+        onExecute={async () => {}}
         isLoading={isSwapping}
+      />
+
+      {/* Send Modal - Using existing interface */}
+      <SendModal
+        isOpen={modalOpen && currentOperation === 'send'}
+        onClose={handleCloseModal}
+        tokenSymbol={tokenSymbol}
+        tokenName={tokenName}
+        imageUrl={imageUrl}
+        context={context}
+        tokenType={tokenType}
+        tokenBalance={tokenBalance}
+        accountSearchQuery=""
+        accountSearchResults={[]}
+        isSearching={false}
+        onSearchQueryChange={() => {}}
+        selectedAccount={undefined}
+        onAccountSelect={() => {}}
+        recipientAddress=""
+        onExecute={executeSend}
+        isLoading={isLoading}
+      />
+
+      {/* Burn Modal - Using existing interface */}
+      <BurnModal
+        isOpen={modalOpen && currentOperation === 'burn'}
+        onClose={handleCloseModal}
+        tokenSymbol={tokenSymbol}
+        tokenName={tokenName}
+        imageUrl={imageUrl}
+        context={context}
+        tokenType={tokenType}
+        tokenBalance={tokenBalance}
+        onExecute={executeBurn}
+        isLoading={isBurning}
       />
     </>
   )

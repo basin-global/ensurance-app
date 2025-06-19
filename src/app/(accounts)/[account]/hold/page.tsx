@@ -25,7 +25,8 @@ export default function HoldPage({ params }: HoldPageProps) {
   return (
     <div className="space-y-6">
       <Portfolio 
-        tbaAddress={accountData.tba_address} 
+        address={accountData.tba_address} 
+        context="tokenbound"
         isOwner={isOwner}
         isDeployed={isDeployed}
       />

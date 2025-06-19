@@ -5,11 +5,13 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { EnsureButtons } from '@/modules/ensure/buttons';
+import { CONTRACTS } from '@/modules/specific/config';
 
 interface CardProps {
   token: PortfolioToken;
   variant: 'list' | 'grid' | 'overview';
-  tbaAddress: string;
+  address: string;
+  context: 'tokenbound' | 'operator';
   isOverview?: boolean;
   isOwner?: boolean;
   isDeployed?: boolean;
@@ -18,7 +20,8 @@ interface CardProps {
 export default function Card({ 
   token, 
   variant, 
-  tbaAddress, 
+  address, 
+  context,
   isOverview = false,
   isOwner = false,
   isDeployed = false 
@@ -325,29 +328,30 @@ export default function Card({
           </TooltipProvider>
         )}
       </td>
-      <td className="py-4 pl-4">
-        <div className="flex justify-end">
-          <EnsureButtons
-            contractAddress={token.address as `0x${string}`}
-            tokenId={token.type === 'erc721' || token.type === 'erc1155' ? (token as NFTToken).tokenId : ''}
-            tokenType={token.type}
-            tokenSymbol={token.symbol}
-            tokenName={token.name}
-            imageUrl={getTokenImage(token) || '/assets/no-image-found.png'}
-            size="sm"
-            variant={variant === 'overview' ? 'list' : variant}
-            context="tokenbound"
-            tbaAddress={tbaAddress as `0x${string}`}
-            isOwner={isOwner}
-            isDeployed={isDeployed}
-            showBalance={false}
-            showBurn={token.ensurance?.isEnsuranceGeneral || token.ensurance?.isEnsuranceSpecific || false}
-            initialBalance={token.balance}
-            primaryMintActive={
-              token.type === 'erc1155' && 
-              token.address.toLowerCase() === '0x7dfaa8f8e2aa32b6c2112213b395b4c9889580dd'
-            }
-          />
+      <td className="py-4 text-right">
+        <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+          {!(token.type === 'erc1155' && token.address.toLowerCase() !== CONTRACTS.specific.toLowerCase()) && (
+            <EnsureButtons
+              contractAddress={token.address}
+              tokenId={token.type === 'erc721' || token.type === 'erc1155' ? (token as NFTToken).tokenId : ''}
+              tokenType={token.type}
+              tokenSymbol={token.symbol}
+              tokenName={token.name}
+              imageUrl={getTokenImage(token) || '/assets/no-image-found.png'}
+              context={
+                token.type === 'erc1155' && token.address.toLowerCase() === CONTRACTS.specific.toLowerCase()
+                  ? 'specific'
+                  : context
+              }
+              tbaAddress={context === 'tokenbound' ? address : undefined}
+              variant="portfolio"
+              className="text-sm"
+              primaryMintActive={
+                token.type === 'erc1155' && 
+                token.address.toLowerCase() === CONTRACTS.specific.toLowerCase()
+              }
+            />
+          )}
         </div>
       </td>
     </tr>

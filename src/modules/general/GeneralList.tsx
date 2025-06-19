@@ -102,16 +102,12 @@ export default function GeneralList({ certificates, urlPrefix = '', isMiniApp = 
                     <div className="flex justify-end">
                       <EnsureButtons
                         context="general"
-                        contractAddress={cert.contract_address as `0x${string}`}
+                        contractAddress={cert.contract_address}
                         tokenSymbol="TOKEN"
                         tokenName={cert.name}
-                        variant="list"
-                        showBurn={false}
-                        showSend={false}
-                        showSwap={false}
-                        showMinus={false}
-                        size="sm"
-                        showBalance={false}
+                        imageUrl={cert.image_url || FALLBACK_IMAGE}
+                        variant="buy-only"
+                        className="text-sm"
                       />
                     </div>
                   </td>

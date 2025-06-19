@@ -12,6 +12,7 @@ import { Grid, List } from 'lucide-react'
 import SpecificList from './SpecificList'
 import { cn } from '@/lib/utils'
 import { toast } from 'react-toastify'
+import { EnsureButtons } from '@/modules/ensure/buttons'
 
 interface SpecificGridProps {
   searchQuery?: string
@@ -31,19 +32,7 @@ const convertIpfsUrl = (url: string) => {
   return url
 }
 
-// Status dot component
-const StatusDot = ({ active }: { active: boolean }) => {
-  const statusDotClasses = "w-2 h-2 rounded-full relative after:content-[''] after:absolute after:inset-0 after:rounded-full after:animate-pulse"
-  
-  return (
-    <span className={cn(
-      statusDotClasses,
-      active 
-        ? "bg-green-500 after:bg-green-500/50" 
-        : "bg-red-500 after:bg-red-500/50"
-    )} />
-  )
-}
+
 
 export default function SpecificGrid({ 
   searchQuery = '',
@@ -266,12 +255,26 @@ export default function SpecificGrid({
                         )}
                         <div className="flex items-center justify-between text-sm text-gray-400 px-2">
                           <div className="flex gap-4">
-                            <div>issued: {token.totalMinted.toString()} / {token.maxSupply >= MAX_SUPPLY_OPEN_EDITION - BigInt(1) ? '∞' : token.maxSupply.toString()}</div>
+                            <div>issued: {token.totalMinted.toString()} / {String(token.maxSupply >= MAX_SUPPLY_OPEN_EDITION - BigInt(1) ? '∞' : token.maxSupply.toString())}</div>
                             {token.salesConfig?.pricePerToken && (
                               <div>${formatUnits(token.salesConfig.pricePerToken, 6)} ea</div>
                             )}
                           </div>
-                          <StatusDot active={token.primaryMintActive || false} />
+                          <div onClick={(e) => e.preventDefault()}>
+                            <EnsureButtons
+                              context="specific"
+                              contractAddress={CONTRACTS.specific}
+                              tokenId={token.tokenURI.split('/').pop() || ''}
+                              tokenType="erc1155"
+                              tokenSymbol="Certificate"
+                              tokenName={metadata?.name || 'Certificate'}
+                              imageUrl={imageUrl}
+                              variant="buy-only"
+                              className="text-sm"
+                              primaryMintActive={token.primaryMintActive}
+                              pricePerToken={token.salesConfig?.pricePerToken}
+                            />
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -321,12 +324,24 @@ export default function SpecificGrid({
                       )}
                       <div className="flex items-center justify-between text-sm text-gray-400 px-2">
                         <div className="flex gap-4">
-                          <div>issued: {token.totalMinted.toString()} / {token.maxSupply >= MAX_SUPPLY_OPEN_EDITION - BigInt(1) ? '∞' : token.maxSupply.toString()}</div>
+                          <div>issued: {token.totalMinted.toString()} / {String(token.maxSupply >= MAX_SUPPLY_OPEN_EDITION - BigInt(1) ? '∞' : token.maxSupply.toString())}</div>
                           {token.salesConfig?.pricePerToken && (
                             <div>${formatUnits(token.salesConfig.pricePerToken, 6)} ea</div>
                           )}
                         </div>
-                        <StatusDot active={token.primaryMintActive || false} />
+                        <EnsureButtons
+                          context="specific"
+                          contractAddress={CONTRACTS.specific}
+                          tokenId={token.tokenURI.split('/').pop() || ''}
+                          tokenType="erc1155"
+                          tokenSymbol="Certificate"
+                          tokenName={metadata?.name || 'Certificate'}
+                          imageUrl={imageUrl}
+                          variant="buy-only"
+                          className="text-sm"
+                          primaryMintActive={token.primaryMintActive}
+                          pricePerToken={token.salesConfig?.pricePerToken}
+                        />
                       </div>
                     </div>
                   </CardContent>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useDebounce } from '@/hooks/useDebounce'
 import Image from 'next/image'
 import {
   Dialog,
@@ -20,7 +21,8 @@ import {
 import type { TokenInfo, ButtonContext, TokenType } from '../types'
 import { handleAmountChange } from '../utils/input'
 import { formatNumber, getTokenDecimals } from '../utils/formatting'
-import { getDefaultTokenImage } from '../utils/images'
+import { useTokenData } from '../hooks/useTokenData'
+import { useOperations } from '../hooks/useOperations'
 
 interface BuyModalProps {
   isOpen: boolean
@@ -30,26 +32,11 @@ interface BuyModalProps {
   imageUrl?: string
   context: ButtonContext
   tokenType?: TokenType
-  availableTokens: TokenInfo[]
-  isLoadingTokens: boolean
-  tokenImages: Record<string, string>
-  estimatedOutput: string
-  isSimulating: boolean
-  onAmountChange: (value: string) => void
-  onTokenSelect: (token: TokenInfo) => void
-  onExecute: (amount: string, selectedToken?: TokenInfo) => Promise<void>
-  selectedToken?: TokenInfo
-  amount: string
-  formattedAmount: string
-  amountError?: string
-  isLoading: boolean
-  // ERC1155 specific props
+  contractAddress: string
+  tbaAddress?: string
   pricePerToken?: bigint
-  usdcBalance?: bigint
-  totalPrice?: bigint
-  // Wallet info for debugging
-  userAddress?: string
-  authenticated?: boolean
+  primaryMintActive?: boolean
+  onRefreshBalance?: () => void
 }
 
 export function BuyModal({
@@ -59,144 +46,184 @@ export function BuyModal({
   tokenName,
   imageUrl = '/assets/no-image-found.png',
   context,
-  tokenType,
-  availableTokens,
-  isLoadingTokens,
-  tokenImages,
-  estimatedOutput,
-  isSimulating,
-  onAmountChange,
-  onTokenSelect,
-  onExecute,
-  selectedToken,
-  amount,
-  formattedAmount,
-  amountError,
-  isLoading,
-  // ERC1155 specific props
+  tokenType = 'erc20',
+  contractAddress,
+  tbaAddress,
   pricePerToken,
-  usdcBalance,
-  totalPrice,
-  // Wallet info for debugging
-  userAddress,
-  authenticated
+  primaryMintActive = false,
+  onRefreshBalance
 }: BuyModalProps) {
+  // Modal state - kept local as decided
   const [localAmount, setLocalAmount] = useState('')
   const [localFormattedAmount, setLocalFormattedAmount] = useState('')
   const [localAmountError, setLocalAmountError] = useState('')
+  const [selectedToken, setSelectedToken] = useState<TokenInfo | null>(null)
+  
+  // Debounce amount for quote fetching to prevent excessive API calls and rounding errors
+  const debouncedAmount = useDebounce(localAmount, 500) // 500ms delay
+  
+  // Target token info removed - now using passed props directly
 
-  // Helper function to get appropriate display name based on token type
+  // Use new simplified hooks
+  const {
+    availableTokens,
+    isLoadingTokens,
+    tokenImages,
+    estimatedOutput,
+    isSimulating,
+    erc1155Balance,
+    fetchAvailableTokens,
+    fetchQuote
+  } = useTokenData({
+    context,
+    contractAddress: contractAddress as any,
+    tokenType,
+    tbaAddress: tbaAddress as any
+  })
+
+  const {
+    isLoading,
+    executeBuy,
+    authenticated,
+    login
+  } = useOperations({
+    context,
+    contractAddress,
+    tokenType,
+    tbaAddress,
+    pricePerToken,
+    primaryMintActive
+  })
+
+  // Helper functions
   const getDisplayName = () => {
-    // For buy modal, we're always dealing with the target token
-    // context === 'specific' or tokenbound ERC1155 means ERC1155, otherwise use symbol
-    if (context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) {
-      return tokenName || tokenSymbol
-    }
-    return tokenSymbol
+    // Use the passed tokenName/tokenSymbol props since they're already properly set
+    // from the parent component
+    return tokenName || tokenSymbol
   }
 
-  // Tokenbound context now works like other contexts
+  const getImageUrl = () => {
+    // Always use the passed imageUrl prop since it's already properly processed
+    // from the parent component (Details) which handles metadata fetching and IPFS conversion
+    return imageUrl
+  }
 
-  // Helper function for button validation
   const isButtonDisabled = () => {
     if (isLoading || !localAmount || Number(localAmount) <= 0) return true
-    if (context !== 'specific' && !(context === 'tokenbound' && (tokenType as string) === 'erc1155') && !selectedToken) return true
     
-    // For ERC1155 (specific or tokenbound), check if there's a validation error
-    if (context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) {
+    if ((tokenType as string) === 'erc1155') {
       return !!localAmountError
     }
     
-    // For general/tokenbound ERC20 context, check amount error
-    return !!amountError
+    if (!selectedToken) return true
+    return !!localAmountError
   }
 
   // Handle amount input changes
   const handleInputChange = (value: string) => {
     const maxDecimals = selectedToken ? getTokenDecimals(selectedToken.symbol, selectedToken.decimals) : 18
-    // Determine token type - ETH is native, others are ERC20
-    const tokenType = selectedToken?.type === 'native' ? 'native' : 'erc20'
-    const result = handleAmountChange(value, tokenType, maxDecimals)
+    const inputTokenType = selectedToken?.type === 'native' ? 'native' : 'erc20'
+    const result = handleAmountChange(value, inputTokenType, maxDecimals)
     
     setLocalAmount(result.cleanValue)
     setLocalFormattedAmount(result.formattedValue)
-    onAmountChange(result.cleanValue)
 
-    // For ERC1155 context (specific or tokenbound), validate against USDC balance instead of selectedToken
-    if ((context === 'specific' || (context === 'tokenbound' && tokenType && (tokenType as string) === 'erc1155')) && result.cleanValue && pricePerToken && usdcBalance) {
-      const quantity = BigInt(Math.floor(Number(result.cleanValue)))
-      const totalCost = quantity * pricePerToken
-      
-      if (totalCost > usdcBalance) {
-        setLocalAmountError('Insufficient USDC balance')
+    // Validate based on token type
+    if ((tokenType as string) === 'erc1155') {
+      // For ERC1155 tokens, validate against USDC balance
+      if (result.cleanValue && pricePerToken && erc1155Balance.usdcBalance) {
+        const quantity = BigInt(Math.floor(Number(result.cleanValue)))
+        const totalCost = quantity * pricePerToken
+        
+        if (totalCost > erc1155Balance.usdcBalance) {
+          setLocalAmountError('Insufficient USDC balance')
+        } else {
+          setLocalAmountError('')
+        }
+      } else {
+        setLocalAmountError('')
+      }
+    } else {
+      // For ERC20/native tokens, validate against selected token balance
+      if (result.cleanValue && selectedToken?.balance) {
+        const inputAmount = Number(result.cleanValue)
+        const availableBalance = Number(selectedToken.balance) / Math.pow(10, selectedToken.decimals)
+        
+        if (inputAmount > availableBalance) {
+          setLocalAmountError(`Insufficient ${selectedToken.symbol} balance`)
+        } else {
+          setLocalAmountError('')
+        }
       } else {
         setLocalAmountError('')
       }
     }
+
+    // Note: Quote fetching is now handled by debouncedAmount effect below
   }
 
-  // Reset amount when modal opens
+  // Target token info fetching removed - now using passed props directly
+
+  // Reset and load data when modal opens
   useEffect(() => {
     if (isOpen) {
       setLocalAmount('')
       setLocalFormattedAmount('')
       setLocalAmountError('')
+      setSelectedToken(null)
       
-      // Debug logging for ERC1155 context
-      if (context === 'specific') {
-        console.log('🔍 BuyModal opened for ERC1155:', {
-          context,
-          walletAddress: userAddress || 'NOT_CONNECTED',
-          authenticated: authenticated,
-          usdcBalance: usdcBalance?.toString(),
-          usdcBalanceFormatted: usdcBalance ? (Number(usdcBalance) / 1_000_000).toFixed(6) : 'undefined',
-          pricePerToken: pricePerToken?.toString(),
-          pricePerTokenFormatted: pricePerToken ? (Number(pricePerToken) / 1_000_000).toFixed(2) : 'undefined',
-          totalPrice: totalPrice?.toString(),
-          localAmount,
-          calculatedTotal: pricePerToken && localAmount ? 
-            (Number(BigInt(Math.floor(Number(localAmount))) * pricePerToken) / 1_000_000).toFixed(2) : 'N/A'
-        })
+      if (authenticated) {
+        fetchAvailableTokens('buy')
       }
     }
-  }, [isOpen, context, usdcBalance, pricePerToken, totalPrice])
+  }, [isOpen, authenticated, fetchAvailableTokens])
+
+  // Set initial selected token when available tokens load
+  useEffect(() => {
+    if (availableTokens.length > 0 && !selectedToken) {
+      const ethToken = availableTokens.find(t => t.type === 'native')
+      if (ethToken) {
+        setSelectedToken(ethToken)
+      }
+    }
+  }, [availableTokens, selectedToken])
+
+  // Clear estimate immediately when user starts typing (prevents stale estimates)
+  useEffect(() => {
+    if (localAmount !== debouncedAmount && (tokenType as string) !== 'erc1155') {
+      // User is typing but debounced value hasn't updated yet - clear stale estimate
+      fetchQuote('', '', '0') // This will set estimatedOutput to '0'
+    }
+  }, [localAmount, debouncedAmount, tokenType, fetchQuote])
+
+  // Fetch quote when debounced amount changes (prevents excessive API calls and rounding errors)
+  useEffect(() => {
+    if (selectedToken && debouncedAmount && (tokenType as string) !== 'erc1155') {
+      const sellAmount = (Number(debouncedAmount) * Math.pow(10, selectedToken.decimals)).toString()
+      fetchQuote(selectedToken.address, contractAddress, sellAmount)
+    }
+  }, [debouncedAmount, selectedToken, contractAddress, tokenType, fetchQuote])
 
   const handleExecute = async () => {
-    console.log('🚀 Buy modal handleExecute called:', {
-      context,
-      tokenType,
-      localAmount,
-      selectedToken: selectedToken?.symbol,
-      isButtonDisabled: isButtonDisabled()
-    })
-    
-    // For specific context or tokenbound ERC1155, selectedToken is optional
-    if (context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) {
-      if (!localAmount) {
-        console.log('❌ No local amount provided')
-        return
+    if (!authenticated) {
+      login()
+      return
+    }
+
+    try {
+      if ((tokenType as string) === 'erc1155') {
+        await executeBuy(localAmount)
+      } else {
+        if (!selectedToken) return
+        await executeBuy(localAmount, selectedToken)
       }
-      try {
-        console.log('🔵 Calling onExecute for ERC1155 context with amount:', localAmount)
-        await onExecute(localAmount)
-        onClose()
-      } catch (error) {
-        console.error('❌ Buy modal execution error (ERC1155):', error)
-        // Error handling is done in the hook
-      }
-    } else {
-      if (!selectedToken || !localAmount) {
-        console.log('❌ Missing selectedToken or localAmount:', { selectedToken: selectedToken?.symbol, localAmount })
-        return
-      }
-      try {
-        console.log('🔵 Calling onExecute for ERC20/general context:', { amount: localAmount, token: selectedToken.symbol })
-        await onExecute(localAmount, selectedToken)
-        onClose()
-      } catch (error) {
-        console.error('❌ Buy modal execution error (ERC20/general):', error)
-        // Error handling is done in the hook
-      }
+      
+      // Refresh balance and close modal
+      onRefreshBalance?.()
+      onClose()
+    } catch (error) {
+      // Error handling is done in the useOperations hook
+      console.error('Buy execution error:', error)
     }
   }
 
@@ -215,8 +242,8 @@ export function BuyModal({
             </div>
             <div className="relative w-20 h-20 rounded-lg overflow-hidden">
               <Image
-                src={imageUrl}
-                alt={tokenSymbol}
+                src={getImageUrl()}
+                alt={getDisplayName()}
                 fill
                 className="object-cover"
               />
@@ -225,16 +252,14 @@ export function BuyModal({
         </DialogHeader>
 
         <div className="py-6 space-y-6">
-          {/* Main content grid */}
           <div className="space-y-4">
-            {/* ERC1155 Specific or Tokenbound ERC1155: Show USDC payment info */}
-            {(context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) ? (
+            {/* ERC1155: Show USDC payment info */}
+            {(tokenType as string) === 'erc1155' ? (
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-300">
                   PAY WITH USDC
                 </label>
                 <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4">
-                  {/* Price Display - Prominent */}
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
                       <span className="text-sm font-bold text-white">$</span>
@@ -247,11 +272,10 @@ export function BuyModal({
                     </div>
                   </div>
                   
-                  {/* Balance Info - Muted below */}
                   <div className="pt-2 border-t border-gray-700">
                     <div className="text-sm text-gray-400">
-                      Your balance: {usdcBalance ? formatNumber(Number(usdcBalance) / 1_000_000, 2) : '0.00'} USDC
-                      {(!usdcBalance || Number(usdcBalance) === 0) && (
+                      Your balance: {erc1155Balance ? formatNumber(Number(erc1155Balance.usdcBalance) / 1_000_000, 2) : '0.00'} USDC
+                      {(!erc1155Balance.usdcBalance || Number(erc1155Balance.usdcBalance) === 0) && (
                         <div className="text-xs text-amber-400 mt-1">
                           💡 You need USDC on Base network to purchase certificates
                         </div>
@@ -261,7 +285,7 @@ export function BuyModal({
                 </div>
               </div>
             ) : (
-              /* General/Tokenbound: Token Selection */
+              /* ERC20/Native: Token Selection */
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-300">
                   PAY WITH
@@ -270,7 +294,7 @@ export function BuyModal({
                   value={selectedToken?.address}
                   onValueChange={(value) => {
                     const token = availableTokens.find(t => t.address === value)
-                    if (token) onTokenSelect(token)
+                    if (token) setSelectedToken(token)
                   }}
                 >
                   <SelectTrigger className="bg-gray-900/50 border-gray-800 text-white h-12 text-lg font-medium">
@@ -320,11 +344,11 @@ export function BuyModal({
             )}
 
             {/* Amount Input */}
-            {((context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) || selectedToken) && (
+            {(((tokenType as string) === 'erc1155') || selectedToken) && (
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-300">
-                  {(context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) ? 
-                    `certificates to purchase` : 
+                  {(tokenType as string) === 'erc1155' ? 
+                    'certificates to purchase' : 
                     `spend ${selectedToken?.symbol}`
                   }
                 </label>
@@ -332,40 +356,40 @@ export function BuyModal({
                   type="text"
                   value={localFormattedAmount}
                   onChange={(e) => handleInputChange(e.target.value)}
-                  placeholder={(context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) ? 
+                  placeholder={(tokenType as string) === 'erc1155' ? 
                     'enter certificate quantity' : 
                     `enter ${selectedToken?.symbol} amount`
                   }
                   className={`bg-gray-900/50 border-gray-800 text-white placeholder:text-gray-500 h-12 text-lg font-medium ${
-                    ((context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) ? localAmountError : amountError) ? 'border-red-500' : ''
+                    localAmountError ? 'border-red-500' : ''
                   }`}
                 />
-                {((context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) ? localAmountError : amountError) && (
+                {localAmountError && (
                   <div className="text-sm text-red-500">
-                    {(context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) ? localAmountError : amountError}
+                    {localAmountError}
                   </div>
                 )}
               </div>
             )}
 
             {/* Output Display */}
-            {((context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) ? localAmount : (selectedToken && localAmount)) && (
+            {(((tokenType as string) === 'erc1155') ? localAmount : (selectedToken && localAmount)) && (
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-300">
-                  {(context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) ? 'TOTAL COST' : 'ESTIMATED OUTPUT'}
+                  {(tokenType as string) === 'erc1155' ? 'TOTAL COST' : 'ESTIMATED OUTPUT'}
                 </label>
                 <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
-                        {(context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) ? (
+                        {(tokenType as string) === 'erc1155' ? (
                           <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
                             <span className="text-xs font-bold text-white">$</span>
                           </div>
                         ) : (
                           <Image
-                            src={imageUrl}
-                            alt={tokenSymbol}
+                            src={getImageUrl()}
+                            alt={getDisplayName()}
                             width={24}
                             height={24}
                             className="object-cover"
@@ -373,7 +397,7 @@ export function BuyModal({
                         )}
                       </div>
                       <span className="text-lg font-medium">
-                        {(context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) ? (
+                        {(tokenType as string) === 'erc1155' ? (
                           pricePerToken && localAmount ? 
                             formatNumber(Number(BigInt(Math.floor(Number(localAmount))) * pricePerToken) / 1_000_000, 2) : 
                             '0.00'
@@ -387,7 +411,7 @@ export function BuyModal({
                       </span>
                     </div>
                     <span className="text-gray-400">
-                      {(context === 'specific' || (context === 'tokenbound' && (tokenType as string) === 'erc1155')) ? 'USDC' : getDisplayName()}
+                      {(tokenType as string) === 'erc1155' ? 'USDC' : getDisplayName()}
                     </span>
                   </div>
                 </div>

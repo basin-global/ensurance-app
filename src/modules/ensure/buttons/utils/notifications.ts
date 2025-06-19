@@ -138,3 +138,77 @@ export const approvalToast = (toastId: Id, tokenSymbol: string): void => {
     autoClose: 5000
   })
 }
+
+/**
+ * Permit2 approval step messaging
+ */
+export const permit2ApprovalToast = (
+  toastId: Id, 
+  tokenSymbol: string, 
+  context: 'tokenbound' | 'regular' = 'regular'
+): void => {
+  const message = context === 'tokenbound' 
+    ? `approving ${tokenSymbol} spending for your agent account...`
+    : `approving ${tokenSymbol} spending...`
+    
+  toast.update(toastId, {
+    render: message,
+    type: 'info',
+    isLoading: true
+  })
+}
+
+/**
+ * Swap execution step messaging  
+ */
+export const swapExecutionToast = (
+  toastId: Id,
+  fromSymbol: string,
+  toSymbol: string,
+  context: 'tokenbound' | 'regular' = 'regular'
+): void => {
+  const message = context === 'tokenbound'
+    ? `executing ${fromSymbol} → ${toSymbol} swap through your agent account...`
+    : `executing ${fromSymbol} → ${toSymbol} swap...`
+    
+  toast.update(toastId, {
+    render: message, 
+    type: 'info',
+    isLoading: true
+  })
+}
+
+/**
+ * Generic step-based transaction messaging
+ */
+export const stepTransactionToast = (
+  toastId: Id,
+  step: string,
+  context: 'tokenbound' | 'regular' = 'regular'
+): void => {
+  const contextSuffix = context === 'tokenbound' ? ' through your agent account' : ''
+  
+  toast.update(toastId, {
+    render: `${step}${contextSuffix}...`,
+    type: 'info', 
+    isLoading: true
+  })
+}
+
+/**
+ * Permit2 signature step messaging
+ */
+export const permit2SignatureToast = (
+  toastId: Id,
+  context: 'tokenbound' | 'regular' = 'regular'
+): void => {
+  const message = context === 'tokenbound' 
+    ? 'signing permit2 message for your agent account...'
+    : 'signing permit2 message...'
+    
+  toast.update(toastId, {
+    render: message,
+    type: 'info',
+    isLoading: true
+  })
+}

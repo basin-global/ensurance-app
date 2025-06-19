@@ -3,24 +3,27 @@ import { ViewMode, TokenFilter, SortConfig, SortField, PortfolioToken } from './
 import { usePortfolioData } from './hooks/usePortfolioData';
 import PortfolioGrid from './components/PortfolioGrid';
 import PortfolioList from './components/PortfolioList';
-import { Grid, List, ArrowUpDown } from 'lucide-react';
+import { Grid, List, ArrowUpDown, Search } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatUnits } from 'viem';
 
 interface PortfolioProps {
-  tbaAddress: string;
+  address: string;
+  context?: 'tokenbound' | 'operator';
   isOwner?: boolean;
   isDeployed?: boolean;
+  searchQuery?: string;
 }
 
 const SORT_CYCLES: SortField[] = ['name', 'balance', 'value'];
 
-export default function Portfolio({ tbaAddress, isOwner = false, isDeployed = false }: PortfolioProps) {
+export default function Portfolio({ address, context = 'tokenbound', isOwner = false, isDeployed = false, searchQuery = '' }: PortfolioProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [filter, setFilter] = useState<TokenFilter>('all');
   const [sort, setSort] = useState<SortConfig>({ field: 'value', direction: 'desc' });
+  const [localSearchQuery, setLocalSearchQuery] = useState('');
   
-  const { tokens: rawTokens, isLoading, error } = usePortfolioData(tbaAddress);
+  const { tokens: rawTokens, isLoading, error } = usePortfolioData(address);
 
   const options = [
     { value: 'all', label: 'portfolio' },
@@ -57,11 +60,32 @@ export default function Portfolio({ tbaAddress, isOwner = false, isDeployed = fa
     });
   }, [uniqueTokens, filter]); // Depend on both uniqueTokens and filter
 
-  // Step 3: Sort the filtered tokens
-  const sortedTokens = useMemo(() => {
+  // Step 3: Apply search filter
+  const searchFilteredTokens = useMemo(() => {
     if (!filteredTokens?.length) return [];
     
-    return [...filteredTokens].sort((a, b) => {
+    // Use appropriate search query based on context
+    const currentSearchQuery = context === 'operator' ? searchQuery : localSearchQuery;
+    if (!currentSearchQuery.trim()) return filteredTokens;
+    
+    const query = currentSearchQuery.toLowerCase().trim();
+    return filteredTokens.filter(token => {
+      // Search by token name, symbol, or contract address
+      const name = token.name?.toLowerCase() || '';
+      const symbol = token.symbol?.toLowerCase() || '';
+      const address = token.address?.toLowerCase() || '';
+      
+      return name.includes(query) || 
+             symbol.includes(query) || 
+             address.includes(query);
+    });
+  }, [filteredTokens, searchQuery, localSearchQuery, context]);
+
+  // Step 4: Sort the filtered tokens
+  const sortedTokens = useMemo(() => {
+    if (!searchFilteredTokens?.length) return [];
+    
+    return [...searchFilteredTokens].sort((a, b) => {
       switch (sort.field) {
         case 'name':
           const aName = (a.type === 'erc721' || a.type === 'erc1155' ? a.name : a.symbol)?.toLowerCase() || '';
@@ -82,7 +106,7 @@ export default function Portfolio({ tbaAddress, isOwner = false, isDeployed = fa
           return 0;
       }
     });
-  }, [filteredTokens, sort]); // Depend on filteredTokens and sort
+  }, [searchFilteredTokens, sort]); // Depend on searchFilteredTokens and sort
 
   const handleSortClick = () => {
     const fields = SORT_CYCLES;
@@ -127,23 +151,39 @@ export default function Portfolio({ tbaAddress, isOwner = false, isDeployed = fa
     <div className="space-y-4">
       {/* Controls Bar */}
       <div className="flex items-center justify-between">
-        {/* Filter Dropdown as Heading */}
-        <Select value={filter} onValueChange={(value) => setFilter(value as TokenFilter)}>
-          <SelectTrigger className="text-xl font-medium bg-transparent border-0 hover:bg-transparent focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:outline-none pl-0 pr-2 h-auto w-auto">
-            <SelectValue placeholder="portfolio" />
-          </SelectTrigger>
-          <SelectContent className="bg-[#000] border-gray-800">
-            {options.map((option) => (
-              <SelectItem
-                key={option.value}
-                value={option.value}
-                className="text-white hover:bg-[#111] focus:bg-[#111] cursor-pointer"
-              >
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-4">
+          {/* Filter Dropdown as Heading */}
+          <Select value={filter} onValueChange={(value) => setFilter(value as TokenFilter)}>
+            <SelectTrigger className="text-xl font-medium bg-transparent border-0 hover:bg-transparent focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:outline-none pl-0 pr-2 h-auto w-auto">
+              <SelectValue placeholder="portfolio" />
+            </SelectTrigger>
+            <SelectContent className="bg-[#000] border-gray-800">
+              {options.map((option) => (
+                <SelectItem
+                  key={option.value}
+                  value={option.value}
+                  className="text-white hover:bg-[#111] focus:bg-[#111] cursor-pointer"
+                >
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Small Search Box (TBA context only) */}
+          {context === 'tokenbound' && (
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="search portfolio"
+                value={localSearchQuery}
+                onChange={(e) => setLocalSearchQuery(e.target.value)}
+                className="pl-9 pr-3 py-1.5 text-sm bg-gray-900/30 rounded-md text-white placeholder-gray-400 focus:outline-none w-40"
+              />
+            </div>
+          )}
+        </div>
 
         {/* View and Sort Controls */}
         <div className="flex gap-2">
@@ -188,14 +228,16 @@ export default function Portfolio({ tbaAddress, isOwner = false, isDeployed = fa
       {viewMode === 'grid' ? (
         <PortfolioGrid 
           tokens={sortedTokens} 
-          tbaAddress={tbaAddress} 
+          address={address}
+          context={context}
           isOwner={isOwner}
           isDeployed={isDeployed}
         />
       ) : (
         <PortfolioList 
           tokens={sortedTokens} 
-          tbaAddress={tbaAddress} 
+          address={address}
+          context={context}
           isOwner={isOwner}
           isDeployed={isDeployed}
         />

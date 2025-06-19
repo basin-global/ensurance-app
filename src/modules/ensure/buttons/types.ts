@@ -1,8 +1,11 @@
 import type { Address } from 'viem'
 
 export type TokenType = 'native' | 'erc20' | 'erc721' | 'erc1155'
-export type OperationType = 'buy' | 'swap' | 'send' | 'burn'
-export type ButtonContext = 'general' | 'specific' | 'tokenbound'
+export type Operation = 'buy' | 'swap' | 'send' | 'burn'
+export type ButtonContext = 'general' | 'specific' | 'tokenbound' | 'operator'
+
+// Legacy type alias for backwards compatibility
+export type OperationType = Operation
 
 export interface TokenInfo {
   symbol: string

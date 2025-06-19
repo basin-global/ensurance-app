@@ -302,15 +302,11 @@ export default function Details({
             <div className="flex flex-col items-center gap-6 pt-2">
               <div className="w-full flex justify-center">
                 <EnsureButtons
-                  contractAddress={contractAddress as `0x${string}`}
+                  contractAddress={contractAddress}
                   tokenSymbol={certificateData?.symbol || 'TOKEN'}
                   tokenName={certificateData?.name}
                   imageUrl={String(convertIpfsUrl(metadata?.image ?? '') || FALLBACK_IMAGE)}
                   context="general"
-                  variant="page"
-                  showMinus={true}
-                  showBurn={true}
-                  showBalance={true}
                 />
               </div>
             </div>

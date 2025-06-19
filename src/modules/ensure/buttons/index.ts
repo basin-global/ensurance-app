@@ -1,8 +1,18 @@
-export { EnsureButtons } from './EnsureButtons'
-export type { EnsureButtonsProps, ButtonContext, TokenType, OperationType } from './types'
+// Main component
+export { default as EnsureButtons } from './EnsureButtons'
 
-// Export hook for advanced usage
-export { useTokenOperations } from './hooks/useTokenOperations'
+// Export new simplified hooks
+export { useTokenData } from './hooks/useTokenData'
+export { useOperations } from './hooks/useOperations'
+
+// Export operation functions
+export { getTokenOperations } from './operations'
+
+// Export types
+export * from './types'
+
+// Export accounts
+export * from './accounts'
 
 // Export individual modals for custom implementations
 export { BuyModal } from './modals/buy'

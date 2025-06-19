@@ -6,11 +6,13 @@ import { identifyEnsurancePortfolioTokens } from '@/lib/ensurance';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { EnsureButtons } from '@/modules/ensure/buttons';
+import { CONTRACTS } from '@/modules/specific/config';
 
 interface PortfolioGridProps {
   tokens: PortfolioToken[];
   isLoading?: boolean;
-  tbaAddress: string;
+  address: string;
+  context: 'tokenbound' | 'operator';
   showEnsureButtons?: boolean;
   isOwner?: boolean;
   isDeployed?: boolean;
@@ -19,7 +21,8 @@ interface PortfolioGridProps {
 export default function PortfolioGrid({ 
   tokens, 
   isLoading = false, 
-  tbaAddress, 
+  address, 
+  context,
   showEnsureButtons = true, 
   isOwner = false,
   isDeployed = false 
@@ -78,33 +81,35 @@ export default function PortfolioGrid({
             <Card 
               token={token}
               variant="grid"
-              tbaAddress={tbaAddress}
+              address={address}
+              context={context}
               isOwner={isOwner}
               isDeployed={isDeployed}
             />
-            {showEnsureButtons && (
-              <div className="absolute bottom-4 left-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                <EnsureButtons
-                  contractAddress={token.address as `0x${string}`}
-                  tokenId={token.type === 'erc721' || token.type === 'erc1155' ? (token as NFTToken).tokenId : ''}
-                  tokenType={token.type}
-                  tokenSymbol={token.symbol}
-                  tokenName={token.name}
-                  imageUrl={token.metadata?.image || '/assets/no-image-found.png'}
-                  size="sm"
-                  variant="grid"
-                  context="tokenbound"
-                  tbaAddress={tbaAddress as `0x${string}`}
-                  isOwner={isOwner}
-                  isDeployed={isDeployed}
-                  showBalance={false}
-                  showBurn={token.ensurance?.isEnsuranceGeneral || token.ensurance?.isEnsuranceSpecific || false}
-                  initialBalance={token.balance}
-                  primaryMintActive={
-                    token.type === 'erc1155' && 
-                    token.address.toLowerCase() === '0x7dfaa8f8e2aa32b6c2112213b395b4c9889580dd'
-                  }
-                />
+                        {showEnsureButtons && !(token.type === 'erc1155' && token.address.toLowerCase() !== CONTRACTS.specific.toLowerCase()) && (
+              <div className="absolute bottom-4 left-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="bg-black/80 backdrop-blur-sm rounded-lg p-2 flex justify-center">
+                  <EnsureButtons
+                    contractAddress={token.address}
+                    tokenId={token.type === 'erc721' || token.type === 'erc1155' ? (token as NFTToken).tokenId : ''}
+                    tokenType={token.type}
+                    tokenSymbol={token.symbol}
+                    tokenName={token.name}
+                    imageUrl={token.metadata?.image || '/assets/no-image-found.png'}
+                    context={
+                      token.type === 'erc1155' && token.address.toLowerCase() === CONTRACTS.specific.toLowerCase()
+                        ? 'specific'
+                        : context
+                    }
+                    tbaAddress={context === 'tokenbound' ? address : undefined}
+                    variant="portfolio"
+                    className="text-sm"
+                    primaryMintActive={
+                      token.type === 'erc1155' && 
+                      token.address.toLowerCase() === CONTRACTS.specific.toLowerCase()
+                    }
+                  />
+                </div>
               </div>
             )}
           </CardContent>

@@ -8,7 +8,8 @@ import Link from 'next/link';
 interface PortfolioListProps {
   tokens: PortfolioToken[];
   isOverview?: boolean;
-  tbaAddress: string;
+  address: string;
+  context: 'tokenbound' | 'operator';
   account?: string;
   isOwner?: boolean;
   isDeployed?: boolean;
@@ -17,7 +18,8 @@ interface PortfolioListProps {
 export default function PortfolioList({ 
   tokens, 
   isOverview = false, 
-  tbaAddress, 
+  address, 
+  context,
   account, 
   isOwner = false,
   isDeployed = false 
@@ -57,10 +59,9 @@ export default function PortfolioList({
         {!isOverview && (
           <thead>
             <tr className="text-left text-sm text-gray-400">
-              <th className="pb-4 font-medium">name</th>
-              <th className="pb-4 font-medium">balance</th>
-              <th className="pb-4 font-medium text-right">value</th>
-              <th className="pb-4 font-medium w-24"></th>
+              <th className="pb-4 font-medium w-[40%]">name</th>
+              <th className="pb-4 font-medium text-right w-[35%]">value</th>
+              <th className="pb-4 font-medium text-right w-[25%]">actions</th>
             </tr>
           </thead>
         )}
@@ -70,7 +71,8 @@ export default function PortfolioList({
               key={`${token.address}-${token.type}${token.type === 'erc721' || token.type === 'erc1155' ? `-${token.tokenId}` : ''}`}
               token={token}
               variant={isOverview ? 'overview' : 'list'}
-              tbaAddress={tbaAddress}
+              address={address}
+              context={context}
               isOverview={isOverview}
               isOwner={isOwner}
               isDeployed={isDeployed}

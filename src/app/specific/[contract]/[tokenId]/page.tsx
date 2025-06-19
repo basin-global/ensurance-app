@@ -8,7 +8,7 @@ import { getTokenInfo, type TokenDisplayInfo } from '@/modules/specific/collect'
 import { cn } from '@/lib/utils'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { MAX_SUPPLY_OPEN_EDITION } from '@/modules/specific/config'
-import { EnsureButtons } from '@/modules/ensure/buttons/EnsureButtons'
+import EnsureButtons from '@/modules/ensure/buttons/EnsureButtons'
 import VerificationSection from '@/components/layout/verifications/VerificationSection'
 import ReactMarkdown from 'react-markdown'
 import { ChevronDown, ChevronUp } from 'lucide-react'
@@ -358,21 +358,15 @@ export default function SpecificTokenPage({
                   {/* Right: Action Buttons */}
                   <div className="flex flex-row items-center justify-end flex-1">
                     <EnsureButtons
-                      contractAddress={params.contract as `0x${string}`}
+                      contractAddress={params.contract}
                       tokenId={params.tokenId}
                       tokenType="erc1155"
                       context="specific"
-                      variant="page"
                       imageUrl={imageUrl}
                       tokenName={metadata?.name}
                       tokenSymbol={metadata?.name || 'Certificate'}
-                      maxSupply={tokenInfo.maxSupply}
-                      totalMinted={tokenInfo.totalMinted}
                       pricePerToken={tokenInfo.salesConfig?.pricePerToken}
                       primaryMintActive={true}
-                      showBalance={true}
-                      showSwap={true}
-                      showBurn={true}
                     />
                   </div>
                 </div>

@@ -286,7 +286,7 @@ function ContractData({ contract }: { contract: string }) {
       {/* Team Data */}
       {proceedsData.team && (
         <div className="mt-8">
-          <Portfolio tbaAddress={contract} />
+          <Portfolio address={contract} />
         </div>
       )}
     </div>

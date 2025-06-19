@@ -4,20 +4,9 @@ import Link from 'next/link'
 import { formatUnits } from 'viem'
 import { CONTRACTS, MAX_SUPPLY_OPEN_EDITION } from './config'
 import { cn } from '@/lib/utils'
+import { EnsureButtons } from '@/modules/ensure/buttons'
 
-// Status dot component
-const StatusDot = ({ active }: { active: boolean }) => {
-  const statusDotClasses = "w-2 h-2 rounded-full relative after:content-[''] after:absolute after:inset-0 after:rounded-full after:animate-pulse"
-  
-  return (
-    <span className={cn(
-      statusDotClasses,
-      active 
-        ? "bg-green-500 after:bg-green-500/50" 
-        : "bg-red-500 after:bg-red-500/50"
-    )} />
-  )
-}
+
 
 interface SpecificListProps {
   tokens: TokenDisplayInfo[]
@@ -42,8 +31,8 @@ export default function SpecificList({ tokens, tokenMetadata }: SpecificListProp
           <tr className="text-left text-sm text-gray-400">
             <th className="pb-4 font-medium w-[40%]">token</th>
             <th className="pb-4 font-medium w-[20%]">issued</th>
-            <th className="pb-4 font-medium text-right w-[20%]">$</th>
-            <th className="pb-4 font-medium text-right w-[20%]">status</th>
+            <th className="pb-4 font-medium text-right w-[20%]">price</th>
+            <th className="pb-4 font-medium text-right w-[20%]">actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-800">
@@ -106,7 +95,19 @@ export default function SpecificList({ tokens, tokenMetadata }: SpecificListProp
                 </td>
                 <td className="py-4 text-right">
                   <div className="flex justify-end">
-                    <StatusDot active={token.primaryMintActive || false} />
+                    <EnsureButtons
+                      context="specific"
+                      contractAddress={CONTRACTS.specific}
+                      tokenId={token.tokenURI.split('/').pop() || ''}
+                      tokenType="erc1155"
+                      tokenSymbol="Certificate"
+                      tokenName={metadata?.name || 'Certificate'}
+                      imageUrl={imageUrl}
+                      variant="buy-only"
+                      className="text-sm"
+                      primaryMintActive={token.primaryMintActive}
+                      pricePerToken={token.salesConfig?.pricePerToken}
+                    />
                   </div>
                 </td>
               </tr>

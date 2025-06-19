@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, User, Wallet } from 'lucide-react'
 import { usePrivy } from '@privy-io/react-auth'
 import { toast } from 'react-toastify'
+import Link from 'next/link'
 
 export function ConnectOperator() {
   const { login, ready, authenticated, logout, user } = usePrivy()
@@ -80,19 +81,36 @@ export function ConnectOperator() {
         
         {showDropdown && (
           <div 
-            className="absolute top-full right-0 mt-2 bg-black/80 backdrop-blur-sm rounded-lg p-4 shadow-xl"
+            className="absolute top-full right-0 mt-2 bg-black/90 backdrop-blur-sm rounded-lg p-2 shadow-xl border border-gray-800 min-w-48"
           >
-            <div className="flex flex-col items-end space-y-2">
+            <div className="flex flex-col space-y-1">
+              {/* Portfolio Link */}
+              <Link 
+                href="/operator/portfolio"
+                className="flex items-center gap-3 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-800/50 rounded-md transition-colors"
+                onClick={() => setShowDropdown(false)}
+              >
+                <Wallet className="w-4 h-4" />
+                <span>portfolio</span>
+              </Link>
+              
+              {/* Divider */}
+              <div className="border-t border-gray-700 my-1" />
+              
+              {/* Address (clickable to copy) */}
               <div 
                 onClick={handleCopyAddress}
-                className="text-sm font-mono text-gray-400 cursor-pointer hover:text-gray-200 transition-colors"
+                className="flex items-center gap-3 px-3 py-2 text-sm text-gray-400 hover:text-gray-200 cursor-pointer rounded-md transition-colors"
                 title="Click to copy full address"
               >
-                {truncateAddress(user?.wallet?.address)}
+                <User className="w-4 h-4" />
+                <span className="font-mono">{truncateAddress(user?.wallet?.address)}</span>
               </div>
+              
+              {/* Disconnect */}
               <button
                 onClick={handleDisconnect}
-                className="flex items-center text-base font-mono text-gray-300 hover:text-gray-100 transition-colors cursor-pointer"
+                className="flex items-center justify-end px-3 py-2 text-base font-mono text-gray-300 hover:text-gray-100 hover:bg-gray-800/50 rounded-md transition-colors w-full"
               >
                 <span>disconnect</span>
                 <div className="inline-flex items-center ml-[10px]">

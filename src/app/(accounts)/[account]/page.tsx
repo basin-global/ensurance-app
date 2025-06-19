@@ -15,7 +15,7 @@ interface AccountPageProps {
 }
 
 export default function AccountPage({ params }: AccountPageProps) {
-  const { accountData, isOwner } = useAccount()
+  const { accountData, isOwner, isDeployed } = useAccount()
   const accountName = params.account.split('.')[0]
   const groupName = params.account.split('.')[1]
   const { tokens: portfolioTokens, isLoading: loadingPortfolio } = usePortfolioData(accountData?.tba_address || '')
@@ -92,8 +92,11 @@ export default function AccountPage({ params }: AccountPageProps) {
                 <PortfolioList 
                   tokens={portfolioTokens}
                   isOverview={true}
-                  tbaAddress={accountData.tba_address}
+                  address={accountData.tba_address}
+                  context="tokenbound"
                   account={params.account}
+                  isOwner={isOwner}
+                  isDeployed={isDeployed}
                 />
                 <div className="mt-4 pt-4 border-t border-gray-800">
                   <Link 
