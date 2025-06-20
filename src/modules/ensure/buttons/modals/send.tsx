@@ -89,7 +89,8 @@ export function SendModal({
     tokenType,
     tbaAddress,
     pricePerToken: undefined,
-    primaryMintActive: false
+    primaryMintActive: false,
+    tokenDecimals: targetTokenDecimals
   })
 
   // Fetch target token decimals using viem (like buy.tsx)

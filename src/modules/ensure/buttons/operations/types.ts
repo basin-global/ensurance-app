@@ -13,4 +13,5 @@ export type OperationParams = {
   userAddress: string
   pricePerToken?: bigint
   sendTo?: string
+  tokenDecimals?: number
 } 

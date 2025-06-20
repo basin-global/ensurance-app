@@ -102,13 +102,13 @@ export const buildSwapTransaction = async (params: OperationParams): Promise<Ope
  * Build a send transaction - transfer ERC20 tokens
  */
 export const buildSendTransaction = async (params: OperationParams): Promise<OperationResult> => {
-  const { contractAddress, amount, recipient } = params
+  const { contractAddress, amount, recipient, tokenDecimals = 18 } = params
   
   if (!recipient) {
     throw new Error('Recipient required for ERC20 send')
   }
 
-  const sendAmount = parseTokenAmount(amount, 'erc20', 18)
+  const sendAmount = parseTokenAmount(amount, 'erc20', tokenDecimals)
 
   // ERC20 transfer function call
   const data = encodeFunctionData({
@@ -142,9 +142,9 @@ export const buildSendTransaction = async (params: OperationParams): Promise<Ope
  * Build a burn transaction - burn ERC20 tokens
  */
 export const buildBurnTransaction = async (params: OperationParams): Promise<OperationResult> => {
-  const { contractAddress, amount } = params
+  const { contractAddress, amount, tokenDecimals = 18 } = params
   
-  const burnAmount = parseTokenAmount(amount, 'erc20', 18)
+  const burnAmount = parseTokenAmount(amount, 'erc20', tokenDecimals)
 
   // ERC20 burn function call
   const data = encodeFunctionData({

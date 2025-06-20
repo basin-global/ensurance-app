@@ -72,7 +72,8 @@ export function BurnModal({
     tokenType,
     tbaAddress,
     pricePerToken,
-    primaryMintActive
+    primaryMintActive,
+    tokenDecimals: targetTokenDecimals
   })
   const [localAmount, setLocalAmount] = useState('')
   const [localFormattedAmount, setLocalFormattedAmount] = useState('')

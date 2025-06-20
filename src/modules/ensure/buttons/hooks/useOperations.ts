@@ -28,6 +28,7 @@ interface UseOperationsProps {
   tbaAddress?: string
   pricePerToken?: bigint
   primaryMintActive?: boolean
+  tokenDecimals?: number
 }
 
 export const useOperations = ({
@@ -37,7 +38,8 @@ export const useOperations = ({
   tokenType = 'erc20',
   tbaAddress,
   pricePerToken,
-  primaryMintActive = false
+  primaryMintActive = false,
+  tokenDecimals = 18
 }: UseOperationsProps) => {
   const { login, authenticated, user } = usePrivy()
   const { wallets } = useWallets()
@@ -292,7 +294,8 @@ export const useOperations = ({
         tokenId: tokenId || '',
         amount,
         recipient,
-        userAddress: user!.wallet!.address!
+        userAddress: user!.wallet!.address!,
+        tokenDecimals
       }
 
       // Build the transaction using operations layer
@@ -335,7 +338,8 @@ export const useOperations = ({
     context, 
     tbaAddress, 
     user, 
-    getProvider
+    getProvider,
+    tokenDecimals
   ])
 
   /**
@@ -359,7 +363,8 @@ export const useOperations = ({
         contractAddress,
         tokenId: tokenId || '',
         amount,
-        userAddress: user!.wallet!.address!
+        userAddress: user!.wallet!.address!,
+        tokenDecimals
       }
 
       // Build the transaction using operations layer
@@ -402,7 +407,8 @@ export const useOperations = ({
     context, 
     tbaAddress, 
     user, 
-    getProvider
+    getProvider,
+    tokenDecimals
   ])
 
   return {
