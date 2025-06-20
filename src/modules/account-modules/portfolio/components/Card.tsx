@@ -474,7 +474,7 @@ export default function Card({
             showBuy={true}
             showSwap={true}
             showSend={true}
-            showBurn={true}
+            showBurn={token.ensurance?.isEnsuranceGeneral || token.ensurance?.isEnsuranceSpecific}
             muted={shouldMuteButtons()}
             mutedTooltip={getMutedTooltip()}
             pricePerToken={pricePerToken}

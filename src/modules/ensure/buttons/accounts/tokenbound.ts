@@ -74,6 +74,55 @@ export const executeTransaction = async (
       throw new Error('Tokenbound account is not deployed. Please deploy it first.')
     }
 
+    // 2. Special handling for ERC1155 operations (send/burn using safeTransferFrom)
+    const PROCEEDS_ADDRESS = '0xa187F8CBdd36D63967c33f5BD4dD4B9ECA51270e'
+    if (operation.transaction.to && 
+        operation.transaction.data && 
+        operation.transaction.data.includes('f242432a')) { // safeTransferFrom selector
+      
+      // Extract parameters from the transaction data
+      // safeTransferFrom(address,address,uint256,uint256,bytes)
+      // The data structure after the selector is: from(32) + to(32) + tokenId(32) + amount(32) + dataOffset(32)
+      const txData = operation.transaction.data.slice(10) // Remove 0x and selector
+      const toHex = txData.slice(64, 128) // Second parameter (to address)
+      const tokenIdHex = txData.slice(128, 192) // Third parameter (tokenId)
+      const amountHex = txData.slice(192, 256) // Fourth parameter (amount)
+      
+      const recipientAddress = '0x' + toHex.slice(24) // Remove leading zeros from address
+      const tokenId = BigInt('0x' + tokenIdHex).toString()
+      const amount = Number(BigInt('0x' + amountHex))
+      
+      const isBurn = recipientAddress.toLowerCase() === PROCEEDS_ADDRESS.toLowerCase()
+      const operationType = isBurn ? 'burn' : 'send'
+      
+      console.log(`🔄 TBA: Detected ERC1155 ${operationType} operation - using transferNFT method`)
+      onStatusUpdate?.(`${operationType === 'burn' ? 'burning' : 'sending'} tokens through your agent account...`)
+      
+      console.log(`🔄 TBA: ${operationType} details:`, {
+        contractAddress: operation.transaction.to,
+        tokenId,
+        amount,
+        recipient: recipientAddress
+      })
+      
+      // Use transferNFT method for both ERC1155 send and burn
+      const result = await tokenboundActions.transferNFT(
+        {
+          contract_address: operation.transaction.to,
+          token_id: tokenId,
+          contract: { type: 'ERC1155' },
+          chain: 'base'
+        } as any,
+        recipientAddress as Address,
+        amount
+      )
+      
+      return {
+        success: true,
+        hash: result.hash
+      }
+    }
+
     let hash: string
 
     // Handle approval first if needed

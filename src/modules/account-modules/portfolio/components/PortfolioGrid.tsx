@@ -267,7 +267,7 @@ export default function PortfolioGrid({
                 showBuy={true}
                 showSwap={true}
                 showSend={true}
-                showBurn={true}
+                showBurn={token.ensurance?.isEnsuranceGeneral || token.ensurance?.isEnsuranceSpecific}
                 muted={shouldMuteButtons(token)}
                 mutedTooltip={getMutedTooltip(token)}
                 pricePerToken={getTokenPrice(token)}

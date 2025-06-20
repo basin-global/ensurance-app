@@ -54,6 +54,7 @@ export function BurnModal({
   
   // Token balance state
   const [tokenBalance, setTokenBalance] = useState<bigint>(BigInt(0))
+  const [targetTokenDecimals, setTargetTokenDecimals] = useState<number>(18)
   
   // Create public client
   const publicClient = createPublicClient({
@@ -85,9 +86,42 @@ export function BurnModal({
     return tokenSymbol
   }
 
+  // Fetch target token decimals using viem (like send.tsx and buy.tsx)
+  const fetchTargetTokenDecimals = async () => {
+    if ((tokenType as string) === 'erc1155') {
+      setTargetTokenDecimals(0) // ERC1155 tokens don't have decimals
+      return
+    }
+
+    if ((tokenType as string) === 'native') {
+      setTargetTokenDecimals(18) // ETH has 18 decimals
+      return
+    }
+
+    try {
+      const decimals = await publicClient.readContract({
+        address: contractAddress as Address,
+        abi: [
+          {
+            inputs: [],
+            name: 'decimals',
+            outputs: [{ type: 'uint8' }],
+            stateMutability: 'view',
+            type: 'function'
+          }
+        ],
+        functionName: 'decimals'
+      })
+      setTargetTokenDecimals(Number(decimals))
+    } catch (error) {
+      console.error('Error fetching target token decimals:', error)
+      setTargetTokenDecimals(18) // Default fallback
+    }
+  }
+
   // Handle amount input changes
   const handleInputChange = (value: string) => {
-    const maxDecimals = tokenType === 'erc721' ? 0 : tokenType === 'erc1155' ? 0 : 18
+    const maxDecimals = tokenType === 'erc721' ? 0 : tokenType === 'erc1155' ? 0 : targetTokenDecimals
     const result = handleAmountChange(value, tokenType, maxDecimals)
     
     setLocalAmount(result.cleanValue)
@@ -104,9 +138,25 @@ export function BurnModal({
         } else if (tokenType === 'erc1155') {
           inputAmount = BigInt(Math.floor(Number(result.cleanValue)))
         } else {
-          // For ERC20 tokens, convert to wei
-          const multiplier = Math.pow(10, 18)
-          inputAmount = BigInt(Math.floor(Number(result.cleanValue) * multiplier))
+          // For ERC20/native tokens, convert using actual decimals
+          const numericValue = Number(result.cleanValue)
+          const decimals = targetTokenDecimals || 18 // Fallback to 18 if not set yet
+          
+          // Check if we have valid numbers before BigInt conversion
+          if (isNaN(numericValue) || isNaN(decimals)) {
+            setAmountError('Invalid amount')
+            return
+          }
+          
+          const scaledAmount = numericValue * Math.pow(10, decimals)
+          
+          // Check if the scaled amount is a valid number
+          if (isNaN(scaledAmount) || !isFinite(scaledAmount)) {
+            setAmountError('Amount too large')
+            return
+          }
+          
+          inputAmount = BigInt(Math.floor(scaledAmount))
         }
         
         if (inputAmount > currentBalance) {
@@ -185,6 +235,7 @@ export function BurnModal({
       
       if (authenticated) {
         fetchTokenBalance()
+        fetchTargetTokenDecimals()
       }
     }
   }, [isOpen, authenticated])
@@ -285,7 +336,7 @@ export function BurnModal({
                     </div>
                   )}
                   <div className="text-sm text-gray-400">
-                    balance: {formatBalance(tokenBalance.toString(), tokenType, 18)} {getDisplayName()}
+                    balance: {formatBalance(tokenBalance.toString(), tokenType, targetTokenDecimals)} {getDisplayName()}
                   </div>
                 </div>
               )}
@@ -307,7 +358,7 @@ export function BurnModal({
                       <div className="text-orange-300/80 text-xs mt-1">
                         Burning permanently removes assets from circulation. 
                         This reduces total supply, making remaining assets more scarce and protecting their value.
-                        {(context === 'specific' || (context === 'tokenbound' && tokenType === 'erc1155')) && (
+                        {(context === 'specific' || (context === 'tokenbound' && tokenType === 'erc1155') || (context === 'operator' && tokenType === 'erc1155')) && (
                           <>
                             {' '}Burning in this context creates{' '}
                             <a 

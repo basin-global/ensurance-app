@@ -271,7 +271,10 @@ export function SendModal({
 
   // Helper functions
   const getDisplayName = () => {
-    if (tokenType === 'erc721' || tokenType === 'erc1155') {
+    if (tokenType === 'erc1155') {
+      return tokenName || 'Certificate'
+    }
+    if (tokenType === 'erc721') {
       return tokenName || tokenSymbol
     }
     return tokenSymbol
@@ -517,7 +520,7 @@ export function SendModal({
               <div className="text-3xl font-bold text-white">
                 {getDisplayName()}
               </div>
-              {tokenName && tokenName !== tokenSymbol && (
+              {tokenName && tokenName !== tokenSymbol && tokenType !== 'erc1155' && (
                 <div className="text-sm text-gray-400">
                   {tokenName}
                 </div>
@@ -640,7 +643,7 @@ export function SendModal({
                 type="text"
                 value={localFormattedAmount}
                 onChange={(e) => handleInputChange(e.target.value)}
-                placeholder={`enter ${getDisplayName()} amount`}
+                placeholder={tokenType === 'erc1155' ? 'enter amount' : `enter ${getDisplayName()} amount`}
                 className={`bg-gray-900/50 border-gray-800 text-white placeholder:text-gray-500 h-12 text-lg font-medium ${
                   localAmountError ? 'border-red-500' : ''
                 }`}
@@ -650,9 +653,9 @@ export function SendModal({
                   {localAmountError}
                 </div>
               )}
-              <div className="text-sm text-gray-400">
-                Balance: {formatBalance(tokenBalance.toString(), tokenType, targetTokenDecimals)} {getDisplayName()}
-              </div>
+                                <div className="text-sm text-gray-400">
+                    Balance: {formatBalance(tokenBalance.toString(), tokenType, targetTokenDecimals)}{tokenType === 'erc1155' ? '' : ` ${getDisplayName()}`}
+                  </div>
             </div>
           )}
 
@@ -678,9 +681,11 @@ export function SendModal({
                       {getDisplayAmount()}
                     </span>
                   </div>
-                  <span className="text-gray-400">
-                    {getDisplayName()}
-                  </span>
+                  {tokenType !== 'erc1155' && (
+                    <span className="text-gray-400">
+                      {getDisplayName()}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
