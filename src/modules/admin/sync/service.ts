@@ -8,10 +8,18 @@ import ZORA_COIN_ABI from '../../../abi/ZoraCoin.json'
 import { generalCertificates } from '@/lib/database/certificates/general'
 import { getCoin, getCoins } from '@zoralabs/coins-sdk'
 
-// Initialize Viem client
+// Initialize Viem client with Alchemy
+const alchemyApiKey = process.env.ALCHEMY_API_KEY;
+if (!alchemyApiKey) {
+  console.warn('ALCHEMY_API_KEY not found, falling back to public RPC');
+}
+
 export const client = createPublicClient({
   chain: base,
-  transport: http()
+  transport: http(alchemyApiKey 
+    ? `https://base-mainnet.g.alchemy.com/v2/${alchemyApiKey}`
+    : 'https://mainnet.base.org'
+  )
 })
 
 // Initialize Tokenbound client
@@ -331,14 +339,15 @@ async function syncGeneralCertificates(empty_only: boolean = false): Promise<Syn
     const certificates = await generalCertificates.getCertificatesForSync(empty_only);
     
     console.log(`\nStarting general certificates sync for ${certificates.length} contracts...`);
+    console.log('Using Alchemy RPC endpoint for improved rate limits...');
     if (empty_only) {
       console.log('Only syncing certificates with missing data...');
     }
 
-    // Sync certificates in batches
+    // Sync certificates in batches with more aggressive settings since we're using Alchemy
     const results = await generalCertificates.syncBatch(certificates, {
-      batchSize: 1,  // Each cert makes 4 RPC calls
-      batchDelay: 800 // 800ms delay between certs (4 calls per cert = 5 calls/sec)
+      batchSize: 3,   // Process 3 certificates at once (each makes ~5 RPC calls)
+      batchDelay: 500 // 500ms delay between batches (more aggressive with Alchemy)
     });
 
     const success = results.filter(r => r.status === 'success').length;

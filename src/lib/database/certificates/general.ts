@@ -11,6 +11,7 @@ interface GeneralCertificate {
   symbol: string | null;
   decimals: number;
   token_uri: string | null;
+  description: string | null;
   pool_address: string | null;
   total_volume?: string;
   volume_24h?: string;
@@ -25,9 +26,38 @@ interface UpdateFromChainData {
   name: string;
   symbol: string;
   token_uri: string;
+  description?: string;
   pool_address: string;
   payout_recipient: string;
 }
+
+// Helper function to convert IPFS URLs
+const convertIpfsUrl = (url: string) => {
+  if (!url) return undefined;
+  if (url.startsWith('ipfs://')) {
+    return url.replace('ipfs://', 'https://magic.decentralized-content.com/ipfs/');
+  }
+  return url;
+};
+
+// Helper function to fetch metadata from token URI
+const fetchMetadataFromUri = async (tokenUri: string): Promise<{ description?: string }> => {
+  try {
+    const metadataUrl = convertIpfsUrl(tokenUri);
+    if (!metadataUrl) return {};
+    
+    const response = await fetch(metadataUrl);
+    if (!response.ok) return {};
+    
+    const metadata = await response.json();
+    return {
+      description: metadata.description || undefined
+    };
+  } catch (error) {
+    console.error('Failed to fetch metadata:', error);
+    return {};
+  }
+};
 
 export const generalCertificates = {
   /**
@@ -35,7 +65,7 @@ export const generalCertificates = {
    */
   async getCertificatesForSync(empty_only: boolean = false): Promise<GeneralCertificate[]> {
     const query = empty_only 
-      ? sql`SELECT * FROM certificates.general WHERE chain = 'base' AND (name IS NULL OR symbol IS NULL OR token_uri IS NULL OR pool_address IS NULL OR payout_recipient IS NULL)`
+      ? sql`SELECT * FROM certificates.general WHERE chain = 'base' AND (name IS NULL OR symbol IS NULL OR token_uri IS NULL OR pool_address IS NULL OR payout_recipient IS NULL OR description IS NULL)`
       : sql`SELECT * FROM certificates.general WHERE chain = 'base'`;
 
     const { rows } = await query;
@@ -49,6 +79,7 @@ export const generalCertificates = {
     name: string;
     symbol: string;
     token_uri: string;
+    description?: string;
     pool_address?: string;
     payout_recipient: string;
   }): Promise<void> {
@@ -58,6 +89,7 @@ export const generalCertificates = {
         name = ${data.name},
         symbol = ${data.symbol},
         token_uri = ${data.token_uri},
+        description = ${data.description || null},
         pool_address = ${data.pool_address},
         payout_recipient = ${data.payout_recipient}
       WHERE contract_address = ${cert.contract_address}
@@ -152,11 +184,21 @@ export const generalCertificates = {
         console.log(`No pool address for ${cert.contract_address} (likely V4 contract)`);
       }
 
+      // Fetch description from token URI metadata
+      let description: string | undefined;
+      try {
+        const metadata = await fetchMetadataFromUri(tokenUri);
+        description = metadata.description;
+      } catch (err) {
+        console.log(`Failed to fetch metadata for ${cert.contract_address}:`, err);
+      }
+
       // Update certificate in database
       await this.updateFromChain(cert, {
         name,
         symbol,
         token_uri: tokenUri,
+        description,
         pool_address: poolAddress,
         payout_recipient: payoutRecipient
       });
@@ -167,6 +209,7 @@ export const generalCertificates = {
         name,
         symbol,
         token_uri: tokenUri,
+        description,
         pool_address: poolAddress,
         payout_recipient: payoutRecipient
       };
@@ -190,19 +233,32 @@ export const generalCertificates = {
    * Sync multiple certificates with rate limiting
    */
   async syncBatch(certificates: GeneralCertificate[], options: { batchSize?: number; batchDelay?: number } = {}): Promise<SyncResult[]> {
-    const { batchSize = 1, batchDelay = 800 } = options;
+    const { batchSize = 3, batchDelay = 500 } = options;
     const results: SyncResult[] = [];
+
+    console.log(`Processing ${certificates.length} certificates in batches of ${batchSize}...`);
 
     for (let i = 0; i < certificates.length; i += batchSize) {
       const batch = certificates.slice(i, i + batchSize);
+      const batchNumber = Math.floor(i / batchSize) + 1;
+      const totalBatches = Math.ceil(certificates.length / batchSize);
       
-      // Process each certificate in the current batch
+      console.log(`\nProcessing batch ${batchNumber}/${totalBatches} (${batch.length} certificates)...`);
+      console.log(`Addresses: ${batch.map(c => c.contract_address).join(', ')}`);
+      
+      // Process each certificate in the current batch in parallel
       const batchPromises = batch.map(cert => this.syncFromChain(cert));
       const batchResults = await Promise.all(batchPromises);
       results.push(...batchResults);
 
-      // Add delay between batches
+      // Log batch results
+      const batchSuccess = batchResults.filter(r => r.status === 'success').length;
+      const batchFailed = batchResults.filter(r => r.status === 'failed').length;
+      console.log(`Batch ${batchNumber} complete: ${batchSuccess} success, ${batchFailed} failed`);
+
+      // Add delay between batches (except for the last batch)
       if (i + batchSize < certificates.length) {
+        console.log(`Waiting ${batchDelay}ms before next batch...`);
         await new Promise(resolve => setTimeout(resolve, batchDelay));
       }
     }
