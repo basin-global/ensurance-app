@@ -1,7 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useDebounce } from '@/hooks/useDebounce'
+import { usePrivy } from '@privy-io/react-auth'
+import { createPublicClient, http, type Address } from 'viem'
+import { base } from 'viem/chains'
 import Image from 'next/image'
+import { RefreshCw, ChevronDown, Loader2 } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -10,13 +15,18 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { RefreshCw, ChevronDown, Loader2 } from 'lucide-react'
-import type { ButtonContext, TokenInfo, TokenType } from '../types'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import type { TokenInfo, ButtonContext, TokenType } from '../types'
 import { handleAmountChange } from '../utils/input'
-import { formatBalance, formatNumber } from '../utils/formatting'
-import { useDebounce } from '@/hooks/useDebounce'
-import { usePrivy } from '@privy-io/react-auth'
-import type { Address } from 'viem'
+import { formatNumber, getTokenDecimals } from '../utils/formatting'
+import { useOperations } from '../hooks/useOperations'
+import { toast } from 'react-toastify'
 
 interface SwapModalProps {
   isOpen: boolean
@@ -24,29 +34,14 @@ interface SwapModalProps {
   tokenSymbol: string
   tokenName?: string
   imageUrl?: string
-  tokenType?: TokenType
   context: ButtonContext
-  contractAddress: Address
-  
-  // Current token balance (what we're swapping FROM)
-  tokenBalance: bigint
-  
-  // Available tokens to swap TO
-  availableTokens: TokenInfo[]
-  isLoadingTokens: boolean
-  tokenImages: Record<string, string>
-  
-  // Quote data
-  estimatedOutput: string
-  isSimulating: boolean
-  
-  // Form handlers
-  onTokenSelect: (token: TokenInfo) => void
-  onExecute: (amount: string, selectedToken: TokenInfo) => Promise<void>
-  
-  // Form state
-  selectedToken?: TokenInfo
-  isLoading: boolean
+  tokenType?: TokenType
+  contractAddress: string
+  tokenId?: string
+  tbaAddress?: string
+  pricePerToken?: bigint
+  primaryMintActive?: boolean
+  onRefreshBalance?: () => void
 }
 
 export function SwapModal({
@@ -55,266 +50,469 @@ export function SwapModal({
   tokenSymbol,
   tokenName,
   imageUrl = '/assets/no-image-found.png',
-  tokenType = 'erc20',
   context,
+  tokenType = 'erc20',
   contractAddress,
-  tokenBalance,
-  availableTokens,
-  isLoadingTokens,
-  tokenImages,
-  estimatedOutput,
-  isSimulating,
-  onTokenSelect,
-  onExecute,
-  selectedToken,
-  isLoading
+  tokenId,
+  tbaAddress,
+  pricePerToken,
+  primaryMintActive = false,
+  onRefreshBalance
 }: SwapModalProps) {
-  const { user } = usePrivy()
+  const { authenticated, user, login } = usePrivy()
+  
+  // Modal state
   const [localAmount, setLocalAmount] = useState('')
   const [localFormattedAmount, setLocalFormattedAmount] = useState('')
   const [localAmountError, setLocalAmountError] = useState('')
-  const [showTokenSelect, setShowTokenSelect] = useState(false)
-  const [localEstimatedOutput, setLocalEstimatedOutput] = useState('0')
-  const [localIsSimulating, setLocalIsSimulating] = useState(false)
+  const [selectedToken, setSelectedToken] = useState<TokenInfo | null>(null)
   
+  // Trading state
+  const [availableTokens, setAvailableTokens] = useState<TokenInfo[]>([])
+  const [isLoadingTokens, setIsLoadingTokens] = useState(false)
+  const [estimatedOutput, setEstimatedOutput] = useState('0')
+  const [isSimulating, setIsSimulating] = useState(false)
+  const [tokenBalance, setTokenBalance] = useState<bigint>(BigInt(0))
+  const [tokenImages, setTokenImages] = useState<Record<string, string>>({})
+  const [targetTokenDecimals, setTargetTokenDecimals] = useState<number>(18)
+  
+  // Debounce amount for quote fetching
   const debouncedAmount = useDebounce(localAmount, 500)
+  
+  // Create public client
+  const publicClient = createPublicClient({
+    chain: base,
+    transport: http()
+  })
 
-  // Helper function to get appropriate display name based on token type
-  const getDisplayName = () => {
-    if (tokenType === 'erc721' || tokenType === 'erc1155') {
-      return tokenName || tokenSymbol
+  const {
+    isSwapping: isLoading,
+    executeSwap
+  } = useOperations({
+    context,
+    contractAddress,
+    tokenId,
+    tokenType,
+    tbaAddress,
+    pricePerToken,
+    primaryMintActive,
+    tokenName,
+    tokenSymbol
+  })
+
+  // Add effect to fetch available tokens when modal opens
+  useEffect(() => {
+    const fetchAvailableTokens = async () => {
+      if (!isOpen || !authenticated) return
+      
+      setIsLoadingTokens(true)
+      try {
+        // Get all supported tokens from both currencies and general certificates
+        const [currenciesRes, certificatesRes] = await Promise.all([
+          fetch('/api/currencies'),
+          fetch('/api/general')
+        ])
+
+        if (!currenciesRes.ok || !certificatesRes.ok) {
+          throw new Error('Failed to fetch supported tokens')
+        }
+
+        const [currencies, certificates] = await Promise.all([
+          currenciesRes.json(),
+          certificatesRes.json()
+        ])
+
+        // Create comprehensive token list for "TRANSFORM TO" dropdown
+        const tokens: TokenInfo[] = []
+        
+        // Add native ETH if current token is not ETH
+        if (tokenType !== 'native') {
+          tokens.push({
+            symbol: 'ETH',
+            address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE' as Address,
+            decimals: 18,
+            type: 'native'
+          })
+        }
+        
+        // Add currencies (except the current one if it's a currency) sorted by symbol
+        const filteredCurrencies = currencies
+          .filter((c: any) => c.address.toLowerCase() !== contractAddress.toLowerCase())
+          .map((c: any) => ({
+            symbol: c.symbol,
+            address: c.address as Address,
+            decimals: c.decimals,
+            type: 'currency' as const
+          }))
+          .sort((a: any, b: any) => a.symbol.localeCompare(b.symbol))
+        
+        tokens.push(...filteredCurrencies)
+        
+        // Add certificates (except the current one) sorted by symbol
+        const filteredCertificates = certificates
+          .filter((c: any) => c.contract_address.toLowerCase() !== contractAddress.toLowerCase())
+          .map((c: any) => ({
+            symbol: c.symbol,
+            address: c.contract_address as Address,
+            decimals: 18, // Certificates are always 18 decimals
+            type: 'certificate' as const
+          }))
+          .sort((a: any, b: any) => a.symbol.localeCompare(b.symbol))
+        
+        tokens.push(...filteredCertificates)
+
+        setAvailableTokens(tokens)
+        // Set initial selected token to ETH
+        setSelectedToken(tokens[0])
+        
+        // Fetch images for the tokens
+        if (tokens.length > 0) {
+          fetchTokenImages(tokens)
+        }
+      } catch (error) {
+        console.error('Error fetching tokens:', error)
+        toast.error('Failed to load available tokens')
+      } finally {
+        setIsLoadingTokens(false)
+      }
     }
-    return tokenSymbol
+
+    fetchAvailableTokens()
+  }, [isOpen, authenticated, contractAddress])
+
+  // Fetch token images
+  const fetchTokenImages = async (tokens: TokenInfo[]) => {
+    console.log('Fetching images for tokens:', tokens.map(t => ({ symbol: t.symbol, address: t.address, type: t.type })))
+    
+    const imagePromises = tokens.map(async (token) => {
+      try {
+        console.log(`Fetching image for ${token.symbol} (${token.address})`)
+        const response = await fetch(`/api/utilities/image?address=${token.address}`)
+        console.log(`Image response for ${token.symbol}:`, response.status, response.ok)
+        
+        if (response.ok) {
+          const data = await response.json()
+          console.log(`Image data for ${token.symbol}:`, data)
+          return { address: token.address, url: data.url }
+        }
+      } catch (error) {
+        console.error(`Error fetching image for ${token.address}:`, error)
+      }
+      return { address: token.address, url: null }
+    })
+
+    const results = await Promise.all(imagePromises)
+    const imageMap: Record<string, string> = {}
+    
+    results.forEach(({ address, url }) => {
+      if (url) {
+        imageMap[address] = url
+      }
+    })
+    
+    console.log('Final image map:', imageMap)
+    setTokenImages(imageMap)
   }
 
-  // Show placeholder for specific context (ERC1155 certificates)
-  if (context === 'specific') {
-    return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[400px] bg-black/95 border border-gray-800 shadow-xl backdrop-blur-xl">
-          <DialogHeader className="border-b border-gray-800 pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col gap-2">
-                <DialogTitle className="text-xl font-bold text-white">
-                  transform
-                </DialogTitle>
-                <div className="text-3xl font-bold text-white">
-                  {getDisplayName()}
-                </div>
-              </div>
-              <div className="relative w-20 h-20 rounded-lg overflow-hidden">
-                <Image
-                  src={imageUrl}
-                  alt={tokenSymbol}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-            </div>
-          </DialogHeader>
+  // Fetch target token decimals using viem
+  const fetchTargetTokenDecimals = async () => {
+    if ((tokenType as string) === 'erc1155') {
+      setTargetTokenDecimals(0) // ERC1155 tokens don't have decimals
+      return
+    }
 
-          <div className="py-8 text-center space-y-4">
-            <div className="text-6xl">🔄</div>
-            <div className="space-y-2">
-              <h3 className="text-lg font-medium text-white">
-                Coming Soon
-              </h3>
-              <p className="text-gray-400 text-sm">
-                Asset to Currency exchange will be available in a future soon.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex justify-center pt-6 border-t border-gray-800">
-            <Button 
-              onClick={onClose}
-              className="bg-gray-800 hover:bg-gray-700 text-white"
-            >
-              Close
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    )
+    try {
+      const decimals = await publicClient.readContract({
+        address: contractAddress as Address,
+        abi: [
+          {
+            inputs: [],
+            name: 'decimals',
+            outputs: [{ type: 'uint8' }],
+            stateMutability: 'view',
+            type: 'function'
+          }
+        ],
+        functionName: 'decimals'
+      })
+      setTargetTokenDecimals(Number(decimals))
+    } catch (error) {
+      console.error('Error fetching target token decimals:', error)
+      setTargetTokenDecimals(18) // Default fallback
+    }
   }
 
-  // Show placeholder for tokenbound context
-  if (context === 'tokenbound') {
-    return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[400px] bg-black/95 border border-gray-800 shadow-xl backdrop-blur-xl">
-          <DialogHeader className="border-b border-gray-800 pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col gap-2">
-                <DialogTitle className="text-xl font-bold text-white">
-                  transform
-                </DialogTitle>
-                <div className="text-3xl font-bold text-white">
-                  {getDisplayName()}
-                </div>
-              </div>
-              <div className="relative w-20 h-20 rounded-lg overflow-hidden">
-                <Image
-                  src={imageUrl}
-                  alt={tokenSymbol}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-            </div>
-          </DialogHeader>
+  // Fetch token balance (what we're swapping FROM)
+  const fetchTokenBalance = async () => {
+    if (!user?.wallet?.address) return
+    
+    const addressToQuery = context === 'tokenbound' && tbaAddress ? tbaAddress : user.wallet.address
 
-          <div className="py-8 text-center space-y-4">
-            <div className="text-6xl">🔄</div>
-            <div className="space-y-2">
-              <h3 className="text-lg font-medium text-white">
-                Coming Soon
-              </h3>
-              <p className="text-gray-400 text-sm">
-                Swap operations for tokenbound accounts will be available soon.
-              </p>
-            </div>
-          </div>
+    try {
+      if ((tokenType as string) === 'erc1155') {
+        const balance = await publicClient.readContract({
+          address: contractAddress as Address,
+          abi: [
+            {
+              inputs: [
+                { name: 'account', type: 'address' },
+                { name: 'id', type: 'uint256' }
+              ],
+              name: 'balanceOf',
+              outputs: [{ type: 'uint256' }],
+              stateMutability: 'view',
+              type: 'function'
+            }
+          ],
+          functionName: 'balanceOf',
+          args: [addressToQuery as Address, BigInt(tokenId || '0')]
+        })
+        setTokenBalance(balance as bigint)
+      } else if ((tokenType as string) === 'native') {
+        const balance = await publicClient.getBalance({
+          address: addressToQuery as Address
+        })
+        setTokenBalance(balance)
+      } else if ((tokenType as string) === 'erc20' || (tokenType as string) === 'erc721') {
+        const balance = await publicClient.readContract({
+          address: contractAddress as Address,
+          abi: [
+            {
+              inputs: [{ name: 'account', type: 'address' }],
+              name: 'balanceOf',
+              outputs: [{ type: 'uint256' }],
+              stateMutability: 'view',
+              type: 'function'
+            }
+          ],
+          functionName: 'balanceOf',
+          args: [addressToQuery as Address]
+        })
+        setTokenBalance(balance as bigint)
+      }
+    } catch (error) {
+      console.error('Error fetching token balance:', error)
+      setTokenBalance(BigInt(0))
+    }
+  }
 
-          <div className="flex justify-center pt-6 border-t border-gray-800">
-            <Button 
-              onClick={onClose}
-              className="bg-gray-800 hover:bg-gray-700 text-white"
-            >
-              Close
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    )
+  // Get price quote from 0x API
+  const fetchQuote = async (
+    sellToken: string,
+    buyToken: string, 
+    sellAmount: string
+  ) => {
+    if (!user?.wallet?.address || !sellAmount || Number(sellAmount) <= 0) {
+      setEstimatedOutput('0')
+      return
+    }
+
+    const takerAddress = context === 'tokenbound' && tbaAddress ? tbaAddress : user.wallet.address
+
+    setIsSimulating(true)
+    try {
+      const params = new URLSearchParams({
+        action: 'quote',
+        sellToken,
+        buyToken,
+        sellAmount,
+        taker: takerAddress,
+        slippageBps: '200',
+        swapFeeBps: '100'
+      })
+
+      const response = await fetch(`/api/0x?${params}`)
+      if (!response.ok) {
+        setEstimatedOutput('0')
+        return
+      }
+      
+      const data = await response.json()
+      
+      if (!data.liquidityAvailable || !data.buyAmount) {
+        setEstimatedOutput('0')
+        return
+      }
+      
+      const amount = Number(data.buyAmount) / Math.pow(10, selectedToken?.decimals || 18)
+      const formattedAmount = formatNumber(amount, selectedToken?.decimals || 18)
+      setEstimatedOutput(formattedAmount)
+    } catch (error) {
+      console.error('Error getting quote:', error)
+      setEstimatedOutput('0')
+    } finally {
+      setIsSimulating(false)
+    }
+  }
+
+  // Helper functions
+  const getDisplayName = () => {
+    return tokenName || tokenSymbol
+  }
+
+  const getImageUrl = () => {
+    return imageUrl
+  }
+
+  const isButtonDisabled = () => {
+    if (isLoading || !localAmount || Number(localAmount) <= 0) return true
+    if (!selectedToken) return true
+    return !!localAmountError
   }
 
   // Handle amount input changes
   const handleInputChange = (value: string) => {
-    const maxDecimals = tokenType === 'erc721' ? 0 : tokenType === 'erc1155' ? 0 : 18
-    const result = handleAmountChange(value, tokenType, maxDecimals)
+    // For ERC721 tokens, only allow 1
+    if ((tokenType as string) === 'erc721') {
+      setLocalAmount('1')
+      setLocalFormattedAmount('1')
+      setLocalAmountError('')
+      return
+    }
     
-    setLocalAmount(result.cleanValue)
-    setLocalFormattedAmount(result.formattedValue)
-    
-    // Validate amount against balance
-    if (result.cleanValue && tokenBalance) {
-      try {
-        const multiplier = Math.pow(10, 18) // Our tokens are 18 decimals
-        const inputAmount = BigInt(Math.floor(Number(result.cleanValue) * multiplier))
-        
+    // For ERC1155 tokens, only allow whole numbers
+    if ((tokenType as string) === 'erc1155') {
+      const wholeNumberValue = value.replace(/[^\d]/g, '')
+      setLocalAmount(wholeNumberValue)
+      setLocalFormattedAmount(wholeNumberValue)
+      
+      // Validate against balance
+      if (wholeNumberValue && tokenBalance) {
+        const inputAmount = BigInt(Math.floor(Number(wholeNumberValue)))
         if (inputAmount > tokenBalance) {
           setLocalAmountError('Amount exceeds available balance')
         } else {
           setLocalAmountError('')
         }
-      } catch (error) {
+      } else {
+        setLocalAmountError('')
+      }
+      return
+    }
+    
+    // For ERC20/native tokens, use actual decimals from token contract
+    const maxDecimals = targetTokenDecimals
+    const inputTokenType = tokenType === 'native' ? 'native' : 'erc20'
+    const result = handleAmountChange(value, inputTokenType, maxDecimals)
+    
+    setLocalAmount(result.cleanValue)
+    setLocalFormattedAmount(result.formattedValue)
+
+    // Validate against balance using actual decimals
+    if (result.cleanValue && tokenBalance) {
+      const numericValue = Number(result.cleanValue)
+      const decimals = targetTokenDecimals || 18 // Fallback to 18 if not set yet
+      
+      // Check if we have valid numbers before BigInt conversion
+      if (isNaN(numericValue) || isNaN(decimals)) {
         setLocalAmountError('Invalid amount')
+        return
+      }
+      
+      const scaledAmount = numericValue * Math.pow(10, decimals)
+      
+      // Check if the scaled amount is a valid number
+      if (isNaN(scaledAmount) || !isFinite(scaledAmount)) {
+        setLocalAmountError('Amount too large')
+        return
+      }
+      
+      const inputAmount = BigInt(Math.floor(scaledAmount))
+      
+      if (inputAmount > tokenBalance) {
+        setLocalAmountError('Amount exceeds available balance')
+      } else {
+        setLocalAmountError('')
       }
     } else {
       setLocalAmountError('')
     }
   }
 
-  // Reset form when modal opens
+  // Reset and load data when modal opens
   useEffect(() => {
     if (isOpen) {
       setLocalAmount('')
       setLocalFormattedAmount('')
       setLocalAmountError('')
-      setShowTokenSelect(false)
-      setLocalEstimatedOutput('0')
-      setLocalIsSimulating(false)
+      setSelectedToken(null)
+      setEstimatedOutput('0')
+      
+      // Always fetch target token decimals
+      fetchTargetTokenDecimals()
+      
+      if (authenticated) {
+        fetchTokenBalance()
+      }
     }
-  }, [isOpen])
+  }, [isOpen, authenticated])
 
-  // Get price quote for swap operation
+  // Set initial selected token when available tokens load
   useEffect(() => {
-    const getQuote = async () => {
-      if (!selectedToken || 
-          !debouncedAmount || 
-          !user?.wallet?.address || 
-          Number(debouncedAmount) <= 0) {
-        setLocalEstimatedOutput('0')
-        return
-      }
-
-      setLocalIsSimulating(true)
-      try {
-        // Convert amount based on our token's decimals (18)
-        const rawAmount = Number(debouncedAmount.replace(/[^\d.]/g, ''))
-        if (isNaN(rawAmount)) {
-          setLocalEstimatedOutput('0')
-          return
-        }
-
-        const multiplier = Math.pow(10, 18) // Our tokens are 18 decimals
-        const sellAmountWei = BigInt(Math.floor(rawAmount * multiplier)).toString()
-
-        // For swap: selling our token (contractAddress) to get selectedToken
-        const params = new URLSearchParams({
-          action: 'quote',
-          sellToken: contractAddress,
-          buyToken: selectedToken.address,
-          sellAmount: sellAmountWei,
-          taker: user.wallet.address,
-          slippageBps: '200', // 2% slippage
-          swapFeeBps: '100'   // 1% fee
-        })
-
-        const response = await fetch(`/api/0x?${params}`)
-        if (!response.ok) {
-          const errorData = await response.json()
-          console.error('Quote error:', errorData)
-          setLocalEstimatedOutput('0')
-          return
-        }
-        
-        const data = await response.json()
-        
-        if (!data.liquidityAvailable) {
-          setLocalEstimatedOutput('0')
-          return
-        }
-        
-        if (data.buyAmount) {
-          // Convert to proper decimal representation using selectedToken's decimals
-          const amount = Number(data.buyAmount) / Math.pow(10, selectedToken.decimals)
-          const formattedAmount = formatNumber(amount, selectedToken.decimals)
-          setLocalEstimatedOutput(formattedAmount)
-        } else {
-          setLocalEstimatedOutput('0')
-        }
-      } catch (error) {
-        console.error('Error getting quote:', error)
-        setLocalEstimatedOutput('0')
-      } finally {
-        setLocalIsSimulating(false)
+    if (availableTokens.length > 0 && !selectedToken) {
+      const ethToken = availableTokens.find(t => t.type === 'native')
+      if (ethToken) {
+        setSelectedToken(ethToken)
       }
     }
+  }, [availableTokens, selectedToken])
 
-    getQuote()
-  }, [debouncedAmount, selectedToken, user?.wallet?.address, contractAddress])
+  // Clear estimate immediately when user starts typing (prevents stale estimates)
+  useEffect(() => {
+    if (localAmount !== debouncedAmount) {
+      setEstimatedOutput('0')
+    }
+  }, [localAmount, debouncedAmount])
+
+  // Fetch quote when debounced amount changes
+  useEffect(() => {
+    if (selectedToken && debouncedAmount) {
+      const sellAmount = (Number(debouncedAmount) * Math.pow(10, targetTokenDecimals)).toString()
+      fetchQuote(contractAddress, selectedToken.address, sellAmount)
+    }
+  }, [debouncedAmount, selectedToken, contractAddress, targetTokenDecimals])
 
   const handleExecute = async () => {
+    if (!authenticated) {
+      login()
+      return
+    }
+
     if (!localAmount || !selectedToken) return
     
     try {
-      await onExecute(localAmount, selectedToken)
+      await executeSwap(localAmount, selectedToken)
+      
+      // Refresh balance and close modal
+      onRefreshBalance?.()
       onClose()
     } catch (error) {
-      // Error handling is done in the hook
+      console.error('Swap execution error:', error)
     }
   }
 
-  const handleTokenSelectClick = (token: TokenInfo) => {
-    onTokenSelect(token)
-    setShowTokenSelect(false)
+  const getDisplayAmount = () => {
+    if (tokenType === 'erc721') return '1'
+    return localFormattedAmount || '0'
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] bg-black/95 border border-gray-800 shadow-xl backdrop-blur-xl">
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={onClose}
+      modal={true}
+    >
+      <DialogContent 
+        className="sm:max-w-[500px] bg-black/95 border border-gray-800 shadow-xl backdrop-blur-xl z-[9999] fixed"
+        onClick={(e) => {
+          e.stopPropagation()
+        }}
+        onMouseDown={(e) => {
+          e.stopPropagation()
+        }}
+        onKeyDown={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
         <DialogHeader className="border-b border-gray-800 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex flex-col gap-2">
@@ -327,8 +525,8 @@ export function SwapModal({
             </div>
             <div className="relative w-20 h-20 rounded-lg overflow-hidden">
               <Image
-                src={imageUrl}
-                alt={tokenSymbol}
+                src={getImageUrl()}
+                alt={getDisplayName()}
                 fill
                 className="object-cover"
               />
@@ -337,7 +535,19 @@ export function SwapModal({
         </DialogHeader>
 
         <div className="py-6 space-y-6">
-          {tokenBalance === BigInt(0) ? (
+          {!authenticated ? (
+            /* Not Connected - Show Connect Account */
+            <div className="space-y-6 text-center">
+              <div className="space-y-4">
+                <div className="w-16 h-16 mx-auto bg-blue-500/10 rounded-full flex items-center justify-center">
+                  <RefreshCw className="w-8 h-8 text-blue-500" />
+                </div>
+                <div className="text-xl font-semibold text-white">
+                  connect to transform
+                </div>
+              </div>
+            </div>
+          ) : tokenBalance === BigInt(0) ? (
             // Show guidance when no balance
             <div className="space-y-6 text-center">
               <div className="text-lg text-gray-300">
@@ -348,140 +558,120 @@ export function SwapModal({
               </p>
             </div>
           ) : (
-            <div className="space-y-6">
-              {/* Amount Input */}
-              <div className="space-y-3">
-                <label className="text-sm font-medium text-gray-300">
-                  quantity to transform
-                </label>
-                <Input
-                  type="text"
-                  value={localFormattedAmount}
-                  onChange={(e) => handleInputChange(e.target.value)}
-                  placeholder="enter amount"
-                  className={`bg-gray-900/50 border-gray-800 text-white placeholder:text-gray-500 h-12 text-lg font-medium ${
-                    localAmountError ? 'border-red-500' : ''
-                  }`}
-                />
-                {localAmountError && (
-                  <div className="text-sm text-red-500">
-                    {localAmountError}
-                  </div>
-                )}
-                <div className="text-sm text-gray-400">
-                  balance: {formatBalance(tokenBalance.toString(), tokenType)}
-                </div>
-              </div>
-
+            /* Authenticated - Show Swap Form */
+            <div className="space-y-4">
               {/* Token Selection */}
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-300">
-                  transform to
+                  TRANSFORM TO
                 </label>
-                
-                {isLoadingTokens ? (
-                  <div className="flex items-center justify-center p-4 bg-gray-900/50 rounded-lg border border-gray-800">
-                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-                    <span className="ml-2 text-gray-400">Loading tokens...</span>
-                  </div>
-                ) : (
-                  <>
-                    {/* Selected Token Display */}
-                    {selectedToken && !showTokenSelect ? (
-                      <button
-                        onClick={() => setShowTokenSelect(true)}
-                        className="w-full flex items-center justify-between p-4 bg-gray-900/50 rounded-lg border border-gray-800 hover:border-gray-700 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="relative w-8 h-8 rounded-full overflow-hidden">
-                            <Image
-                              src={tokenImages[selectedToken.address] || '/assets/no-image-found.png'}
-                              alt={selectedToken.symbol}
-                              fill
-                              className="object-cover"
-                            />
-                          </div>
-                          <div className="text-left">
-                            <div className="text-white font-medium">{selectedToken.symbol}</div>
-                          </div>
-                        </div>
-                        <ChevronDown className="w-5 h-5 text-gray-400" />
-                      </button>
-                    ) : (
-                      // Token Selection List
-                      <div className="relative">
-                        <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-thin scrollbar-track-gray-800 scrollbar-thumb-gray-600">
-                          {availableTokens.length === 0 ? (
-                            <div className="text-center p-4 text-gray-400">
-                              No tokens available for swapping
-                            </div>
-                          ) : (
-                            availableTokens.map((token) => (
-                              <button
-                                key={token.address}
-                                onClick={() => handleTokenSelectClick(token)}
-                                className="w-full flex items-center gap-3 p-3 bg-gray-900/50 rounded-lg border border-gray-800 hover:border-gray-700 transition-colors"
-                              >
-                                <div className="relative w-8 h-8 rounded-full overflow-hidden">
-                                  <Image
-                                    src={tokenImages[token.address] || '/assets/no-image-found.png'}
-                                    alt={token.symbol}
-                                    fill
-                                    className="object-cover"
-                                  />
-                                </div>
-                                <div className="flex-1 text-left">
-                                  <div className="text-white font-medium">{token.symbol}</div>
-                                </div>
-                              </button>
-                            ))
-                          )}
-                        </div>
-                        
-                        {/* Scroll indicator fade */}
-                        {availableTokens.length > 4 && (
-                          <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-black/95 to-transparent pointer-events-none rounded-b-lg" />
-                        )}
-                        
-                        {/* Scroll hint text */}
-                        {availableTokens.length > 4 && (
-                          <div className="text-center mt-2">
-                            <div className="text-xs text-gray-500 flex items-center justify-center gap-1">
-                              <ChevronDown className="w-3 h-3" />
-                              scroll for more tokens
-                            </div>
-                          </div>
-                        )}
+                <Select
+                  value={selectedToken?.address}
+                  onValueChange={(value) => {
+                    const token = availableTokens.find(t => t.address === value)
+                    if (token) setSelectedToken(token)
+                  }}
+                >
+                  <SelectTrigger className="bg-gray-900/50 border-gray-800 text-white h-12 text-lg font-medium">
+                    <SelectValue placeholder="Select token" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-900 border-gray-800 z-[10000]">
+                    {isLoadingTokens ? (
+                      <div className="flex items-center justify-center p-4">
+                        <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
                       </div>
+                    ) : (
+                      availableTokens.map((token) => (
+                        <SelectItem
+                          key={token.address}
+                          value={token.address}
+                          className="text-white hover:bg-gray-800 focus:bg-gray-800"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
+                              {tokenImages[token.address] ? (
+                                <Image
+                                  src={tokenImages[token.address]}
+                                  alt={token.symbol}
+                                  width={24}
+                                  height={24}
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <div className="w-6 h-6 bg-gray-700 rounded-full" />
+                              )}
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="font-medium">{token.symbol}</span>
+                              {token.balance && (
+                                <span className="text-xs text-gray-400">
+                                  Balance: {formatNumber(Number(token.balance) / Math.pow(10, token.decimals), token.decimals)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </SelectItem>
+                      ))
                     )}
-                  </>
-                )}
+                  </SelectContent>
+                </Select>
               </div>
 
-              {/* Quote Display */}
-              {selectedToken && localAmount && (
-                <div className="mt-4 p-4 bg-gray-900/50 rounded-lg border border-gray-800">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-gray-400">You will receive:</span>
-                    <span className="text-white">
-                      {localIsSimulating ? (
-                        <div className="flex items-center gap-2">
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>calculating...</span>
-                        </div>
-                      ) : (
-                        `~${localEstimatedOutput} ${selectedToken.symbol}`
-                      )}
-                    </span>
+              {/* Amount Input */}
+              {selectedToken && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-300">
+                    {`spend ${getDisplayName()}`}
+                  </label>
+                  <Input
+                    type="text"
+                    value={localFormattedAmount}
+                    onChange={(e) => handleInputChange(e.target.value)}
+                    placeholder={`enter ${getDisplayName()} amount`}
+                    className={`bg-gray-900/50 border-gray-800 text-white placeholder:text-gray-500 h-12 text-lg font-medium ${
+                      localAmountError ? 'border-red-500' : ''
+                    }`}
+                  />
+                  {localAmountError && (
+                    <div className="text-sm text-red-500">
+                      {localAmountError}
+                    </div>
+                  )}
+                  <div className="text-sm text-gray-400">
+                    Balance: {formatNumber(Number(tokenBalance) / Math.pow(10, targetTokenDecimals), targetTokenDecimals)} {getDisplayName()}
                   </div>
-                  
-                  <div className="text-sm text-gray-400 flex items-center gap-2 mt-3 p-3 bg-blue-500/10 rounded border border-blue-500/20">
-                    <RefreshCw className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                    <div>
-                      <div className="text-blue-200 font-medium">currency exchange</div>
-                      <div className="text-blue-300/80 text-xs mt-1">
-                        Exchange {getDisplayName()} for {selectedToken.symbol} at current market rates with 2% slippage protection.
+                </div>
+              )}
+
+              {/* Output Display */}
+              {selectedToken && localAmount && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-300">
+                    ESTIMATED OUTPUT
+                  </label>
+                  <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
+                          <Image
+                            src={tokenImages[selectedToken.address] || '/assets/no-image-found.png'}
+                            alt={selectedToken.symbol}
+                            width={24}
+                            height={24}
+                            className="object-cover"
+                          />
+                        </div>
+                        <span className="text-lg font-medium">
+                          {isSimulating ? (
+                            <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            estimatedOutput
+                          )}
+                        </span>
                       </div>
+                      <span className="text-gray-400">
+                        {selectedToken.symbol}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -501,14 +691,7 @@ export function SwapModal({
           </Button>
           <Button
             onClick={handleExecute}
-            disabled={
-              isLoading || 
-              tokenBalance === BigInt(0) ||
-              !localAmount || 
-              Number(localAmount) <= 0 ||
-              !selectedToken ||
-              !!localAmountError
-            }
+            disabled={authenticated && isButtonDisabled()}
             className="min-w-[120px] bg-blue-600 hover:bg-blue-500"
           >
             {isLoading ? (
@@ -516,8 +699,10 @@ export function SwapModal({
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 <span>Processing...</span>
               </div>
-            ) : (
+            ) : authenticated ? (
               'TRANSFORM'
+            ) : (
+              'CONNECT'
             )}
           </Button>
         </div>

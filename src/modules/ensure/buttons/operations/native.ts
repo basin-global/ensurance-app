@@ -50,20 +50,25 @@ export const buildBuyTransaction = async (params: OperationParams): Promise<Oper
 }
 
 /**
- * Build a swap transaction - spend tokens to get ETH
+ * Build a swap transaction - spend ETH to get selected token
+ * This is essentially the same as buy, but with different parameter naming for clarity
  */
 export const buildSwapTransaction = async (params: OperationParams): Promise<OperationResult> => {
-  const { contractAddress, amount, userAddress, sendTo } = params
+  const { selectedToken, amount, userAddress, sendTo } = params
+
+  if (!selectedToken) {
+    throw new Error('Selected token required for ETH swap')
+  }
 
   // Use sendTo for tokenbound context (TBA receives tokens), otherwise use userAddress
   const taker = sendTo || userAddress
 
-  // Use 0x API to swap tokens for ETH
+  // Use 0x API to swap ETH for selected token
   const params0x = new URLSearchParams({
     action: 'quote',
-    sellToken: contractAddress,
-    buyToken: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', // ETH placeholder
-    sellAmount: parseEther(amount).toString(),
+    sellToken: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', // ETH
+    buyToken: selectedToken.address, // The token we want to get
+    sellAmount: parseEther(amount).toString(), // ETH amount we're spending
     taker,
     slippageBps: '200', // 2% slippage
     swapFeeBps: '100'   // 1% fee  
@@ -83,7 +88,7 @@ export const buildSwapTransaction = async (params: OperationParams): Promise<Ope
 
   return {
     transaction: quoteData.transaction,
-    needsApproval: false // This might need approval for the token being sold
+    needsApproval: false // ETH doesn't need approval
   }
 }
 

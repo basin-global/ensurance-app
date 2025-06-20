@@ -21,7 +21,7 @@ import type {
 import { getTooltipText } from './utils'
 
 // TODO: Re-enable swap functionality once implemented
-const SWAP_ENABLED = false
+const SWAP_ENABLED = true
 const BURN_ENABLED = true
 
 interface EnsureButtonsProps {
@@ -261,16 +261,12 @@ export default function EnsureButtons({
           imageUrl={imageUrl}
           context={context}
           tokenType={tokenType}
-          contractAddress={(contractAddress.startsWith('0x') ? contractAddress : `0x${contractAddress}`) as `0x${string}`}
-          tokenBalance={BigInt(0)} // Will be fetched in modal when needed
-          availableTokens={[]}
-          isLoadingTokens={false}
-          tokenImages={{}}
-          estimatedOutput="0"
-          isSimulating={false}
-          onTokenSelect={() => {}}
-          onExecute={async () => {}}
-          isLoading={false}
+          contractAddress={contractAddress}
+          tokenId={tokenId}
+          tbaAddress={tbaAddress}
+          pricePerToken={pricePerToken}
+          primaryMintActive={primaryMintActive}
+          onRefreshBalance={onRefreshBalance}
         />
       )}
 

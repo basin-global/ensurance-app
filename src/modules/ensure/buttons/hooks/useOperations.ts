@@ -29,6 +29,8 @@ interface UseOperationsProps {
   pricePerToken?: bigint
   primaryMintActive?: boolean
   tokenDecimals?: number
+  tokenName?: string
+  tokenSymbol?: string
 }
 
 export const useOperations = ({
@@ -39,7 +41,9 @@ export const useOperations = ({
   tbaAddress,
   pricePerToken,
   primaryMintActive = false,
-  tokenDecimals = 18
+  tokenDecimals = 18,
+  tokenName,
+  tokenSymbol
 }: UseOperationsProps) => {
   const { login, authenticated, user } = usePrivy()
   const { wallets } = useWallets()
@@ -196,8 +200,12 @@ export const useOperations = ({
 
     try {
       const toastContext = context === 'tokenbound' ? 'tokenbound' : 'regular'
-      const fromSymbol = selectedToken.symbol
-      const toSymbol = 'TOKEN'
+      
+      // For swap: we're selling the target token to get the selected token
+      // fromSymbol = target token (what we own and are selling)
+      // toSymbol = selected token (what we're buying)
+      const fromSymbol = tokenName || tokenSymbol || 'Token' // Target token display name
+      const toSymbol = selectedToken.symbol // Selected token symbol
       
       stepTransactionToast(toastId, 'setting up swap', toastContext)
 
@@ -244,7 +252,7 @@ export const useOperations = ({
       const result = await executeAccountOperation(context, operation, executionParams)
 
       if (result.success) {
-        successToast(toastId, 'swap', result.hash, selectedToken.symbol, toSymbol)
+        successToast(toastId, 'swap', result.hash, fromSymbol, toSymbol)
       } else {
         throw new Error(result.error || 'Transaction failed')
       }
@@ -269,7 +277,9 @@ export const useOperations = ({
     context, 
     tbaAddress, 
     user, 
-    getProvider
+    getProvider,
+    tokenName,
+    tokenSymbol
   ])
 
   /**

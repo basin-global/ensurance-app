@@ -9,6 +9,8 @@ interface Currency {
   name: string;
   decimals: number;
   is_active: boolean;
+  token_uri?: string;
+  img_fallback?: string;
   last_market_update?: string;
   market_data?: any;
 }
@@ -33,7 +35,7 @@ export const currencies = {
   async getByAddress(address: string): Promise<Currency | null> {
     const { rows } = await sql`
       SELECT * FROM config.currencies 
-      WHERE address = ${address}
+      WHERE contract_address = ${address}
     `;
     return rows[0] as Currency || null;
   },

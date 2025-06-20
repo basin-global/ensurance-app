@@ -101,7 +101,7 @@ export async function GET(request: Request) {
           taker,
           swapFeeRecipient: '0xa187F8CBdd36D63967c33f5BD4dD4B9ECA51270e',
           swapFeeBps: Number(swapFeeBps),
-          swapFeeToken: sellToken,
+          swapFeeToken: buyToken,
           slippageBps: Number(slippageBps),
           // Exclude problematic sources if needed
           // excludedSources: 'Kyber,Balancer'

@@ -176,7 +176,7 @@ export async function executeSwap({
       buyToken,
       sellAmount: sellAmountWei,
       taker: userAddress,
-      swapFeeToken: sellToken,
+      swapFeeToken: buyToken,
       slippageBps: '200', // 2% slippage
       swapFeeBps: '100'   // 1% fee
     })
