@@ -6,6 +6,10 @@
   .animate-blink {
     animation: blink 1s step-end infinite;
   }
+  
+  .animate-pulse-subtle {
+    animation: pulse-subtle 2s ease-in-out infinite;
+  }
 }
 
 @keyframes blink {
@@ -14,6 +18,15 @@
   }
   50% {
     opacity: 0;
+  }
+}
+
+@keyframes pulse-subtle {
+  0%, 100% {
+    box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.4);
   }
 }
 

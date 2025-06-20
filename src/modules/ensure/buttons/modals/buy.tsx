@@ -6,6 +6,7 @@ import { usePrivy } from '@privy-io/react-auth'
 import { createPublicClient, http, type Address } from 'viem'
 import { base } from 'viem/chains'
 import Image from 'next/image'
+import { PlusCircle } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -517,9 +518,23 @@ export function BuyModal({
         </DialogHeader>
 
         <div className="py-6 space-y-6">
-          <div className="space-y-4">
-            {/* ERC1155: Show USDC payment info */}
-            {(tokenType as string) === 'erc1155' ? (
+          {!authenticated ? (
+            /* Not Connected - Show Connect Account */
+            <div className="space-y-6 text-center">
+              <div className="space-y-4">
+                <div className="w-16 h-16 mx-auto bg-green-500/10 rounded-full flex items-center justify-center">
+                  <PlusCircle className="w-8 h-8 text-green-500" />
+                </div>
+                <div className="text-xl font-semibold text-white">
+                  connect to ensure
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Authenticated - Show Buy Form */
+            <div className="space-y-4">
+              {/* ERC1155: Show USDC payment info */}
+              {(tokenType as string) === 'erc1155' ? (
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-300">
                   PAY WITH USDC
@@ -683,6 +698,7 @@ export function BuyModal({
               </div>
             )}
           </div>
+        )}
         </div>
 
         {/* Action Buttons */}
@@ -696,7 +712,7 @@ export function BuyModal({
           </Button>
           <Button
             onClick={handleExecute}
-            disabled={isButtonDisabled()}
+            disabled={authenticated && isButtonDisabled()}
             className="min-w-[120px] bg-green-600 hover:bg-green-500"
           >
             {isLoading ? (
@@ -704,8 +720,10 @@ export function BuyModal({
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 <span>Processing...</span>
               </div>
-            ) : (
+            ) : authenticated ? (
               'ENSURE'
+            ) : (
+              'CONNECT'
             )}
           </Button>
         </div>

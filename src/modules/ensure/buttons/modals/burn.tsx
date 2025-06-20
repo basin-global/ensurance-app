@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { usePrivy } from '@privy-io/react-auth'
+import { createPublicClient, http, type Address } from 'viem'
+import { base } from 'viem/chains'
 import Image from 'next/image'
 import {
   Dialog,
@@ -14,6 +17,7 @@ import { Flame, ExternalLink } from 'lucide-react'
 import type { ButtonContext, TokenType } from '../types'
 import { handleAmountChange } from '../utils/input'
 import { formatBalance } from '../utils/formatting'
+import { useOperations } from '../hooks/useOperations'
 
 interface BurnModalProps {
   isOpen: boolean
@@ -23,13 +27,12 @@ interface BurnModalProps {
   imageUrl?: string
   tokenType?: TokenType
   context: ButtonContext
-  
-  // Token balance
-  tokenBalance: bigint
-  
-  // Burn operation
-  onExecute: (amount: string) => Promise<void>
-  isLoading: boolean
+  contractAddress: string
+  tokenId?: string
+  tbaAddress?: string
+  pricePerToken?: bigint
+  primaryMintActive?: boolean
+  onRefreshBalance?: () => void
 }
 
 export function BurnModal({
@@ -40,10 +43,36 @@ export function BurnModal({
   imageUrl = '/assets/no-image-found.png',
   tokenType = 'erc20',
   context,
-  tokenBalance,
-  onExecute,
-  isLoading
+  contractAddress,
+  tokenId,
+  tbaAddress,
+  pricePerToken,
+  primaryMintActive = false,
+  onRefreshBalance
 }: BurnModalProps) {
+  const { authenticated, user, login } = usePrivy()
+  
+  // Token balance state
+  const [tokenBalance, setTokenBalance] = useState<bigint>(BigInt(0))
+  
+  // Create public client
+  const publicClient = createPublicClient({
+    chain: base,
+    transport: http()
+  })
+
+  const {
+    isBurning: isLoading,
+    executeBurn
+  } = useOperations({
+    context,
+    contractAddress,
+    tokenId,
+    tokenType,
+    tbaAddress,
+    pricePerToken,
+    primaryMintActive
+  })
   const [localAmount, setLocalAmount] = useState('')
   const [localFormattedAmount, setLocalFormattedAmount] = useState('')
   const [amountError, setAmountError] = useState('')
@@ -93,25 +122,91 @@ export function BurnModal({
     }
   }
 
-  // Reset form when modal opens
+  // Fetch token balance
+  const fetchTokenBalance = async () => {
+    if (!user?.wallet?.address) return
+    
+    const addressToQuery = context === 'tokenbound' && tbaAddress ? tbaAddress : user.wallet.address
+
+    try {
+      if ((tokenType as string) === 'erc1155') {
+        const balance = await publicClient.readContract({
+          address: contractAddress as Address,
+          abi: [
+            {
+              inputs: [
+                { name: 'account', type: 'address' },
+                { name: 'id', type: 'uint256' }
+              ],
+              name: 'balanceOf',
+              outputs: [{ type: 'uint256' }],
+              stateMutability: 'view',
+              type: 'function'
+            }
+          ],
+          functionName: 'balanceOf',
+          args: [addressToQuery as Address, BigInt(tokenId || '0')]
+        })
+        setTokenBalance(balance as bigint)
+      } else if ((tokenType as string) === 'native') {
+        const balance = await publicClient.getBalance({
+          address: addressToQuery as Address
+        })
+        setTokenBalance(balance)
+      } else if ((tokenType as string) === 'erc20' || (tokenType as string) === 'erc721') {
+        const balance = await publicClient.readContract({
+          address: contractAddress as Address,
+          abi: [
+            {
+              inputs: [{ name: 'account', type: 'address' }],
+              name: 'balanceOf',
+              outputs: [{ type: 'uint256' }],
+              stateMutability: 'view',
+              type: 'function'
+            }
+          ],
+          functionName: 'balanceOf',
+          args: [addressToQuery as Address]
+        })
+        setTokenBalance(balance as bigint)
+      }
+    } catch (error) {
+      console.error('Error fetching token balance:', error)
+      setTokenBalance(BigInt(0))
+    }
+  }
+
+  // Reset form and load data when modal opens
   useEffect(() => {
     if (isOpen) {
       setLocalAmount('')
       setLocalFormattedAmount('')
       setAmountError('')
+      
+      if (authenticated) {
+        fetchTokenBalance()
+      }
     }
-  }, [isOpen])
+  }, [isOpen, authenticated])
 
   const handleExecute = async () => {
+    if (!authenticated) {
+      login()
+      return
+    }
+
     if (!localAmount && tokenType !== 'erc721') return
     
     const burnAmount = tokenType === 'erc721' ? '1' : localAmount
     
     try {
-      await onExecute(burnAmount)
+      await executeBurn(burnAmount)
+      
+      // Refresh balance and close modal
+      onRefreshBalance?.()
       onClose()
     } catch (error) {
-      // Error handling is done in the hook
+      console.error('Burn execution error:', error)
     }
   }
 
@@ -145,7 +240,19 @@ export function BurnModal({
         </DialogHeader>
 
         <div className="py-6 space-y-6">
-          {tokenBalance === BigInt(0) ? (
+          {!authenticated ? (
+            /* Not Connected - Show Connect Account */
+            <div className="space-y-6 text-center">
+              <div className="space-y-4">
+                <div className="w-16 h-16 mx-auto bg-orange-500/10 rounded-full flex items-center justify-center">
+                  <Flame className="w-8 h-8 text-orange-500" />
+                </div>
+                <div className="text-xl font-semibold text-white">
+                  connect to burn
+                </div>
+              </div>
+            </div>
+          ) : tokenBalance === BigInt(0) ? (
             // Show guidance when no balance
             <div className="space-y-6 text-center">
               <div className="text-lg text-gray-300">
@@ -178,7 +285,7 @@ export function BurnModal({
                     </div>
                   )}
                   <div className="text-sm text-gray-400">
-                    balance: {formatBalance(tokenBalance.toString(), tokenType)} {getDisplayName()}
+                    balance: {formatBalance(tokenBalance.toString(), tokenType, 18)} {getDisplayName()}
                   </div>
                 </div>
               )}
@@ -235,10 +342,12 @@ export function BurnModal({
           <Button
             onClick={handleExecute}
             disabled={
-              isLoading || 
-              tokenBalance === BigInt(0) ||
-              (tokenType !== 'erc721' && (!localAmount || Number(localAmount) <= 0)) ||
-              !!amountError
+              authenticated && (
+                isLoading || 
+                tokenBalance === BigInt(0) ||
+                (tokenType !== 'erc721' && (!localAmount || Number(localAmount) <= 0)) ||
+                !!amountError
+              )
             }
             className="min-w-[120px] bg-orange-600 hover:bg-orange-500"
           >
@@ -247,8 +356,10 @@ export function BurnModal({
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 <span>Processing...</span>
               </div>
-            ) : (
+            ) : authenticated ? (
               'BURN'
+            ) : (
+              'CONNECT'
             )}
           </Button>
         </div>

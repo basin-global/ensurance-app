@@ -19,6 +19,20 @@ export default function Footer() {
           <div className="mb-6">
             <GroupLinks />
           </div>
+          
+          {/* Natural Assets Link */}
+          <div className="max-w-2xl mx-auto mb-6">
+            <div className="flex justify-center items-center">
+              <Link 
+                href="https://binder.ensurance.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-lg text-gray-500 hover:text-gray-300 transition-colors"
+              >
+                natural assets
+              </Link>
+            </div>
+          </div>
 
           {/* Upper Gradient Divider */}
           <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-800 to-transparent mb-8" />

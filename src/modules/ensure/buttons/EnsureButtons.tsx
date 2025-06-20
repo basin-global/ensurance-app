@@ -20,9 +20,9 @@ import type {
 } from './types'
 import { getTooltipText } from './utils'
 
-// TODO: Re-enable swap and burn functionality once implemented
+// TODO: Re-enable swap functionality once implemented
 const SWAP_ENABLED = false
-const BURN_ENABLED = false
+const BURN_ENABLED = true
 
 interface EnsureButtonsProps {
   // Basic token info
@@ -299,9 +299,12 @@ export default function EnsureButtons({
           imageUrl={imageUrl}
           context={context}
           tokenType={tokenType}
-          tokenBalance={BigInt(0)} // Will be fetched in modal when needed
-          onExecute={async () => {}}
-          isLoading={false}
+          contractAddress={contractAddress}
+          tokenId={tokenId}
+          tbaAddress={tbaAddress}
+          pricePerToken={pricePerToken}
+          primaryMintActive={primaryMintActive}
+          onRefreshBalance={onRefreshBalance}
         />
       )}
     </>

@@ -6,6 +6,7 @@ import { usePrivy } from '@privy-io/react-auth'
 import { createPublicClient, http, type Address } from 'viem'
 import { base } from 'viem/chains'
 import Image from 'next/image'
+import { Send } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -534,8 +535,23 @@ export function SendModal({
         </DialogHeader>
 
         <div className="py-6 space-y-6">
-          {/* Recipient Search */}
-          <div className="space-y-3">
+          {!authenticated ? (
+            /* Not Connected - Show Connect Account */
+            <div className="space-y-6 text-center">
+              <div className="space-y-4">
+                <div className="w-16 h-16 mx-auto bg-amber-500/10 rounded-full flex items-center justify-center">
+                  <Send className="w-8 h-8 text-amber-500" />
+                </div>
+                <div className="text-xl font-semibold text-white">
+                  connect to send
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Authenticated - Show Send Form */
+            <div className="space-y-6">
+              {/* Recipient Search */}
+              <div className="space-y-3">
             <label className="text-sm font-medium text-gray-300">
               RECIPIENT
             </label>
@@ -669,6 +685,8 @@ export function SendModal({
               </div>
             </div>
           )}
+            </div>
+          )}
         </div>
 
         {/* Action Buttons */}
@@ -682,7 +700,7 @@ export function SendModal({
           </Button>
           <Button
             onClick={handleExecute}
-            disabled={isButtonDisabled()}
+            disabled={authenticated && isButtonDisabled()}
             className="min-w-[120px] bg-amber-600 hover:bg-amber-500"
           >
             {isLoading ? (
@@ -690,8 +708,10 @@ export function SendModal({
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 <span>Processing...</span>
               </div>
-            ) : (
+            ) : authenticated ? (
               'SEND'
+            ) : (
+              'CONNECT'
             )}
           </Button>
         </div>

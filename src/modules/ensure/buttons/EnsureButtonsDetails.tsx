@@ -24,9 +24,9 @@ import type {
 import { useOperations } from './hooks/useOperations'
 import { formatBalance, getTooltipText } from './utils'
 
-// TODO: Re-enable swap and burn functionality once implemented
+// TODO: Re-enable swap functionality once implemented
 const SWAP_ENABLED = false
-const BURN_ENABLED = false
+const BURN_ENABLED = true
 
 interface EnsureButtonsProps {
   tokenSymbol: string
@@ -320,7 +320,7 @@ export default function EnsureButtons({
         {/* Balance display - only show on page variant */}
         {variant === 'page' && (
           <div className="text-sm text-gray-400 text-center">
-            balance: {tokenBalance ? formatBalance(tokenBalance, tokenType, 18) : '0'}
+            balance: {!authenticated ? 'connect to see balance' : tokenBalance ? formatBalance(tokenBalance, tokenType, 18) : '0'}
           </div>
         )}
       </div>
@@ -378,7 +378,7 @@ export default function EnsureButtons({
         onRefreshBalance={handleRefreshBalance}
       />
 
-      {/* Burn Modal - Using existing interface */}
+      {/* Burn Modal */}
       <BurnModal
         isOpen={modalOpen && currentOperation === 'burn'}
         onClose={handleCloseModal}
@@ -387,9 +387,12 @@ export default function EnsureButtons({
         imageUrl={imageUrl}
         context={context}
         tokenType={tokenType}
-        tokenBalance={tokenBalance}
-        onExecute={executeBurn}
-        isLoading={isBurning}
+        contractAddress={contractAddress}
+        tokenId={tokenId}
+        tbaAddress={tbaAddress}
+        pricePerToken={pricePerToken}
+        primaryMintActive={primaryMintActive}
+        onRefreshBalance={handleRefreshBalance}
       />
     </>
   )

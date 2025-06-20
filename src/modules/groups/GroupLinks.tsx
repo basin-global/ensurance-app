@@ -35,15 +35,15 @@ export function GroupLinks() {
     return (
         <div className="max-w-2xl mx-auto">
             <div className="flex justify-center items-center gap-12 mb-2">
-                <Link href="/all" className="text-lg text-gray-500 hover:text-gray-300 transition-colors">
-                    agents
-                </Link>
                 <button 
                     onClick={() => setIsOpen(!isOpen)}
                     className="text-lg text-gray-500 hover:text-gray-300 transition-colors cursor-pointer"
                 >
                     groups
                 </button>
+                <Link href="/all" className="text-lg text-gray-500 hover:text-gray-300 transition-colors">
+                    agents
+                </Link>
             </div>
             {isOpen && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-1 text-center">
