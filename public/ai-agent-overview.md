@@ -15,8 +15,8 @@ The platform operates on a simple principle: **"markets for what matters"** - me
 - **Flows** (19 types): clean air, water, food, energy, climate stability, risk resilience
 
 ### 2. Financial Instruments
-- **General Ensurance**: Values what matters, flowing like a currency where market activity indirectly funds place, people, and purpose. General certificates can be issued by any Group to ensure what is important to them and allow natural price discovery, proper valuation, and market fluctuations to fund natural capital. ERC20
-- **Specific Ensurance**: Protects what matters, anchoring as an asset to directly fund natural assets and stewardship. Specific certificates are issued based on the dollar value of specific natural assets and holders can make prorata ecological data claims. ERC1155
+- **Certificates**: ERC20 tokens representing ownership in natural capital projects
+- **Specific Assets**: ERC1155 tokens for unique natural assets
 - **Syndicates**: ERC4626 vaults for collaborative funding
 - **$ENSURE**: The native currency for natural capital transactions
 

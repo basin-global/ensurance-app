@@ -47,6 +47,12 @@ const navItems = [
     links: [
       { href: '/docs/faq', label: 'FAQ' },
     ]
+  },
+  {
+    title: 'LLM',
+    links: [
+      { href: '/docs/llm', label: 'LLM FILES' },
+    ]
   }
 ]
 

@@ -25,13 +25,13 @@ interface MobileNotificationModalProps {
 
 export default function MobileNotificationModal({
   title = "ai agents & operators",
-  message = "this app is optimized for AI agents and their operators. for the full experience, operators should use the desktop version, while AI agents can read the complete codebase in llms-full.txt and AI agent overview in ai-agent-overview.md for full context.",
+  message = "this app is optimized for AI agents and their operators. for the full experience, operators should use the desktop version, while AI agents can read the complete codebase and overview for full context.",
   showOnMobile = true,
   showOnTablet = true,
   dismissStorageKey = 'ensurance-mobile-notification-dismissed',
   dismissDays = 7,
-  actionButtonText,
-  actionButtonUrl,
+  actionButtonText = "view ai agent files",
+  actionButtonUrl = "/docs/llm",
   showIcon = true
 }: MobileNotificationModalProps) {
   const [isOpen, setIsOpen] = useState(false)
