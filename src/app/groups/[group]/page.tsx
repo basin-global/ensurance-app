@@ -3,6 +3,61 @@ import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import VerificationSection from '@/components/layout/verifications/VerificationSection'
+import { Metadata } from 'next'
+
+// Tell Next.js this is a dynamic route
+export const dynamic = 'force-dynamic'
+
+// Generate metadata for the page
+export async function generateMetadata({ params }: { params: { group: string } }): Promise<Metadata> {
+  try {
+    const groupData = await groups.getByName(`.${params.group}`)
+    
+    if (!groupData) {
+      return {
+        title: `Group ${params.group} | Ensurance`,
+        description: `Group ${params.group} - reducing risk, increasing resilience`,
+      }
+    }
+    
+    // Use group banner as image
+    const imageUrl = `https://ensurance.app/groups/banners/${params.group}-banner.jpg`
+    
+    const title = `${groupData.name_front || groupData.group_name} | Group | Ensurance`
+    const description = groupData.tagline || groupData.description || `Group ${params.group} - reducing risk, increasing resilience`
+    
+    return {
+      title,
+      description,
+      openGraph: {
+        type: 'website',
+        title,
+        description,
+        images: [{
+          url: imageUrl,
+          width: 1200,
+          height: 630,
+          alt: groupData.name_front || groupData.group_name
+        }],
+        siteName: 'ensurance agents'
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title,
+        description,
+        images: [imageUrl],
+        creator: '@ensurance_app',
+        site: '@ensurance_app'
+      }
+    }
+  } catch (error) {
+    console.error('Error generating group metadata:', error)
+    return {
+      title: `Group ${params.group} | Ensurance`,
+      description: `Group ${params.group} - reducing risk, increasing resilience`,
+    }
+  }
+}
 
 export default async function GroupPage({ params }: { params: { group: string } }) {
     const groupData = await groups.getByName(`.${params.group}`)

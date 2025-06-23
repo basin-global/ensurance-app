@@ -8,6 +8,9 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { usePortfolioData } from '@/modules/account-modules/portfolio/hooks/usePortfolioData'
 
+// Tell Next.js this is a dynamic route
+export const dynamic = 'force-dynamic'
+
 interface AccountPageProps {
   params: {
     account: string

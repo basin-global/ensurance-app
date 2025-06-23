@@ -35,7 +35,6 @@ interface GeneralGridProps {
   searchQuery?: string
   urlPrefix?: string
   onDataChange?: (data: GeneralCertificate[]) => void
-  isMiniApp?: boolean
   isOverview?: boolean
   hideMarketData?: boolean
   accountContext?: {
@@ -111,7 +110,6 @@ export default function GeneralGrid({
   searchQuery = '',
   urlPrefix = '',
   onDataChange,
-  isMiniApp = false,
   isOverview = false,
   hideMarketData = false,
   accountContext
@@ -488,7 +486,7 @@ export default function GeneralGrid({
               key={cert.contract_address}
               href={cert.is_specific 
                 ? `/specific/${CONTRACTS.specific}/${cert.token_uri.split('/').pop()}`
-                : `${urlPrefix}${isMiniApp ? '/mini-app' : ''}/general/${cert.contract_address}`
+                : `${urlPrefix}/general/${cert.contract_address}`
               }
             >
               <Card 
@@ -579,7 +577,6 @@ export default function GeneralGrid({
         <GeneralList 
           certificates={filteredAndSortedCertificates}
           urlPrefix={urlPrefix}
-          isMiniApp={isMiniApp}
         />
       )}
     </div>

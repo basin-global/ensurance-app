@@ -11,14 +11,13 @@ import { EnsureButtonsLite } from '@/modules/ensure/buttons';
 interface GeneralListProps {
   certificates: GeneralCertificate[];
   urlPrefix?: string;
-  isMiniApp?: boolean;
 }
 
 const FALLBACK_IMAGE = '/assets/no-image-found.png';
 
 const isSpecificAsset = (cert: GeneralCertificate) => cert.is_specific
 
-export default function GeneralList({ certificates, urlPrefix = '', isMiniApp = false }: GeneralListProps) {
+export default function GeneralList({ certificates, urlPrefix = '' }: GeneralListProps) {
   if (!certificates.length) {
     return (
       <div className="text-center py-8">
@@ -44,7 +43,7 @@ export default function GeneralList({ certificates, urlPrefix = '', isMiniApp = 
               <td className="py-4">
                 <Link href={cert.is_specific 
                   ? `/specific/${CONTRACTS.specific}/${cert.token_uri.split('/').pop()}`
-                  : `${urlPrefix}${isMiniApp ? '/mini-app' : ''}/general/${cert.contract_address}`
+                  : `${urlPrefix}/general/${cert.contract_address}`
                 }>
                   <div className="flex items-center gap-3">
                     <div className={cn(

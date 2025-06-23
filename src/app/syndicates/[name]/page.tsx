@@ -9,6 +9,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/layout/PageHeader'
 
+// Tell Next.js this is a dynamic route
+export const dynamic = 'force-dynamic'
+
 interface SyndicateDetails {
   name: string;
   tagline: string;
