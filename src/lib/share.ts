@@ -17,18 +17,6 @@ const convertIpfsUrl = (url: string) => {
   return url
 }
 
-// Generate OpenGraph image from square image
-const generateOpenGraphImage = async (imageUrl: string, title: string, type: string): Promise<string> => {
-  try {
-    const response = await fetch(`https://ensurance.app/api/utilities/share?image=${encodeURIComponent(imageUrl)}&title=${encodeURIComponent(title)}&type=${type}`)
-    const data = await response.json()
-    return data.url || 'https://ensurance.app/assets/share-default.png'
-  } catch (error) {
-    console.error('Failed to generate OpenGraph image:', error)
-    return 'https://ensurance.app/assets/share-default.png'
-  }
-}
-
 // Base metadata for fallback
 const getBaseMetadata = (): Metadata => ({
     metadataBase: new URL('https://ensurance.app'),
@@ -81,8 +69,7 @@ async function getGeneralCertificateMetadata(contractAddress: string): Promise<M
         if (response.ok) {
           const metadata = await response.json()
           if (metadata.image) {
-            const squareImageUrl = convertIpfsUrl(metadata.image)
-            imageUrl = await generateOpenGraphImage(squareImageUrl, certificate.name, 'certificate')
+            imageUrl = convertIpfsUrl(metadata.image)
           }
           if (metadata.description) {
             description = metadata.description
@@ -136,13 +123,13 @@ async function getSpecificCertificateMetadata(contractAddress: string, tokenId: 
     if (!response.ok) return getBaseMetadata()
     
     const metadata = await response.json()
-    const name = metadata.name || `specific ensurance #${tokenId}`
     
     let imageUrl = 'https://ensurance.app/assets/share-default.png'
     if (metadata.image) {
-      const squareImageUrl = convertIpfsUrl(metadata.image)
-      imageUrl = await generateOpenGraphImage(squareImageUrl, name, 'specific')
+      imageUrl = convertIpfsUrl(metadata.image)
     }
+    
+    const name = metadata.name || `specific ensurance #${tokenId}`
     const description = metadata.description || `specific ensurance certificate providing direct funding for natural capital`
     const title = `${name} | specific ensurance`
     
@@ -198,9 +185,7 @@ async function getAccountMetadata(accountName: string): Promise<Metadata> {
     let imageUrl = 'https://ensurance.app/assets/share-default.png'
     if (accountData.token_id && accountData.group_name) {
       const groupNameClean = accountData.group_name.replace(/^\./, '')
-      const squareImageUrl = `https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com/${groupNameClean}/generated/${accountData.token_id}.png`
-      // Generate landscape OpenGraph version
-      imageUrl = await generateOpenGraphImage(squareImageUrl, accountData.full_account_name, 'account')
+      imageUrl = `https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com/${groupNameClean}/generated/${accountData.token_id}.png`
     }
     
     const name = accountData.full_account_name
