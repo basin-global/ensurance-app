@@ -17,33 +17,45 @@ const convertIpfsUrl = (url: string) => {
   return url
 }
 
+// Generate OpenGraph image from square image
+const generateOpenGraphImage = async (imageUrl: string, title: string, type: string): Promise<string> => {
+  try {
+    const response = await fetch(`https://ensurance.app/api/utilities/share?image=${encodeURIComponent(imageUrl)}&title=${encodeURIComponent(title)}&type=${type}`)
+    const data = await response.json()
+    return data.url || 'https://ensurance.app/assets/share-default.png'
+  } catch (error) {
+    console.error('Failed to generate OpenGraph image:', error)
+    return 'https://ensurance.app/assets/share-default.png'
+  }
+}
+
 // Base metadata for fallback
 const getBaseMetadata = (): Metadata => ({
-  metadataBase: new URL('https://ensurance.app'),
-  title: 'ensurance: markets for what matters - ensuring the stocks & flows of natural capital',
-  description: 'reducing risk, increasing resilience',
-  applicationName: 'ensurance agents',
-  authors: [{ name: 'BASIN Natural Capital' }],
-  openGraph: {
-    type: 'website',
+    metadataBase: new URL('https://ensurance.app'),
     title: 'ensurance: markets for what matters - ensuring the stocks & flows of natural capital',
     description: 'reducing risk, increasing resilience',
-    images: [{
-      url: 'https://ensurance.app/assets/share-default.png',
-      width: 1200,
-      height: 630,
-      alt: 'ensurance agents'
-    }],
-    siteName: 'ensurance agents'
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'ensurance: markets for what matters - ensuring the stocks & flows of natural capital',
-    description: 'reducing risk, increasing resilience',
-    images: ['https://ensurance.app/assets/share-default.png'],
-    creator: '@ensurance_app',
-    site: '@ensurance_app'
-  }
+    applicationName: 'ensurance agents',
+    authors: [{ name: 'BASIN Natural Capital' }],
+    openGraph: {
+      type: 'website',
+      title: 'ensurance: markets for what matters - ensuring the stocks & flows of natural capital',
+      description: 'reducing risk, increasing resilience',
+      images: [{
+        url: 'https://ensurance.app/assets/share-default.png',
+        width: 1200,
+        height: 630,
+        alt: 'ensurance agents'
+      }],
+      siteName: 'ensurance agents'
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: 'ensurance: markets for what matters - ensuring the stocks & flows of natural capital',
+      description: 'reducing risk, increasing resilience',
+      images: ['https://ensurance.app/assets/share-default.png'],
+      creator: '@ensurance_app',
+      site: '@ensurance_app'
+    }
 })
 
 // Generate metadata for general certificates
@@ -60,7 +72,7 @@ async function getGeneralCertificateMetadata(contractAddress: string): Promise<M
 
     // Fetch metadata from token URI if available
     let imageUrl = 'https://ensurance.app/assets/share-default.png'
-    let description = certificate.description || `View and trade ${certificate.name} certificate on Ensurance`
+    let description = certificate.description || `view and trade ${certificate.name} certificate on ensurance`
     
     if (certificate.token_uri) {
       try {
@@ -69,7 +81,8 @@ async function getGeneralCertificateMetadata(contractAddress: string): Promise<M
         if (response.ok) {
           const metadata = await response.json()
           if (metadata.image) {
-            imageUrl = convertIpfsUrl(metadata.image)
+            const squareImageUrl = convertIpfsUrl(metadata.image)
+            imageUrl = await generateOpenGraphImage(squareImageUrl, certificate.name, 'certificate')
           }
           if (metadata.description) {
             description = metadata.description
@@ -80,7 +93,7 @@ async function getGeneralCertificateMetadata(contractAddress: string): Promise<M
       }
     }
 
-    const title = `${certificate.name} | General Certificate | Ensurance`
+    const title = `${certificate.name} | general ensurance`
     
     return {
       ...getBaseMetadata(),
@@ -123,15 +136,15 @@ async function getSpecificCertificateMetadata(contractAddress: string, tokenId: 
     if (!response.ok) return getBaseMetadata()
     
     const metadata = await response.json()
+    const name = metadata.name || `specific ensurance #${tokenId}`
     
     let imageUrl = 'https://ensurance.app/assets/share-default.png'
     if (metadata.image) {
-      imageUrl = convertIpfsUrl(metadata.image)
+      const squareImageUrl = convertIpfsUrl(metadata.image)
+      imageUrl = await generateOpenGraphImage(squareImageUrl, name, 'specific')
     }
-    
-    const name = metadata.name || `Specific Certificate #${tokenId}`
-    const description = metadata.description || `Specific ensurance certificate providing direct funding for natural capital`
-    const title = `${name} | Specific Certificate | Ensurance`
+    const description = metadata.description || `specific ensurance certificate providing direct funding for natural capital`
+    const title = `${name} | specific ensurance`
     
     return {
       ...getBaseMetadata(),
@@ -185,14 +198,16 @@ async function getAccountMetadata(accountName: string): Promise<Metadata> {
     let imageUrl = 'https://ensurance.app/assets/share-default.png'
     if (accountData.token_id && accountData.group_name) {
       const groupNameClean = accountData.group_name.replace(/^\./, '')
-      imageUrl = `https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com/${groupNameClean}/generated/${accountData.token_id}.png`
+      const squareImageUrl = `https://2rhcowhl4b5wwjk8.public.blob.vercel-storage.com/${groupNameClean}/generated/${accountData.token_id}.png`
+      // Generate landscape OpenGraph version
+      imageUrl = await generateOpenGraphImage(squareImageUrl, accountData.full_account_name, 'account')
     }
     
     const name = accountData.full_account_name
     const description = accountData.is_agent 
       ? `AI agent account managed by ${accountName} - reducing risk, increasing resilience`
-      : `Account for ${accountName} - reducing risk, increasing resilience`
-    const title = `${name} | Account | Ensurance`
+      : `account for ${accountName} - reducing risk, increasing resilience`
+    const title = `${name} | ensurance agents`
     
     return {
       ...getBaseMetadata(),
@@ -235,8 +250,8 @@ async function getGroupMetadata(groupName: string): Promise<Metadata> {
     // Use group banner as image
     const imageUrl = `https://ensurance.app/groups/banners/${groupName}-banner.jpg`
     
-    const title = `${groupData.name_front || groupData.group_name} | Group | Ensurance`
-    const description = groupData.tagline || groupData.description || `Group ${groupName} - reducing risk, increasing resilience`
+    const title = `${groupData.name_front || groupData.group_name} | ensurance groups`
+    const description = groupData.tagline || groupData.description || `group ${groupName} - reducing risk, increasing resilience`
     
     return {
       ...getBaseMetadata(),
@@ -281,8 +296,8 @@ async function getSyndicateMetadata(syndicateName: string): Promise<Metadata> {
     if (!syndicate) return getBaseMetadata()
     
     const imageUrl = syndicate.image_url || 'https://ensurance.app/assets/share-default.png'
-    const title = `${syndicate.name} | Syndicate | Ensurance`
-    const description = syndicate.description || `Syndicate ${syndicateName} - reducing risk, increasing resilience`
+    const title = `${syndicate.name} | ensurance syndicates`
+    const description = syndicate.description || `syndicate ${syndicateName} - reducing risk, increasing resilience`
     
     return {
       ...getBaseMetadata(),
