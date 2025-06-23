@@ -5,6 +5,7 @@ import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import WebAnalytics from '@/components/analytics/WebAnalytics'
 import AnnouncementBanner from '@/components/layout/AnnouncementBanner'
+import MobileNotificationModal from '@/components/layout/MobileNotificationModal'
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify'
 import { Metadata } from 'next'
@@ -39,6 +40,7 @@ export default function RootLayout({
       <body className="antialiased min-h-screen flex flex-col font-grotesk bg-black text-white overflow-x-hidden">
         <PrivyProviderWrapper>
           <AnnouncementBanner />
+          <MobileNotificationModal />
           <Header />
           <ToastContainer 
             theme="dark"
