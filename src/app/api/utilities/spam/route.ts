@@ -4,12 +4,11 @@ import { sql } from '@vercel/postgres';
 export async function GET() {
   try {
     const { rows } = await sql`
-      SELECT DISTINCT LOWER(contract_address) as address 
+      SELECT DISTINCT LOWER(contract_address) as address, LOWER(TRIM(chain)) as chain
       FROM config.spam_contracts 
-      WHERE LOWER(TRIM(chain)) = 'base'
-      ORDER BY LOWER(contract_address)
+      ORDER BY LOWER(TRIM(chain)), LOWER(contract_address)
     `;
-    return NextResponse.json({ addresses: rows.map(r => r.address) });
+    return NextResponse.json({ contracts: rows });
   } catch (error) {
     console.error('Error fetching spam list:', error);
     return NextResponse.json(
