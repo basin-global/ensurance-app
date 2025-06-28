@@ -4,9 +4,11 @@ import { sql } from '@vercel/postgres';
 export async function GET() {
   try {
     const { rows } = await sql`
-      SELECT DISTINCT LOWER(contract_address) as address, LOWER(TRIM(chain)) as chain
+      SELECT LOWER(COALESCE(contract_address, '')) as address, LOWER(COALESCE(TRIM(chain), '')) as chain
       FROM config.spam_contracts 
-      ORDER BY LOWER(TRIM(chain)), LOWER(contract_address)
+      WHERE contract_address IS NOT NULL AND contract_address != '' 
+        AND chain IS NOT NULL AND chain != ''
+      ORDER BY LOWER(COALESCE(TRIM(chain), '')), LOWER(COALESCE(contract_address, ''))
     `;
     return NextResponse.json({ contracts: rows });
   } catch (error) {
