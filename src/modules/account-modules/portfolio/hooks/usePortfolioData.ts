@@ -28,7 +28,11 @@ export function usePortfolioData(tbaAddress: string) {
         if (!spamResponse.ok) {
           throw new Error('Failed to fetch spam list');
         }
-        const { addresses: spamAddresses } = await spamResponse.json();
+        const { contracts: spamContracts } = await spamResponse.json();
+        // Filter for base chain and extract addresses for backwards compatibility
+        const spamAddresses = spamContracts
+          .filter((contract: any) => contract.chain === 'base')
+          .map((contract: any) => contract.address);
         console.log('Spam addresses:', spamAddresses);
 
         // Get list of supported tokens to identify ensurance tokens
