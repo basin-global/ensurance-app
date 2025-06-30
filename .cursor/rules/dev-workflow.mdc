@@ -1,0 +1,160 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Standard Development Workflow
+
+This document outlines a structured, test-driven development process for building high-quality software. Following this workflow ensures consistency, quality, and maintainability across projects.
+
+```mermaid
+graph TD
+    A[1. Understand Requirement] --> B[2. Plan Implementation];
+    B --> C{Bug or Feature?};
+    C -->|Bug| D[Identify Root Cause & Affected Files];
+    C -->|Feature| E[Create Design Doc];
+    D & E --> F[3. Create Detailed Change Plan];
+    F --> G[4. Write Tests First];
+    G --> H[5. Implement Solution];
+    H --> I{Tests Passing?};
+    I -->|No| H;
+    I -->|Yes| J[6. Review for Edge Cases & Finalize];
+    J --> K[7. Pull Request];
+```
+
+## Core Development Principles
+
+### 1. Always Plan First
+- **Bug Fixes**: First identify the bug, research ALL related files, create complete change plan
+- **Impact Analysis**: Identify all possible errors and negative outcomes from changes
+- **Documentation**: Create thorough design doc and implementation plan BEFORE writing any code
+- **Identify risks and approaches**: Thoroughly outline all risks and offer multiple possible approaches, choosing your favorite
+- **Execute**: Once the plan is in place, start implementation immediately
+
+### 2. No Stubs or Incomplete Code
+- **Never** use stubs, fake code, or incomplete implementations
+- **Always** continue working until all stubs are replaced with finished, working code
+- **No POCs**: Never deliver proof-of-concepts - only finished, detailed code
+- **Iteration**: Work on files until they are complete, looping testing and fixing until all tests pass
+
+### 3. Test-Driven Development
+- Code often has bugs on first attempts - thorough testing is critical
+- Verify tests are complete and passing before declaring changes correct
+- Write tests before implementation when possible
+- Use appropriate testing frameworks for your stack
+
+## Step-by-Step Workflow
+
+### Step 1: Understand the Requirement
+Before writing any code, fully understand the goal.
+- **For a Feature**: Read the requirements document or feature ticket. Clarify any ambiguities.
+- **For a Bug**: Replicate the bug locally. Understand the exact steps to reproduce it and the expected correct behavior.
+
+### Step 2: Plan the Implementation
+This is the most critical phase. Do not start coding without a plan.
+- **Research**: Use search tools to find all relevant files, modules, and components that will be affected by your change.
+- **Impact Analysis**: Think through negative outcomes. How could this change break other parts of the system?
+- **Propose a Solution**: Write a detailed implementation plan. This should outline:
+  - The files you will change
+  - The new functions/classes/components you will add
+  - The existing code you will modify
+  - The rationale for your approach
+  - Any identified risks
+
+### Step 3: Project Scaffolding
+Set up any necessary boilerplate or project structure.
+- **New Components**: Create React components, pages, and API routes in Next.js structure
+- **Dependencies**: Add any new NPM packages for blockchain libraries, UI components, etc.
+- **Configuration**: Update Next.js config, environment variables, and database schemas
+
+### Step 4: Test-Driven Development
+Write your tests *before* you write the implementation logic. This clarifies requirements and ensures your code is correct from the start.
+
+- **Unit Tests**: For isolated logic (e.g., utility functions, React components, smart contract interactions)
+  - Use Jest and React Testing Library for component testing
+  - Mock external dependencies and blockchain calls
+  - Test edge cases and error conditions
+
+- **Integration Tests**: For component interactions and system behavior
+  - Test complete user workflows (wallet connection, transactions, etc.)
+  - Use test databases (PostgreSQL/SQLite) and testnets
+  - Verify end-to-end functionality including smart contract interactions
+
+```bash
+# Run tests frequently during development
+npm test          # Jest unit tests
+npm run test:e2e  # End-to-end tests
+npm run dev       # Development server
+```
+
+### Step 5: Implement the Solution
+With tests and plan in place, write the implementation code.
+
+- **Start the Application**: Run your development server for manual testing and verification
+- **Iterate**: Write code to make your failing tests pass
+- **Follow Standards**: Adhere to your project's style guidelines and architectural patterns
+- **Refactor**: Once tests are passing, review your code for clarity, performance, and maintainability
+
+### Step 6: Final Review and Verification
+- **Edge Cases**: Review your code one last time. Have you handled null values, empty arrays, unexpected inputs?
+- **Manual Testing**: Run through the feature or bug fix manually one last time
+- **Full Test Suite**: Run the entire test suite to ensure you haven't caused any regressions
+- **Code Review**: Self-review your changes as if you were reviewing someone else's code
+
+### Step 7: Commit and Create a Pull Request
+- **Commit Message**: Write a clear and descriptive commit message following conventional commit standards:
+  - `feat: Add new user authentication system`
+  - `fix: Resolve memory leak in data processing`
+  - `refactor: Simplify database connection logic`
+- **Pull Request**: Open a pull request against the main branch. The description should:
+  - Link to the relevant ticket/issue
+  - Summarize the changes made
+  - Include testing instructions
+  - Note any breaking changes
+- **CI/CD**: Ensure automated tests and checks pass before requesting review
+
+## Testing Guidelines
+
+### Test Types
+- **Unit Tests**: Test individual functions/methods in isolation
+- **Integration Tests**: Test component interactions
+- **End-to-End Tests**: Test complete user workflows
+- **Performance Tests**: Test system performance under load (when applicable)
+
+### Test Quality
+- Tests should be independent and repeatable
+- Use descriptive test names that explain what is being tested
+- Test both success and failure scenarios
+- Keep tests focused on a single behavior
+
+## Code Quality Standards
+
+- Write self-documenting code with clear variable and function names
+- Handle errors gracefully with appropriate error messages
+- Follow consistent formatting and style guidelines
+- Comment complex logic, but prefer clear code over comments
+- Separate concerns appropriately
+- Keep functions and classes focused on single responsibilities
+
+## Development Best Practices
+
+1. **Version Control**: Make frequent, small commits with descriptive messages
+2. **Documentation**: Update documentation when changing public APIs or smart contract interfaces
+3. **Dependencies**: Keep NPM packages up to date and minimize unnecessary additions
+4. **Security**: Follow web3 security best practices (private key handling, input validation, reentrancy protection)
+5. **Performance**: Consider gas optimization for smart contracts and Next.js performance best practices
+6. **Backwards Compatibility**: Maintain backwards compatibility when possible, especially for smart contract upgrades
+7. **Environment Management**: Use separate environments for development, staging, and production (including different networks/testnets)
+
+## Workflow Adaptations
+
+This workflow can be adapted for different project types:
+
+- **Web3 dApps**: Include wallet integration testing, smart contract interaction verification, and testnet deployment
+- **Next.js Applications**: Include SSR/SSG testing, API route validation, and performance optimization
+- **Smart Contract Integration**: Include ABI testing, transaction simulation, and gas optimization
+- **Database-heavy Applications**: Include migration testing, query optimization, and data integrity verification
+
+---
+
+Remember: The key to successful development is thorough planning, comprehensive testing, and iterative improvement. Take time to understand the problem fully before jumping into implementation. 

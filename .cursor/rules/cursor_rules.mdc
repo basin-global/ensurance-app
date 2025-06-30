@@ -1,0 +1,171 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Onchain Agents Development Rules
+
+## Project Overview
+
+**Ensurance App** is a comprehensive web3 platform for Natural Capital Ensurance - a pioneering system that transforms how we value, fund, and protect natural assets. Built by BASIN, this full-stack Next.js application serves as the primary interface for a resilience hyperstructure that ensures the protection and regeneration of critical ecological infrastructure.
+
+### Core Mission
+The platform addresses the global $1T biodiversity funding gap by creating proactive "ensurance" (vs reactive insurance) for natural capital. Unlike traditional insurance that compensates after damage, ensurance protects ecosystems from day one with a clear path to permanent protection, restoration, and ongoing stewardship funding.
+
+### Technical Architecture
+- **Frontend**: Next.js 14 with TypeScript, modern React components, and responsive UI/UX
+- **Backend**: PostgreSQL (Neon) database with comprehensive API routes
+- **Blockchain**: Multi-chain EVM compatibility with smart contract integration
+- **AI**: ElizaOS-powered autonomous agents for semi-autonomous account operations  
+- **Authentication**: Privy wallet connectivity for seamless web3 onboarding
+
+### Domain Model & Key Components
+
+**Groups & Accounts System:**
+- Groups: Organizations/communities with unique namespaces (.basin, .refi)
+- Accounts/Agents: Members representing people, places, projects, or purpose
+- Each account has cross-chain Ethereum wallet capabilities
+
+**Certificate Types:**
+- General Ensurance (ERC-20): Currency-like certificates for indirect natural capital funding
+- Specific Ensurance (ERC-1155): Asset certificates tied to specific real natural assets
+- Both types enable swapping for $ENSURE (the nature-based protocol currency)
+
+**Financial Mechanisms:**
+- Ensurance Syndicates: Yield-bearing vaults for specific purposes (ERC-4626)
+- Ensurance Pools: Investment vehicles managing 15 ecosystems & 19 ecosystem services
+- Protocol Rewards: Automated distribution system modeled after natural water cycles
+- DeFi Integration: Seamless trading, swapping, and liquidity provision
+
+**Natural Asset Management:**
+- RealValue Framework: Proprietary valuation methodology for natural capital
+- Ensurance Binder: Registry of real assets considered for or part of ensurance
+- Policies & Premiums: Structured agreements for ecosystem protection funding
+- ENTRUST: Permanent trust system for fully ensured natural assets
+
+### Application Features
+
+**Core Pages & Functionality:**
+- `/ensure`: Main discovery interface for all ensurance opportunities
+- `/markets`: Unified markets view for natural capital trading
+- `/natural-capital`: Comprehensive natural capital stocks/flows visualization  
+- `/groups`: Group management and discovery
+- `/syndicates`: Investment syndicate creation and participation
+- `/accounts`: Account/agent management with portfolio views
+- `/binder`: Natural asset registry and policy management
+- `/proceeds`: Distribution tracking and claims interface
+
+**Advanced Capabilities:**
+- Real-time blockchain data integration via Alchemy & Moralis APIs
+- Dynamic metadata generation for certificates and natural assets
+- Multi-chain asset tracking and portfolio management
+- AI-powered search and asset discovery
+- Automated trading and yield optimization through agents
+- Comprehensive admin tools for protocol governance
+
+### Technical Integration Points
+- **Smart Contracts**: Direct integration with SITUS Protocol (ERC-721 Groups, ERC-6551 Accounts)
+- **DeFi Protocols**: 0x API for trading, various DEX integrations
+- **Data Sources**: Alchemy for blockchain data, Moralis for market data, custom APIs
+- **Media & Assets**: Dynamic image generation, IPFS integration for metadata
+- **AI Agents**: ElizaOS framework for autonomous account operations
+
+The platform represents a sophisticated intersection of environmental science, blockchain technology, and traditional finance - creating new markets that properly value and fund the natural systems essential to all life.
+
+### Onchain Agents Platform
+
+**Onchain Agents** transforms ERC721 NFTs into autonomous DeFi agents using ERC6551 Tokenbound Accounts and ElizaOS. Turn idle NFTs into semi-autonomous trading agents with constrained autonomy.
+
+#### Architecture
+Three-tier security model:
+- **Owner**: External wallet (Privy) - funds and controls the system
+- **Operator**: Embedded wallet - holds main assets, controlled by Owner  
+- **Agent**: NFT Tokenbound Account - limited assets for autonomous trading
+
+```
+Owner → Operator → Multiple Agents (TBAs)
+```
+
+#### Capabilities
+- **Autonomous Trading**: Token swaps via 0x API with constraints
+- **Asset Management**: ERC20/ERC1155 transfers (not ERC721s)
+- **Profit Sweeping**: Auto-move gains to Operator wallet
+- **Personality-Driven**: Agent behavior based on NFT traits via ElizaOS
+
+#### Tech Stack
+- **Frontend**: Next.js + Privy + Viem + Tokenbound SDK
+- **DeFi**: 0x API for swaps
+- **AI**: ElizaOS fork with API-based character export
+
+#### Security
+- Tiered custody with limited agent funds
+- Platform-level constraints
+- Permissionless for any ERC721 owner
+- Agents restricted to tokenbound wallet client transactions
+
+### Shared Infrastructure
+
+Both **Ensurance App** and **Onchain Agents** operate as clients of the same underlying infrastructure:
+
+- **Common Tech Stack**: Next.js, TypeScript, PostgreSQL (Neon), Privy authentication
+- **Shared Blockchain Integration**: ERC-6551 Tokenbound Accounts, 0x API, multi-chain support
+- **Unified AI Framework**: ElizaOS for autonomous agent operations
+- **Common APIs**: Alchemy, Moralis, and custom backend services
+- **Shared Components**: Account management, wallet integration, trading infrastructure
+
+This dual-platform approach allows for specialized user experiences while maintaining infrastructure efficiency and code reuse across both natural capital ensurance and NFT agent trading use cases.
+
+## Core Development Principles
+
+### 1. Flow - Always Plan First
+
+- **Bug Fixes**: First identify the bug, research ALL related files, create complete change plan
+- **Impact Analysis**: Identify all possible errors and negative outcomes from changes
+- **Documentation**: Create thorough PRD and implementation plan BEFORE writing any code
+- **Identify risks and approaches**: Thoroughly outline all risks and offer multiple possible approaches, choosing your favorite
+- **Just do it**: Once the plan is in place, start writing code. Don't wait for response from the user. UNLESS user mentions "discuss" then discuss first.
+
+### 2. No Stubs or Incomplete Code
+
+- **Never** use stubs, fake code, or incomplete implementations
+- **Always** continue writing until all stubs are replaced with finished, working code
+- **No POCs**: Never deliver proof-of-concepts - only finished, detailed code
+- **Iteration**: Work on files until they are perfect, looping testing and fixing until all tests pass
+
+### 3. Test-Driven Development
+
+- Models hallucinate frequently - thorough testing is critical
+- Verify tests are complete and passing before declaring changes correct
+- First attempts are usually incorrect - test thoroughly
+- Write tests before implementation when possible
+
+
+## Architecture Details
+
+
+## Database Architecture
+
+- Postgres SQL: Neon on Vercel
+
+## Code Style Guidelines
+
+- TypeScript for all code
+- Comprehensive error handling required
+- Clear separation of concerns
+- Follow existing patterns in codebase
+- Descriptive variable and function names
+- Comment complex logic
+- Don't comment change notes
+- Never omit code or add an "// ..." as it risks breaking the codebase
+
+## Development Workflow
+
+1. Understand the requirement completely
+2. Research all affected files and components
+3. Create detailed implementation plan
+4. Write comprehensive tests
+5. Implement solution iteratively
+6. Verify all tests pass
+7. Review for edge cases
+8. Ensure no stubs remain
+
