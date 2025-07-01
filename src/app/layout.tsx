@@ -1,6 +1,7 @@
 import { spaceGrotesk, spaceMono } from './fonts'
 import './globals.css'
 import { PrivyProviderWrapper } from '@/providers/privy-provider'
+import { ActivityOverlayProvider } from '@/providers/activity-overlay-provider'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import WebAnalytics from '@/components/analytics/WebAnalytics'
@@ -39,21 +40,23 @@ export default function RootLayout({
       </head>
       <body className="antialiased min-h-screen flex flex-col font-grotesk bg-black text-white overflow-x-hidden">
         <PrivyProviderWrapper>
-          <AnnouncementBanner />
-          <MobileNotificationModal />
-          <Header />
-          <ToastContainer 
-            theme="dark"
-            position="top-right"
-            toastClassName="!bg-gray-900 !text-gray-100 !max-w-[90vw] md:!max-w-md"
-            progressClassName="!bg-blue-500"
-            closeButton={false}
-            limit={3}
-          />
-          <main className="flex-1 w-full max-w-[100vw]">
-            {children}
-          </main>
-          <Footer />
+          <ActivityOverlayProvider>
+            <AnnouncementBanner />
+            <MobileNotificationModal />
+            <Header />
+            <ToastContainer 
+              theme="dark"
+              position="top-right"
+              toastClassName="!bg-gray-900 !text-gray-100 !max-w-[90vw] md:!max-w-md"
+              progressClassName="!bg-blue-500"
+              closeButton={false}
+              limit={3}
+            />
+            <main className="flex-1 w-full max-w-[100vw]">
+              {children}
+            </main>
+            <Footer />
+          </ActivityOverlayProvider>
         </PrivyProviderWrapper>
         <div id="modal-root" className="relative z-50" />
       </body>
