@@ -5,6 +5,7 @@ import { generalCertificates } from '@/lib/database/certificates/general';
 interface AllowlistItem {
   contract_address: string;
   chain: string;
+  symbol: string;
 }
 
 export async function GET() {
@@ -15,16 +16,18 @@ export async function GET() {
       generalCertificates.getAll()
     ]);
 
-    // Extract contract_address and chain from currencies
+    // Extract contract_address, chain, and symbol from currencies
     const currencyItems: AllowlistItem[] = currenciesData.map(currency => ({
       contract_address: currency.address, // currencies uses 'address' field
-      chain: 'base' // currencies seem to be base-only based on the query
+      chain: 'base', // currencies seem to be base-only based on the query
+      symbol: currency.symbol || 'UNKNOWN'
     }));
 
-    // Extract contract_address and chain from certificates
+    // Extract contract_address, chain, and symbol from certificates
     const certificateItems: AllowlistItem[] = certificatesData.map(cert => ({
       contract_address: cert.contract_address,
-      chain: cert.chain
+      chain: cert.chain,
+      symbol: cert.symbol || 'UNKNOWN'
     }));
 
     // Combine both arrays and remove duplicates
