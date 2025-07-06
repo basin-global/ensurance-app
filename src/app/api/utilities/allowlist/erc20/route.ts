@@ -6,6 +6,7 @@ interface AllowlistItem {
   contract_address: string;
   chain: string;
   symbol: string;
+  decimals: number;
 }
 
 export async function GET() {
@@ -16,18 +17,20 @@ export async function GET() {
       generalCertificates.getAll()
     ]);
 
-    // Extract contract_address, chain, and symbol from currencies
+    // Extract contract_address, chain, symbol, and decimals from currencies
     const currencyItems: AllowlistItem[] = currenciesData.map(currency => ({
       contract_address: currency.address, // currencies uses 'address' field
       chain: 'base', // currencies seem to be base-only based on the query
-      symbol: currency.symbol || 'UNKNOWN'
+      symbol: currency.symbol || 'UNKNOWN',
+      decimals: currency.decimals || 18 // Default to 18 if not specified
     }));
 
-    // Extract contract_address, chain, and symbol from certificates
+    // Extract contract_address, chain, symbol, and decimals from certificates
     const certificateItems: AllowlistItem[] = certificatesData.map(cert => ({
       contract_address: cert.contract_address,
       chain: cert.chain,
-      symbol: cert.symbol || 'UNKNOWN'
+      symbol: cert.symbol || 'UNKNOWN',
+      decimals: cert.decimals || 18 // Default to 18 if not specified
     }));
 
     // Combine both arrays and remove duplicates
