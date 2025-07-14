@@ -1,47 +1,96 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { GroupInfo } from '@/modules/groups/GroupInfo'
-import Image from 'next/image'
+import { GroupCreateAccount } from '@/modules/groups/GroupCreateAccount'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { Loader2 } from 'lucide-react'
+
+interface GroupData {
+    group_name: string
+    contract_address: string
+}
 
 export default function GroupCreatePage({ params }: { params: { group: string } }) {
-    return (
-        <div className="min-h-screen flex flex-col">
-            <div className="container mx-auto px-4 py-8 flex-1">
-                <div className="space-y-4">
+    const [groupData, setGroupData] = useState<GroupData | null>(null)
+    const [isLoading, setIsLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
+
+    useEffect(() => {
+        const fetchGroupData = async () => {
+            try {
+                const response = await fetch(`/api/groups`)
+                if (!response.ok) throw new Error('Failed to fetch groups')
+                const allGroups = await response.json()
+                
+                const group = allGroups.find((g: any) => 
+                    g.group_name === `.${params.group}` || g.group_name === params.group
+                )
+                
+                if (!group) {
+                    setError('Group not found')
+                    return
+                }
+
+                setGroupData({
+                    group_name: group.group_name,
+                    contract_address: group.contract_address
+                })
+            } catch (err) {
+                console.error('Error fetching group data:', err)
+                setError('Failed to load group information')
+            } finally {
+                setIsLoading(false)
+            }
+        }
+
+        fetchGroupData()
+    }, [params.group])
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex flex-col">
+                <div className="container mx-auto px-4 py-8 flex-1">
                     <PageHeader
                         title={`create ${params.group} account`}
                         showSearch={false}
                     />
                     <div className="flex items-center justify-center py-12">
-                        <div className="w-20 h-20 flex-shrink-0 mr-6">
-                            <Image
-                                src={`/groups/orbs/${params.group}-orb.png`}
-                                alt={`${params.group} orb`}
-                                width={80}
-                                height={80}
-                                className="rounded-full"
-                            />
-                        </div>
-                        <div>
-                            <p className="text-xl font-mono text-white-400 mb-4">
-                                Create your own .{params.group} account...
-                            </p>
-                            <p className="text-gray-500 font-mono">
-                                Account creation is coming soon.{' '}
-                                <a 
-                                    href="https://x.com/ensurance_app" 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="text-blue-400 hover:text-blue-300 transition-colors"
-                                >
-                                    follow updates here
-                                </a>
-                                .
-                            </p>
-                        </div>
+                        <Loader2 className="w-8 h-8 animate-spin text-gray-400 mr-3" />
+                        <span className="text-gray-500 font-mono">Loading group information...</span>
                     </div>
                 </div>
+            </div>
+        )
+    }
+
+    if (error || !groupData) {
+        return (
+            <div className="min-h-screen flex flex-col">
+                <div className="container mx-auto px-4 py-8 flex-1">
+                    <PageHeader
+                        title={`create ${params.group} account`}
+                        showSearch={false}
+                    />
+                    <div className="text-center py-12">
+                        <p className="text-red-400 font-mono">{error || 'Group not found'}</p>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <div className="min-h-screen flex flex-col">
+            <div className="container mx-auto px-4 py-8 flex-1">
+                <PageHeader
+                    title={`create ${params.group} account`}
+                    showSearch={false}
+                />
+                <GroupCreateAccount 
+                    groupName={params.group}
+                    contractAddress={groupData.contract_address}
+                />
             </div>
             <GroupInfo groupName={params.group} />
         </div>
