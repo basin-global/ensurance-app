@@ -22,10 +22,9 @@ export const groups = {
     
     // Get all groups
     getAll: async (includeInactive = false) => {
-        const result = await sql`
-            SELECT * FROM members.groups 
-            WHERE is_active = true 
-            ORDER BY group_name`;
+        const result = includeInactive 
+            ? await sql`SELECT * FROM members.groups ORDER BY group_name`
+            : await sql`SELECT * FROM members.groups WHERE is_active = true ORDER BY group_name`;
         return result.rows;
     },
     

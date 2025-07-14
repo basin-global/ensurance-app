@@ -25,6 +25,12 @@ export default function AdminLayout({
                 Sync
               </Link>
               <Link 
+                href="/admin/groups"
+                className="text-sm hover:text-blue-500"
+              >
+                Groups
+              </Link>
+              <Link 
                 href="/admin/exports"
                 className="text-sm hover:text-blue-500"
               >

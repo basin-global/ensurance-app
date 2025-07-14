@@ -22,6 +22,11 @@ export default function AdminPage() {
       href: '/admin/sync',
     },
     {
+      title: 'Groups',
+      description: 'View and compare group contract settings',
+      href: '/admin/groups',
+    },
+    {
       title: 'Exports',
       description: 'Export data and generate reports',
       href: '/admin/exports',

@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
         const groupName = searchParams.get('group_name');
+        const includeInactive = searchParams.get('include_inactive') === 'true';
 
         if (groupName) {
             const group = await groups.getByName(groupName);
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
             });
         }
 
-        const allGroups = await groups.getAll();
+        const allGroups = await groups.getAll(includeInactive);
         return NextResponse.json(allGroups, {
             headers: {
                 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
