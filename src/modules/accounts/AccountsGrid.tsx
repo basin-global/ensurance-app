@@ -243,7 +243,20 @@ export default function AccountsGrid({
             <div className="text-center py-8">
                 <p className="text-lg text-gray-600 dark:text-gray-400">
                     {walletAddress ? (
-                        "API migration in progress - NFT functionality will be restored soon"
+                        <>
+                            No{groupName ? ` .${groupName}` : ''} agent accounts found{searchQuery ? ' matching your search' : ''}.
+                            {!searchQuery && (
+                                <>
+                                    {' '}You can create one{' '}
+                                    <Link 
+                                        href={groupName ? `/groups/${groupName}/create` : '/create'}
+                                        className="text-blue-400 hover:text-blue-300 transition-colors"
+                                    >
+                                        here
+                                    </Link>.
+                                </>
+                            )}
+                        </>
                     ) : (
                         <>
                             No{groupName ? ` .${groupName}` : ''} accounts found{searchQuery ? ' matching your search' : ''}.

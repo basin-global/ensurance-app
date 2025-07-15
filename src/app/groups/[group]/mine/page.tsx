@@ -5,6 +5,7 @@ import { usePrivy } from '@privy-io/react-auth'
 import AccountsGrid from '@/modules/accounts/AccountsGrid'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { GroupInfo } from '@/modules/groups/GroupInfo'
+import Link from 'next/link'
 
 // Tell Next.js this is a dynamic route
 export const dynamic = 'force-dynamic'
@@ -56,6 +57,16 @@ export default function GroupMinePage({ params }: { params: { group: string } })
             searchQuery={searchQuery}
             walletAddress={walletAddress}
           />
+          
+          {/* See all your agents button */}
+          <div className="flex justify-center pt-6">
+            <Link
+              href="/mine"
+              className="bg-primary hover:bg-primary-dark text-primary-foreground font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:-translate-y-1 hover:scale-105"
+            >
+              see all your agents
+            </Link>
+          </div>
         </div>
       </div>
       <GroupInfo groupName={params.group} />

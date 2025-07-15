@@ -845,7 +845,7 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
           {/* Sales Points */}
           <div className="mt-6 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
             <div className="text-center space-y-3">
-              <h3 className="text-lg font-mono text-white">full ai agent with three modes</h3>
+              <h3 className="text-lg font-mono text-white">full onchain agent with three modes</h3>
               <div className="flex justify-center space-x-6 text-sm">
                 <div className="flex items-center space-x-2">
                   <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
