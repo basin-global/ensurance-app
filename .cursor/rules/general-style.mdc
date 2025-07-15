@@ -1,7 +1,5 @@
 ---
-description: design guidelines
-globs: 
-alwaysApply: false
+alwaysApply: true
 ---
 # General Style Guidelines
 

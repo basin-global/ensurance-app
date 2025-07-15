@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { GroupInfo } from '@/modules/groups/GroupInfo'
 import { GroupCreateAccount } from '@/modules/groups/GroupCreateAccount'
+import { AccountSalesPoints } from '@/modules/groups/AccountSalesPoints'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Loader2 } from 'lucide-react'
 
@@ -28,7 +29,7 @@ export default function GroupCreatePage({ params }: { params: { group: string } 
                 )
                 
                 if (!group) {
-                    setError('Group not found')
+                    setError('group not found')
                     return
                 }
 
@@ -38,7 +39,7 @@ export default function GroupCreatePage({ params }: { params: { group: string } 
                 })
             } catch (err) {
                 console.error('Error fetching group data:', err)
-                setError('Failed to load group information')
+                setError('failed to load group information')
             } finally {
                 setIsLoading(false)
             }
@@ -57,7 +58,7 @@ export default function GroupCreatePage({ params }: { params: { group: string } 
                     />
                     <div className="flex items-center justify-center py-12">
                         <Loader2 className="w-8 h-8 animate-spin text-gray-400 mr-3" />
-                        <span className="text-gray-500 font-mono">Loading group information...</span>
+                        <span className="text-gray-500 font-mono">loading group information...</span>
                     </div>
                 </div>
             </div>
@@ -73,7 +74,7 @@ export default function GroupCreatePage({ params }: { params: { group: string } 
                         showSearch={false}
                     />
                     <div className="text-center py-12">
-                        <p className="text-red-400 font-mono">{error || 'Group not found'}</p>
+                        <p className="text-red-400 font-mono">{error || 'group not found'}</p>
                     </div>
                 </div>
             </div>
@@ -93,6 +94,7 @@ export default function GroupCreatePage({ params }: { params: { group: string } 
                 />
             </div>
             <GroupInfo groupName={params.group} />
+            <AccountSalesPoints groupName={params.group} />
         </div>
     )
 } 

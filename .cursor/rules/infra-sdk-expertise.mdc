@@ -1,7 +1,5 @@
 ---
-description: sdk usage
-globs: 
-alwaysApply: false
+alwaysApply: true
 ---
 # Infra and SDK Expertise Rules
 

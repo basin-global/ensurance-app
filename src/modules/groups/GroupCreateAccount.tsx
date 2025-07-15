@@ -47,6 +47,8 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
   const [mintSuccess, setMintSuccess] = useState(false)
   const [newAccountName, setNewAccountName] = useState('')
   const [validationError, setValidationError] = useState<string | null>(null)
+  const [ethBalance, setEthBalance] = useState<bigint | null>(null)
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false)
 
   const debouncedAccountName = useDebounce(accountName, 500)
 
@@ -260,6 +262,46 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
       fetchContractInfo()
     }
   }, [contractAddress, authenticated, user?.wallet?.address])
+
+  // Fetch ETH balance
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (!authenticated || !user?.wallet?.address) {
+        setEthBalance(null)
+        return
+      }
+
+      setIsLoadingBalance(true)
+      try {
+        const { createPublicClient, http } = await import('viem')
+        
+        // Use Alchemy transport with fallback
+        const alchemyApiKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY
+        const publicClient = createPublicClient({
+          chain: base,
+          transport: http(alchemyApiKey 
+            ? `https://base-mainnet.g.alchemy.com/v2/${alchemyApiKey}`
+            : 'https://mainnet.base.org'
+          )
+        })
+
+        const balance = await retryWithBackoff(() => 
+          publicClient.getBalance({
+            address: user.wallet!.address as `0x${string}`
+          })
+        )
+
+        setEthBalance(balance)
+      } catch (error) {
+        console.error('Error fetching ETH balance:', error)
+        setEthBalance(null)
+      } finally {
+        setIsLoadingBalance(false)
+      }
+    }
+
+    fetchBalance()
+  }, [authenticated, user?.wallet?.address])
 
   // Check name availability
   useEffect(() => {
@@ -485,7 +527,7 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
             congratulations!
           </h2>
           <p className="text-lg text-gray-400 mb-6">
-            Your account <span className="text-white font-mono">{newAccountName}</span> has been created successfully.
+            your account <span className="text-white font-mono">{newAccountName}</span> has been created successfully.
           </p>
           <Link
             href={`/${newAccountName}`}
@@ -503,7 +545,7 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
     return (
       <div className="max-w-2xl mx-auto text-center py-12">
         <Loader2 className="w-8 h-8 animate-spin text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-500 font-mono">Loading contract information...</p>
+        <p className="text-gray-500 font-mono">loading contract information...</p>
       </div>
     )
   }
@@ -514,10 +556,10 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
       <div className="max-w-2xl mx-auto text-center py-12">
         <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
         <h2 className="text-xl font-mono text-white mb-4">
-          Error loading contract
+          error loading contract
         </h2>
         <p className="text-gray-400">
-          {contractInfo?.error || 'Failed to load contract information'}
+          {contractInfo?.error || 'failed to load contract information'}
         </p>
       </div>
     )
@@ -534,15 +576,15 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
               connect to check eligibility
             </h2>
             <p className="text-gray-400 mb-6">
-              This group uses allowlist for account creation. <button 
+              this group uses allowlist for account creation. <button 
                 onClick={() => login()}
                 className="text-blue-400 hover:text-blue-300 underline"
               >
-                Connect
+                connect
               </button> to check if you're eligible.
             </p>
             <p className="text-sm text-gray-500">
-              Group: <span className="text-white font-mono">.{groupName}</span>
+              group: <span className="text-white font-mono">.{groupName}</span>
             </p>
           </div>
         )
@@ -553,10 +595,10 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
           <div className="max-w-2xl mx-auto text-center py-12">
             <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
             <h2 className="text-xl font-mono text-white mb-4">
-              You've already created an account
+              you've already created an account
             </h2>
             <p className="text-gray-400 mb-6">
-              Each address can only create one account in this allowlist group.
+              each address can only create one account in this allowlist group.
             </p>
             <Link
               href={`/groups/${groupName}/mine`}
@@ -565,7 +607,7 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
               see your accounts
             </Link>
             <p className="text-sm text-gray-500">
-              Group: <span className="text-white font-mono">.{groupName}</span>
+              group: <span className="text-white font-mono">.{groupName}</span>
             </p>
           </div>
         )
@@ -576,13 +618,13 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
           <div className="max-w-2xl mx-auto text-center py-12">
             <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
             <h2 className="text-xl font-mono text-white mb-4">
-              Not eligible for allowlist minting
+              not eligible for allowlist minting
             </h2>
             <p className="text-gray-400 mb-6">
-              Your address is not on the allowlist for this group.
+              your address is not on the allowlist for this group.
             </p>
             <p className="text-sm text-gray-500">
-              Group: <span className="text-white font-mono">.{groupName}</span>
+              group: <span className="text-white font-mono">.{groupName}</span>
             </p>
           </div>
         )
@@ -592,13 +634,13 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
         <div className="max-w-2xl mx-auto text-center py-12">
           <XCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
           <h2 className="text-xl font-mono text-white mb-4">
-            Custom minting not supported
+            custom minting not supported
           </h2>
           <p className="text-gray-400 mb-6">
-            This group uses a custom minting contract that is not currently supported.
+            this group uses a custom minting contract that is not currently supported.
           </p>
           <p className="text-sm text-gray-500">
-            Group: <span className="text-white font-mono">.{groupName}</span>
+            group: <span className="text-white font-mono">.{groupName}</span>
           </p>
         </div>
       )
@@ -607,21 +649,22 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
         <div className="max-w-2xl mx-auto text-center py-12">
           <XCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
           <h2 className="text-xl font-mono text-white mb-4">
-            Account creation is currently inactive
+            account creation is currently inactive
           </h2>
           <p className="text-gray-400 mb-6">
-            Please contact the group admin to enable account creation.
+            please contact the group admin to enable account creation.
           </p>
           <p className="text-sm text-gray-500">
-            Group: <span className="text-white font-mono">.{groupName}</span>
+            group: <span className="text-white font-mono">.{groupName}</span>
           </p>
         </div>
       )
     }
   }
 
-  const ethAmount = formatEther(contractInfo.price)
+  const ethAmount = parseFloat(formatEther(contractInfo.price)).toFixed(4)
   const usdAmount = ethPrice ? (parseFloat(ethAmount) * ethPrice).toFixed(2) : null
+  const hasInsufficientBalance = contractInfo.minterType === 'default' && authenticated && ethBalance !== null && ethBalance < contractInfo.price
 
   // Domain name validation function that matches contract requirements
   const validateDomainName = (input: string): { value: string; error: string | null } => {
@@ -650,55 +693,57 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
   return (
     <div className="max-w-2xl mx-auto py-8">
       <div className="space-y-6">
+        {/* Streamlined Header */}
         <div className="text-center mb-8">
-          <h2 className="text-2xl font-mono text-white mb-2">
-            create .{groupName} account
-          </h2>
-          <p className="text-gray-400">
-            Choose your account name for <span className="text-white font-mono">.{groupName}</span>
+          <p className="text-gray-400 mb-4">
+            choose your agent account name for <span className="text-white font-mono">.{groupName}</span>
           </p>
           {contractInfo.minterType === 'allowlist' && (
-            <p className="text-sm text-green-400 mt-2">
-              ✓ You're eligible for allowlist minting
+            <p className="text-sm text-green-400">
+              ✓ you're eligible for allowlist minting
             </p>
           )}
         </div>
 
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-mono text-gray-300 mb-2">
-              Account Name
-            </label>
-            <div className="flex items-center space-x-2">
-              <Input
-                type="text"
-                value={accountName}
-                onChange={(e) => {
-                  const result = validateDomainName(e.target.value)
-                  setAccountName(result.value)
-                  setValidationError(result.error)
-                }}
-                placeholder="yourname"
-                className="flex-1 bg-gray-800 border-gray-700 text-white font-mono"
-                disabled={isMinting}
-              />
-              <span className="text-gray-400 font-mono">.{groupName}</span>
+        {/* Account Name Input - Focal Point */}
+        <div className="space-y-6">
+          <div className="text-center">
+            <div className="flex items-center justify-center">
+              <div className="relative flex items-baseline">
+                <Input
+                  type="text"
+                  value={accountName}
+                  onChange={(e) => {
+                    const result = validateDomainName(e.target.value)
+                    setAccountName(result.value)
+                    setValidationError(result.error)
+                  }}
+                  placeholder="yourname"
+                  className="bg-transparent border-none text-4xl font-mono text-white placeholder:text-gray-600 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:outline-none text-right pr-0"
+                  style={{ width: `${Math.max(accountName.length || 12, 12)}ch` }}
+                  disabled={isMinting}
+                />
+                <span className="text-4xl font-mono text-gray-400">.{groupName}</span>
+              </div>
             </div>
+            <div className="mt-2 h-px bg-gradient-to-r from-transparent via-gray-600 to-transparent"></div>
           </div>
 
+          {/* Validation Error */}
           {validationError && (
-            <div className="flex items-center space-x-2 text-sm">
+            <div className="flex items-center justify-center space-x-2 text-sm">
               <XCircle className="w-4 h-4 text-red-500" />
               <span className="text-red-400 font-mono">{validationError}</span>
             </div>
           )}
 
+          {/* Name Availability Check */}
           {accountName && !validationError && (
-            <div className="flex items-center space-x-2 text-sm">
+            <div className="flex items-center justify-center space-x-2 text-sm">
               {isCheckingName ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-                  <span className="text-gray-400 font-mono">Checking availability...</span>
+                  <span className="text-gray-400 font-mono">checking availability...</span>
                 </>
               ) : nameCheckResult ? (
                 nameCheckResult.available ? (
@@ -720,52 +765,109 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
             </div>
           )}
 
+          {/* Pricing Info */}
           {contractInfo.minterType === 'default' && (
-            <div className="bg-gray-800 rounded-lg p-4">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-gray-400 font-mono">Price:</span>
-                <div className="text-right">
-                  <div className="text-white font-mono">{ethAmount} ETH</div>
-                  {usdAmount && (
-                    <div className="text-sm text-gray-400">${usdAmount} USD</div>
-                  )}
+            <div className="flex justify-center">
+              <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 w-80">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-gray-400 font-mono">price:</span>
+                  <div className="text-right">
+                    <div className="text-white font-mono">{ethAmount} ETH</div>
+                    {usdAmount && (
+                      <div className="text-sm text-gray-400">${usdAmount} USD</div>
+                    )}
+                  </div>
                 </div>
+                
+                {/* Balance Display */}
+                {authenticated && (
+                  <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-700">
+                    <span className="text-gray-400 font-mono">your balance:</span>
+                    <div className="text-right">
+                      {isLoadingBalance ? (
+                        <div className="text-gray-400 font-mono">loading...</div>
+                      ) : ethBalance !== null ? (
+                        <div className={`font-mono ${hasInsufficientBalance ? 'text-red-400' : 'text-white'}`}>
+                          {parseFloat(formatEther(ethBalance)).toFixed(4)} ETH
+                        </div>
+                      ) : (
+                        <div className="text-gray-400 font-mono">unable to load</div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
+          {/* Allowlist Minting Info */}
           {contractInfo.minterType === 'allowlist' && (
-            <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
-              <div className="flex items-center space-x-2 mb-2">
-                <CheckCircle className="w-4 h-4 text-green-500" />
-                <span className="text-green-400 font-mono">Allowlist Minting</span>
+            <div className="flex justify-center">
+              <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4 w-80">
+                <div className="flex items-center justify-center space-x-2 mb-2">
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  <span className="text-green-400 font-mono">allowlist minting</span>
+                </div>
+                <p className="text-sm text-gray-300 text-center">
+                  you're eligible for free allowlist minting. no payment required.
+                </p>
               </div>
-              <p className="text-sm text-gray-300">
-                You're eligible for free allowlist minting. No payment required.
-              </p>
             </div>
           )}
 
-          <Button
-            onClick={handleMint}
-            disabled={!authenticated || !nameCheckResult?.available || isMinting}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-mono py-3"
-          >
-            {isMinting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                Creating Account...
-              </>
-            ) : (
-              'Create Agent Account'
-            )}
-          </Button>
+          {/* Create Button */}
+          <div className="flex justify-center">
+            <Button
+              onClick={handleMint}
+              disabled={!authenticated || !nameCheckResult?.available || isMinting || hasInsufficientBalance}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-mono px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isMinting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  creating account...
+                </>
+              ) : hasInsufficientBalance ? (
+                'insufficient balance'
+              ) : (
+                'create agent account'
+              )}
+            </Button>
+          </div>
 
+          {/* Connection Prompt */}
           {!authenticated && (
             <p className="text-center text-sm text-gray-400">
-              Please connect to create an account
+              please connect to create an account
             </p>
           )}
+
+          {/* Sales Points */}
+          <div className="mt-6 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+            <div className="text-center space-y-3">
+              <h3 className="text-lg font-mono text-white">full ai agent with three modes</h3>
+              <div className="flex justify-center space-x-6 text-sm">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  <span className="text-gray-300">own forever</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  <span className="text-gray-300">ai trading</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  <span className="text-gray-300">funds nature</span>
+                </div>
+              </div>
+              <a 
+                href="#learn-more" 
+                className="text-blue-400 hover:text-blue-300 text-sm underline font-mono"
+              >
+                unsure? learn more about agent accounts
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     </div>
