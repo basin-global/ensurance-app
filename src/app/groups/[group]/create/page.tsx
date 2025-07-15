@@ -52,7 +52,7 @@ export default function GroupCreatePage({ params }: { params: { group: string } 
             <div className="min-h-screen flex flex-col">
                 <div className="container mx-auto px-4 py-8 flex-1">
                     <PageHeader
-                        title={`create ${params.group} account`}
+                        title={`create .${params.group} account`}
                         showSearch={false}
                     />
                     <div className="flex items-center justify-center py-12">
@@ -69,7 +69,7 @@ export default function GroupCreatePage({ params }: { params: { group: string } 
             <div className="min-h-screen flex flex-col">
                 <div className="container mx-auto px-4 py-8 flex-1">
                     <PageHeader
-                        title={`create ${params.group} account`}
+                        title={`create .${params.group} account`}
                         showSearch={false}
                     />
                     <div className="text-center py-12">
@@ -84,7 +84,7 @@ export default function GroupCreatePage({ params }: { params: { group: string } 
         <div className="min-h-screen flex flex-col">
             <div className="container mx-auto px-4 py-8 flex-1">
                 <PageHeader
-                    title={`create ${params.group} account`}
+                    title={`create .${params.group} account`}
                     showSearch={false}
                 />
                 <GroupCreateAccount 

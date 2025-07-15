@@ -47,7 +47,7 @@ export default function GroupMinePage({ params }: { params: { group: string } })
       <div className="container mx-auto px-4 py-8 flex-1">
         <div className="space-y-4">
           <PageHeader
-            title={`my ${params.group} accounts`}
+            title={`my .${params.group} accounts`}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
           />

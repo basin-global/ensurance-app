@@ -9,7 +9,7 @@ import { toast } from 'react-toastify'
 import { useDebounce } from '@/hooks/useDebounce'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { CheckCircle, XCircle, Loader2 } from 'lucide-react'
+import { CheckCircle, XCircle, Loader2, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 
 interface GroupCreateAccountProps {
@@ -27,11 +27,15 @@ interface NameCheckResult {
 interface GroupContractInfo {
   buyingEnabled: boolean
   price: bigint
+  minterType: 'default' | 'allowlist' | 'custom' | 'unknown'
+  minterAddress: `0x${string}`
+  userAllowlisted?: boolean
+  userHasMinted?: boolean
   error?: string
 }
 
 export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAccountProps) {
-  const { authenticated } = usePrivy()
+  const { authenticated, user, login } = usePrivy()
   const { wallets } = useWallets()
   const [accountName, setAccountName] = useState('')
   const [nameCheckResult, setNameCheckResult] = useState<NameCheckResult | null>(null)
@@ -42,8 +46,39 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
   const [ethPrice, setEthPrice] = useState<number | null>(null)
   const [mintSuccess, setMintSuccess] = useState(false)
   const [newAccountName, setNewAccountName] = useState('')
+  const [validationError, setValidationError] = useState<string | null>(null)
 
   const debouncedAccountName = useDebounce(accountName, 500)
+
+  // Retry function with exponential backoff
+  const retryWithBackoff = async <T,>(
+    fn: () => Promise<T>,
+    maxRetries: number = 3,
+    baseDelay: number = 1000
+  ): Promise<T> => {
+    let lastError: Error | null = null
+    
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        return await fn()
+      } catch (error) {
+        lastError = error as Error
+        
+        // If it's a rate limit error, wait and retry
+        if (error instanceof Error && (error.message.includes('429') || error.message.includes('rate'))) {
+          const delayMs = baseDelay * Math.pow(2, i) + Math.random() * 1000
+          console.log(`Rate limit hit, retrying in ${delayMs}ms...`)
+          await new Promise(resolve => setTimeout(resolve, delayMs))
+          continue
+        }
+        
+        // For other errors, don't retry
+        throw error
+      }
+    }
+    
+    throw lastError || new Error('Maximum retries exceeded')
+  }
 
   // Fetch ETH price
   useEffect(() => {
@@ -61,18 +96,25 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
     fetchEthPrice()
   }, [])
 
-  // Fetch contract info
+  // Fetch contract info with minter type detection
   useEffect(() => {
     const fetchContractInfo = async () => {
       try {
         const { createPublicClient, http } = await import('viem')
+        
+        // Use Alchemy transport with fallback
+        const alchemyApiKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY
         const publicClient = createPublicClient({
           chain: base,
-          transport: http()
+          transport: http(alchemyApiKey 
+            ? `https://base-mainnet.g.alchemy.com/v2/${alchemyApiKey}`
+            : 'https://mainnet.base.org'
+          )
         })
 
-        const [buyingEnabled, price] = await Promise.all([
-          publicClient.readContract({
+        // First get basic contract info with retry logic
+        const [buyingEnabled, price, minterAddress] = await Promise.all([
+          retryWithBackoff(() => publicClient.readContract({
             address: contractAddress as `0x${string}`,
             abi: [
               {
@@ -84,8 +126,8 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
               }
             ],
             functionName: 'buyingEnabled'
-          }),
-          publicClient.readContract({
+          })),
+          retryWithBackoff(() => publicClient.readContract({
             address: contractAddress as `0x${string}`,
             abi: [
               {
@@ -97,18 +139,116 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
               }
             ],
             functionName: 'price'
-          })
+          })),
+          retryWithBackoff(() => publicClient.readContract({
+            address: contractAddress as `0x${string}`,
+            abi: [
+              {
+                inputs: [],
+                name: 'minter',
+                outputs: [{ type: 'address' }],
+                stateMutability: 'view',
+                type: 'function'
+              }
+            ],
+            functionName: 'minter'
+          }))
         ])
 
+        const minterAddr = minterAddress as `0x${string}`
+        let minterType: 'default' | 'allowlist' | 'custom' | 'unknown' = 'unknown'
+        let userAllowlisted = false
+        let userHasMinted = false
+        let finalBuyingEnabled = buyingEnabled as boolean
+
+        // Determine minter type
+        if (minterAddr === '0x0000000000000000000000000000000000000000') {
+          minterType = 'default'
+        } else {
+          // Check if it's an allowlist minter by trying to call allowlist functions
+          try {
+            // Try to call isAllowlisted function to confirm it's an allowlist minter
+            await retryWithBackoff(() => publicClient.readContract({
+              address: minterAddr as `0x${string}`,
+              abi: [
+                {
+                  inputs: [{ name: '_user', type: 'address' }],
+                  name: 'isAllowlisted',
+                  outputs: [{ type: 'bool' }],
+                  stateMutability: 'view',
+                  type: 'function'
+                }
+              ],
+              functionName: 'isAllowlisted',
+              args: ['0x0000000000000000000000000000000000000000'] // dummy address to test
+            }))
+
+            // If we get here, it's an allowlist minter
+            minterType = 'allowlist'
+            finalBuyingEnabled = false // Will be set to true only if user is allowlisted and hasn't minted
+
+            // Check user's allowlist status if authenticated
+            if (authenticated && user?.wallet?.address) {
+              const userAddress = user.wallet.address as `0x${string}`
+              const [allowlisted, hasMinted] = await Promise.all([
+                retryWithBackoff(() => publicClient.readContract({
+                  address: minterAddr as `0x${string}`,
+                  abi: [
+                    {
+                      inputs: [{ name: '_user', type: 'address' }],
+                      name: 'isAllowlisted',
+                      outputs: [{ type: 'bool' }],
+                      stateMutability: 'view',
+                      type: 'function'
+                    }
+                  ],
+                  functionName: 'isAllowlisted',
+                  args: [userAddress]
+                })),
+                retryWithBackoff(() => publicClient.readContract({
+                  address: minterAddr as `0x${string}`,
+                  abi: [
+                    {
+                      inputs: [{ name: '_user', type: 'address' }],
+                      name: 'hasUserMinted',
+                      outputs: [{ type: 'bool' }],
+                      stateMutability: 'view',
+                      type: 'function'
+                    }
+                  ],
+                  functionName: 'hasUserMinted',
+                  args: [userAddress]
+                }))
+              ])
+
+              userAllowlisted = allowlisted as boolean
+              userHasMinted = hasMinted as boolean
+              
+              // Enable buying only if user is allowlisted and hasn't minted
+              finalBuyingEnabled = userAllowlisted && !userHasMinted
+            }
+          } catch (error) {
+            // If allowlist functions fail, it's a custom minter
+            minterType = 'custom'
+            finalBuyingEnabled = false
+          }
+        }
+
         setContractInfo({
-          buyingEnabled: buyingEnabled as boolean,
-          price: price as bigint
+          buyingEnabled: finalBuyingEnabled,
+          price: price as bigint,
+          minterType,
+          minterAddress,
+          userAllowlisted,
+          userHasMinted
         })
       } catch (error) {
         console.error('Error fetching contract info:', error)
         setContractInfo({
           buyingEnabled: false,
           price: BigInt(0),
+          minterType: 'unknown',
+          minterAddress: '0x0000000000000000000000000000000000000000' as `0x${string}`,
           error: 'Failed to load contract information'
         })
       } finally {
@@ -119,7 +259,7 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
     if (contractAddress) {
       fetchContractInfo()
     }
-  }, [contractAddress])
+  }, [contractAddress, authenticated, user?.wallet?.address])
 
   // Check name availability
   useEffect(() => {
@@ -155,10 +295,21 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
           const result = await response.json()
           setNameCheckResult(result)
         } else {
-          console.error('Error checking name availability')
+          setNameCheckResult({
+            available: false,
+            accountName: debouncedAccountName,
+            groupName,
+            fullAccountName: `${debouncedAccountName}.${groupName}`
+          })
         }
       } catch (error) {
         console.error('Error checking name availability:', error)
+        setNameCheckResult({
+          available: false,
+          accountName: debouncedAccountName,
+          groupName,
+          fullAccountName: `${debouncedAccountName}.${groupName}`
+        })
       } finally {
         setIsCheckingName(false)
       }
@@ -168,30 +319,33 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
   }, [debouncedAccountName, groupName])
 
   const handleMint = async () => {
-    const activeWallet = wallets[0]
-    if (!authenticated || !activeWallet?.address || !contractInfo || !nameCheckResult?.available) {
-      toast.error('Please connect your wallet and ensure name is available')
-      return
-    }
+    if (!authenticated || !wallets.length || !nameCheckResult?.available || !contractInfo) return
 
     setIsMinting(true)
-    const pendingToast = toast.loading('Creating account...')
+    const pendingToast = toast.loading('Preparing transaction...')
 
     try {
+      const activeWallet = wallets[0]
+      const { createPublicClient, http } = await import('viem')
+      
+      // Use Alchemy transport with fallback
+      const alchemyApiKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY
+      const publicClient = createPublicClient({
+        chain: base,
+        transport: http(alchemyApiKey 
+          ? `https://base-mainnet.g.alchemy.com/v2/${alchemyApiKey}`
+          : 'https://mainnet.base.org'
+        )
+      })
+
       const provider = await activeWallet.getEthereumProvider()
       const walletClient = createWalletClient({
         chain: base,
         transport: custom(provider)
       })
 
-      // Check if name is still available on-chain
-      const { createPublicClient, http } = await import('viem')
-      const publicClient = createPublicClient({
-        chain: base,
-        transport: http()
-      })
-
-      const existingDomain = await publicClient.readContract({
+      // Double-check name availability on contract
+      const existingDomain = await retryWithBackoff(() => publicClient.readContract({
         address: contractAddress as `0x${string}`,
         abi: [
           {
@@ -209,7 +363,7 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
         ],
         functionName: 'domains',
         args: [accountName]
-      })
+      }))
 
       // If holder is not zero address, name is taken
       if (existingDomain[2] !== '0x0000000000000000000000000000000000000000') {
@@ -228,31 +382,60 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
         isLoading: true
       })
 
-      // Mint the account
-      const hash = await walletClient.writeContract({
-        address: contractAddress as `0x${string}`,
-        abi: [
-          {
-            inputs: [
-              { name: '_domainName', type: 'string' },
-              { name: '_domainHolder', type: 'address' },
-              { name: '_referrer', type: 'address' }
-            ],
-            name: 'mint',
-            outputs: [{ type: 'uint256' }],
-            stateMutability: 'payable',
-            type: 'function'
-          }
-        ],
-        functionName: 'mint',
-                 args: [
-           accountName,
-           activeWallet.address as `0x${string}`,
-           '0xa187F8CBdd36D63967c33f5BD4dD4B9ECA51270e' as `0x${string}`
-         ],
-         value: contractInfo.price,
-         account: activeWallet.address as `0x${string}`
-      })
+      let hash: `0x${string}`
+
+      if (contractInfo.minterType === 'allowlist') {
+        // Use allowlist minter contract
+        hash = await walletClient.writeContract({
+          address: contractInfo.minterAddress as `0x${string}`,
+          abi: [
+            {
+              inputs: [
+                { name: '_domainName', type: 'string' },
+                { name: '_domainHolder', type: 'address' },
+                { name: '_referrer', type: 'address' }
+              ],
+              name: 'mint',
+              outputs: [{ type: 'uint256' }],
+              stateMutability: 'nonpayable',
+              type: 'function'
+            }
+          ],
+          functionName: 'mint',
+          args: [
+            accountName,
+            activeWallet.address as `0x${string}`,
+            '0xa187F8CBdd36D63967c33f5BD4dD4B9ECA51270e' as `0x${string}`
+          ],
+          account: activeWallet.address as `0x${string}`
+        })
+      } else {
+        // Use default minting (direct from contract)
+        hash = await walletClient.writeContract({
+          address: contractAddress as `0x${string}`,
+          abi: [
+            {
+              inputs: [
+                { name: '_domainName', type: 'string' },
+                { name: '_domainHolder', type: 'address' },
+                { name: '_referrer', type: 'address' }
+              ],
+              name: 'mint',
+              outputs: [{ type: 'uint256' }],
+              stateMutability: 'payable',
+              type: 'function'
+            }
+          ],
+          functionName: 'mint',
+          args: [
+            accountName,
+            activeWallet.address as `0x${string}`,
+            '0xa187F8CBdd36D63967c33f5BD4dD4B9ECA51270e' as `0x${string}`
+          ],
+          value: contractInfo.price,
+          account: activeWallet.address as `0x${string}`
+        })
+      }
 
       await publicClient.waitForTransactionReceipt({ hash })
 
@@ -292,6 +475,7 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
     }
   }
 
+  // Render mint success state
   if (mintSuccess) {
     return (
       <div className="max-w-2xl mx-auto text-center py-12">
@@ -314,6 +498,7 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
     )
   }
 
+  // Render loading state
   if (isLoadingContract) {
     return (
       <div className="max-w-2xl mx-auto text-center py-12">
@@ -323,6 +508,7 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
     )
   }
 
+  // Render error state
   if (contractInfo?.error || !contractInfo) {
     return (
       <div className="max-w-2xl mx-auto text-center py-12">
@@ -337,36 +523,145 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
     )
   }
 
+  // Render different disabled states based on minter type
   if (!contractInfo.buyingEnabled) {
-    return (
-      <div className="max-w-2xl mx-auto text-center py-12">
-        <XCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-        <h2 className="text-xl font-mono text-white mb-4">
-          Account creation is currently inactive
-        </h2>
-        <p className="text-gray-400 mb-6">
-          Please contact the group admin to enable account creation.
-        </p>
-        <p className="text-sm text-gray-500">
-          Group: <span className="text-white font-mono">.{groupName}</span>
-        </p>
-      </div>
-    )
+    if (contractInfo.minterType === 'allowlist') {
+      if (!authenticated) {
+        return (
+          <div className="max-w-2xl mx-auto text-center py-12">
+            <AlertCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+            <h2 className="text-xl font-mono text-white mb-4">
+              connect to check eligibility
+            </h2>
+            <p className="text-gray-400 mb-6">
+              This group uses allowlist for account creation. <button 
+                onClick={() => login()}
+                className="text-blue-400 hover:text-blue-300 underline"
+              >
+                Connect
+              </button> to check if you're eligible.
+            </p>
+            <p className="text-sm text-gray-500">
+              Group: <span className="text-white font-mono">.{groupName}</span>
+            </p>
+          </div>
+        )
+      }
+
+      if (contractInfo.userHasMinted) {
+        return (
+          <div className="max-w-2xl mx-auto text-center py-12">
+            <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+            <h2 className="text-xl font-mono text-white mb-4">
+              You've already created an account
+            </h2>
+            <p className="text-gray-400 mb-6">
+              Each address can only create one account in this allowlist group.
+            </p>
+            <Link
+              href={`/groups/${groupName}/mine`}
+              className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-mono px-6 py-3 rounded-lg transition-colors mb-4"
+            >
+              see your accounts
+            </Link>
+            <p className="text-sm text-gray-500">
+              Group: <span className="text-white font-mono">.{groupName}</span>
+            </p>
+          </div>
+        )
+      }
+
+      if (!contractInfo.userAllowlisted) {
+        return (
+          <div className="max-w-2xl mx-auto text-center py-12">
+            <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-mono text-white mb-4">
+              Not eligible for allowlist minting
+            </h2>
+            <p className="text-gray-400 mb-6">
+              Your address is not on the allowlist for this group.
+            </p>
+            <p className="text-sm text-gray-500">
+              Group: <span className="text-white font-mono">.{groupName}</span>
+            </p>
+          </div>
+        )
+      }
+    } else if (contractInfo.minterType === 'custom') {
+      return (
+        <div className="max-w-2xl mx-auto text-center py-12">
+          <XCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+          <h2 className="text-xl font-mono text-white mb-4">
+            Custom minting not supported
+          </h2>
+          <p className="text-gray-400 mb-6">
+            This group uses a custom minting contract that is not currently supported.
+          </p>
+          <p className="text-sm text-gray-500">
+            Group: <span className="text-white font-mono">.{groupName}</span>
+          </p>
+        </div>
+      )
+    } else {
+      return (
+        <div className="max-w-2xl mx-auto text-center py-12">
+          <XCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+          <h2 className="text-xl font-mono text-white mb-4">
+            Account creation is currently inactive
+          </h2>
+          <p className="text-gray-400 mb-6">
+            Please contact the group admin to enable account creation.
+          </p>
+          <p className="text-sm text-gray-500">
+            Group: <span className="text-white font-mono">.{groupName}</span>
+          </p>
+        </div>
+      )
+    }
   }
 
   const ethAmount = formatEther(contractInfo.price)
   const usdAmount = ethPrice ? (parseFloat(ethAmount) * ethPrice).toFixed(2) : null
+
+  // Domain name validation function that matches contract requirements
+  const validateDomainName = (input: string): { value: string; error: string | null } => {
+    // Check for dots and spaces (contract will reject these)
+    const hasDots = input.includes('.')
+    const hasSpaces = input.includes(' ')
+    
+    if (hasDots || hasSpaces) {
+      const issues = []
+      if (hasDots) issues.push('dots')
+      if (hasSpaces) issues.push('spaces')
+      return { value: accountName, error: `${issues.join(' and ')} are not allowed` }
+    }
+    
+    // Convert to lowercase - works for most Unicode characters
+    let cleaned = input.toLowerCase()
+    
+    // Enforce length limit (contract default is 140 characters)
+    if (cleaned.length > 140) {
+      cleaned = cleaned.substring(0, 140)
+    }
+    
+    return { value: cleaned, error: null }
+  }
 
   return (
     <div className="max-w-2xl mx-auto py-8">
       <div className="space-y-6">
         <div className="text-center mb-8">
           <h2 className="text-2xl font-mono text-white mb-2">
-            create agent account
+            create .{groupName} account
           </h2>
           <p className="text-gray-400">
             Choose your account name for <span className="text-white font-mono">.{groupName}</span>
           </p>
+          {contractInfo.minterType === 'allowlist' && (
+            <p className="text-sm text-green-400 mt-2">
+              ✓ You're eligible for allowlist minting
+            </p>
+          )}
         </div>
 
         <div className="space-y-4">
@@ -378,7 +673,11 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
               <Input
                 type="text"
                 value={accountName}
-                onChange={(e) => setAccountName(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''))}
+                onChange={(e) => {
+                  const result = validateDomainName(e.target.value)
+                  setAccountName(result.value)
+                  setValidationError(result.error)
+                }}
                 placeholder="yourname"
                 className="flex-1 bg-gray-800 border-gray-700 text-white font-mono"
                 disabled={isMinting}
@@ -387,7 +686,14 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
             </div>
           </div>
 
-          {accountName && (
+          {validationError && (
+            <div className="flex items-center space-x-2 text-sm">
+              <XCircle className="w-4 h-4 text-red-500" />
+              <span className="text-red-400 font-mono">{validationError}</span>
+            </div>
+          )}
+
+          {accountName && !validationError && (
             <div className="flex items-center space-x-2 text-sm">
               {isCheckingName ? (
                 <>
@@ -414,17 +720,31 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
             </div>
           )}
 
-          <div className="bg-gray-800 rounded-lg p-4">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-gray-400 font-mono">Price:</span>
-              <div className="text-right">
-                <div className="text-white font-mono">{ethAmount} ETH</div>
-                {usdAmount && (
-                  <div className="text-sm text-gray-400">${usdAmount} USD</div>
-                )}
+          {contractInfo.minterType === 'default' && (
+            <div className="bg-gray-800 rounded-lg p-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-gray-400 font-mono">Price:</span>
+                <div className="text-right">
+                  <div className="text-white font-mono">{ethAmount} ETH</div>
+                  {usdAmount && (
+                    <div className="text-sm text-gray-400">${usdAmount} USD</div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {contractInfo.minterType === 'allowlist' && (
+            <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
+              <div className="flex items-center space-x-2 mb-2">
+                <CheckCircle className="w-4 h-4 text-green-500" />
+                <span className="text-green-400 font-mono">Allowlist Minting</span>
+              </div>
+              <p className="text-sm text-gray-300">
+                You're eligible for free allowlist minting. No payment required.
+              </p>
+            </div>
+          )}
 
           <Button
             onClick={handleMint}
@@ -443,7 +763,7 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
 
           {!authenticated && (
             <p className="text-center text-sm text-gray-400">
-              Please connect your wallet to create an account
+              Please connect to create an account
             </p>
           )}
         </div>
