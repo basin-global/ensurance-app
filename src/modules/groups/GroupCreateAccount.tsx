@@ -167,24 +167,26 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
         if (minterAddr === '0x0000000000000000000000000000000000000000') {
           minterType = 'default'
         } else {
-          // Check if it's an allowlist minter by trying to call allowlist functions
+          console.log(`Checking minter type for ${groupName}, minter address: ${minterAddr}`)
+          // Check if it's an allowlist minter by reading the allowlist mapping (exists in both V1 and V2)
           try {
-            // Try to call isAllowlisted function to confirm it's an allowlist minter
+            // Try to read allowlist mapping to confirm it's an allowlist minter
             await retryWithBackoff(() => publicClient.readContract({
               address: minterAddr as `0x${string}`,
               abi: [
                 {
-                  inputs: [{ name: '_user', type: 'address' }],
-                  name: 'isAllowlisted',
+                  inputs: [{ name: '', type: 'address' }],
+                  name: 'allowlist',
                   outputs: [{ type: 'bool' }],
                   stateMutability: 'view',
                   type: 'function'
                 }
               ],
-              functionName: 'isAllowlisted',
+              functionName: 'allowlist',
               args: ['0x0000000000000000000000000000000000000000'] // dummy address to test
             }))
 
+            console.log(`✅ ${groupName}: Detected as allowlist minter (has allowlist mapping)`)
             // If we get here, it's an allowlist minter
             minterType = 'allowlist'
             finalBuyingEnabled = false // Will be set to true only if user is allowlisted and hasn't minted
@@ -197,28 +199,28 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
                   address: minterAddr as `0x${string}`,
                   abi: [
                     {
-                      inputs: [{ name: '_user', type: 'address' }],
-                      name: 'isAllowlisted',
+                      inputs: [{ name: '', type: 'address' }],
+                      name: 'allowlist',
                       outputs: [{ type: 'bool' }],
                       stateMutability: 'view',
                       type: 'function'
                     }
                   ],
-                  functionName: 'isAllowlisted',
+                  functionName: 'allowlist',
                   args: [userAddress]
                 })),
                 retryWithBackoff(() => publicClient.readContract({
                   address: minterAddr as `0x${string}`,
                   abi: [
                     {
-                      inputs: [{ name: '_user', type: 'address' }],
-                      name: 'hasUserMinted',
+                      inputs: [{ name: '', type: 'address' }],
+                      name: 'hasMinted',
                       outputs: [{ type: 'bool' }],
                       stateMutability: 'view',
                       type: 'function'
                     }
                   ],
-                  functionName: 'hasUserMinted',
+                  functionName: 'hasMinted',
                   args: [userAddress]
                 }))
               ])
@@ -230,6 +232,8 @@ export function GroupCreateAccount({ groupName, contractAddress }: GroupCreateAc
               finalBuyingEnabled = userAllowlisted && !userHasMinted
             }
           } catch (error) {
+            console.log(`❌ ${groupName}: Failed allowlist detection, error:`, error)
+            console.log(`Setting as custom minter type`)
             // If allowlist functions fail, it's a custom minter
             minterType = 'custom'
             finalBuyingEnabled = false
